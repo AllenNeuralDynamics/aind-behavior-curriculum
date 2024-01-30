@@ -17,6 +17,7 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    "pydantic == 2.6.0"
 ]
 
 [project.optional-dependencies]
