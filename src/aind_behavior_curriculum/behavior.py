@@ -1,21 +1,26 @@
-from pydantic import (
-    BaseModel, 
-    ConfigDict, 
-    Field
-)
+"""
+Base Behavior Models
+"""
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class AindBehaviorModel(BaseModel):
     """
     Defines Pydantic configurations applied to all behavior models.
-    BaseModel: Validate arguments on initialization.  
-    Configurations: 
-        - extra='forbid': Do not allow a model to be initalized with undocumented parameters.
-        - validate_assignment=True: Revalidate fields against schema on any change to model instance.
-        - strict=True: Enforce strict typing.
+    BaseModel: Validate arguments on initialization.
+    Configurations:
+        - extra='forbid':
+            Do not allow a model to be initalized with undocumented parameters.
+        - validate_assignment=True:
+            Revalidate fields against schema on any change to model instance.
+        - strict=True:
+            Enforce strict typing.
     """
-    model_config = ConfigDict(extra='forbid', 
-                              validate_assignment=True,
-                              strict=True)
+
+    model_config = ConfigDict(
+        extra="forbid", validate_assignment=True, strict=True
+    )
 
 
 class Task(AindBehaviorModel):
@@ -23,6 +28,7 @@ class Task(AindBehaviorModel):
     Set of parameters associated with a mouse task.
     Task parameters may be updated and are revalidated on assignment.
     """
+
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field("", description="Description of the task.")
 
@@ -35,5 +41,5 @@ class Task(AindBehaviorModel):
         for key, value in kwargs.items():
             try:
                 setattr(self, key, value)
-            except Exception as e: 
+            except Exception as e:
                 raise e
