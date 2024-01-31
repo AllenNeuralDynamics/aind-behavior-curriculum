@@ -3,6 +3,7 @@ Task Test Suite
 """
 
 import unittest
+from typing import Literal
 
 from pydantic import Field, ValidationInfo, field_validator
 
@@ -15,34 +16,18 @@ class ExampleTask(abc.Task):
     """
 
     # Required: Define type annotations for strict type checks.
-    # Optional: Make fields immutable with the 'frozen=True'.
-    field_1: int = Field(0)
-    field_2: int = Field(0)
-    field_3: float = Field(0.5)
-    field_4: float = Field(0.5)
-    field_5: str = Field("Immutable Field", frozen=True)
+    # Make fields immutable with Literal type.
+    field_1: int = Field(default=0, ge=0.0)
+    field_2: int = Field(default=0, ge=0.0)
+    field_3: float = Field(default=0.5, ge=0.0, le=1.0)
+    field_4: float = Field(default=0.5, ge=0.0, le=1.0)
+    field_5: Literal["Immutable Field"] = "Immutable Field"
 
     # Optional: Add additional validation to fields.
     @field_validator("field_1", "field_2")
     @classmethod
-    def check_nonnegative(cls, v: int, info: ValidationInfo):
-        """Check Nonnegative."""
-        if v < 0:
-            raise ValueError(
-                f"{info.field_name} must be nonnegative.\
-                             {info.field_name}: {v} "
-            )
-        return v
-
-    @field_validator("field_3", "field_4")
-    @classmethod
-    def check_normalized(cls, v: float, info: ValidationInfo):
-        """Check Normalized."""
-        if v < 0 or v > 1:
-            raise ValueError(
-                f"{info.field_name} must be normalized.\
-                             {info.field_name}: {v}"
-            )
+    def check_something(cls, v: int, info: ValidationInfo):
+        """Your validation code here"""
         return v
 
 

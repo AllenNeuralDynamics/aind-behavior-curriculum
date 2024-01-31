@@ -14,12 +14,17 @@ class AindBehaviorModel(BaseModel):
             Do not allow a model to be initalized with undocumented parameters.
         - validate_assignment=True:
             Revalidate fields against schema on any change to model instance.
+        - validate_defaults=True:
+            Validate default fields on subclasses.
         - strict=True:
             Enforce strict typing.
     """
 
     model_config = ConfigDict(
-        extra="forbid", validate_assignment=True, strict=True
+        extra="forbid",
+        validate_assignment=True,
+        validate_defaults=True,
+        strict=True,
     )
 
 
