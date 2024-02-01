@@ -1,7 +1,9 @@
 """
 Base Behavior Models
 """
+from __future__ import annotations
 
+from functools import partial
 from typing import Generic, TypeVar
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
@@ -59,3 +61,26 @@ class Task(AindBehaviorModel, Generic[GenericType]):
                 setattr(self, key, value)
             except Exception as e:
                 raise e
+
+
+class AllowModification(Enum):
+    """
+    Enum class representing the options for allowing modification.
+
+    Attributes:
+        TRUE: Represents the option to allow modification (True).
+        FALSE: Represents the option to disallow modification (False).
+    """
+
+    TRUE = True
+    FALSE = False
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return str(self.value)
+
+
+ModifiableAttr = partial(Field, allow_modification=AllowModification.TRUE)
+ModifiableAttr.__doc__ = "Tags a property as modifiable."
