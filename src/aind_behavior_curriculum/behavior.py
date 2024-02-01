@@ -2,7 +2,16 @@
 Base Behavior Models
 """
 
+from typing import Generic, TypeVar
+from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class GenericModel(BaseModel, extra="allow"):
+    pass
+
+
+GenericType = TypeVar("GenericType", bound=GenericModel)
 
 
 class AindBehaviorModel(BaseModel):
@@ -28,7 +37,7 @@ class AindBehaviorModel(BaseModel):
     )
 
 
-class Task(AindBehaviorModel):
+class Task(AindBehaviorModel, Generic[GenericType]):
     """
     Set of parameters associated with a mouse task.
     Task parameters may be updated and are revalidated on assignment.
@@ -36,6 +45,7 @@ class Task(AindBehaviorModel):
 
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field("", description="Description of the task.")
+    task_parameters: GenericType = Field(..., description="Task parameters.", )
 
     def update_parameters(self, **kwargs) -> None:
         """
