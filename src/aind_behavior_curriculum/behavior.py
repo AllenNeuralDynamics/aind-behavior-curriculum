@@ -45,6 +45,7 @@ class Task(AindBehaviorModel, Generic[GenericType]):
 
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field("", description="Description of the task.")
+    version: str = Field(..., description="Version of the task.") # I would prefer using this: https://github.com/AllenNeuralDynamics/Aind.Behavior.MouseUniversity/blob/1ea05884ac58276c72ab01bcc069f0de8c62e281/src/aind_behavior_mouse_university/base/__init__.py#L37
     task_parameters: GenericType = Field(..., description="Task parameters.", )
 
     def update_parameters(self, **kwargs) -> None:
