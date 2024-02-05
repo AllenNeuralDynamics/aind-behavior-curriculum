@@ -1,8 +1,19 @@
 """
 Base Behavior Models
 """
+from __future__ import annotations
 
+from functools import partial
+from typing import Generic, TypeVar
+from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class GenericModel(BaseModel, extra="allow"):
+    pass
+
+
+GenericType = TypeVar("GenericType", bound=GenericModel)
 
 
 class AindBehaviorModel(BaseModel):
@@ -28,7 +39,7 @@ class AindBehaviorModel(BaseModel):
     )
 
 
-class Task(AindBehaviorModel):
+class Task(AindBehaviorModel, Generic[GenericType]):
     """
     Set of parameters associated with a mouse task.
     Task parameters may be updated and are revalidated on assignment.
@@ -36,6 +47,8 @@ class Task(AindBehaviorModel):
 
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field("", description="Description of the task.")
+    version: str = Field(..., description="Version of the task.") # I would prefer using this: https://github.com/AllenNeuralDynamics/Aind.Behavior.MouseUniversity/blob/1ea05884ac58276c72ab01bcc069f0de8c62e281/src/aind_behavior_mouse_university/base/__init__.py#L37
+    task_parameters: GenericType = Field(..., description="Task parameters.", )
 
     def update_parameters(self, **kwargs) -> None:
         """
@@ -48,3 +61,26 @@ class Task(AindBehaviorModel):
                 setattr(self, key, value)
             except Exception as e:
                 raise e
+
+
+class AllowModification(Enum):
+    """
+    Enum class representing the options for allowing modification.
+
+    Attributes:
+        TRUE: Represents the option to allow modification (True).
+        FALSE: Represents the option to disallow modification (False).
+    """
+
+    TRUE = True
+    FALSE = False
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return str(self.value)
+
+
+ModifiableAttr = partial(Field, allow_modification=AllowModification.TRUE)
+ModifiableAttr.__doc__ = "Tags a property as modifiable."
