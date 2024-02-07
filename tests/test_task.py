@@ -28,14 +28,14 @@ class ExampleTaskParameters(abc.TaskParameters):
 
 
 class ExampleTask(abc.Task):
-    name: Literal['TaskName'] = 'TaskName'
-    description: str = Field(default='Example description of task')
+    name: Literal["TaskName"] = "TaskName"
+    description: str = Field(default="Example description of task")
     version: abc.SemVerAnnotation = abc.__version__
     # ^Use the version of your task repo package!
 
-    task_parameters: ExampleTaskParameters = Field(...,
-                                                   description=ExampleTaskParameters.__doc__)
-
+    task_parameters: ExampleTaskParameters = Field(
+        ..., description=ExampleTaskParameters.__doc__
+    )
 
 
 class TaskTests(unittest.TestCase):
@@ -45,8 +45,10 @@ class TaskTests(unittest.TestCase):
     def test_valid_construction(self):
         ex_parameters = ExampleTaskParameters(field_2=50, field_4=0.8)
         ex_task = ExampleTask(task_parameters=ex_parameters)
-        self.assertTrue(ex_task.task_parameters.field_2 == 50 and \
-                        ex_task.task_parameters.field_4 == 0.8)
+        self.assertTrue(
+            ex_task.task_parameters.field_2 == 50
+            and ex_task.task_parameters.field_4 == 0.8
+        )
 
     def test_valid_parameter_change(self):
         ex_parameters = ExampleTaskParameters()
@@ -57,10 +59,9 @@ class TaskTests(unittest.TestCase):
     def test_valid_group_parameter_change(self):
         ex_parameters = ExampleTaskParameters()
         ex_task = ExampleTask(task_parameters=ex_parameters)
-        ex_task.update_parameters(field_1=123,
-                                  field_2=456,
-                                  field_3=0.8,
-                                  field_4=0.9)
+        ex_task.update_parameters(
+            field_1=123, field_2=456, field_3=0.8, field_4=0.9
+        )
         self.assertTrue(
             ex_task.task_parameters.field_1 == 123
             and ex_task.task_parameters.field_2 == 456
@@ -72,15 +73,15 @@ class TaskTests(unittest.TestCase):
     def test_invalid_construction(self):
         def unknown_field():
             ex_parameters = ExampleTaskParameters(field_0=0)
-            ex_task = ExampleTask(task_parameters=ex_parameters)
+            ex_task = ExampleTask(task_parameters=ex_parameters)  # noqa: F841
 
         def invalid_type():
             ex_parameters = ExampleTaskParameters(field_1="20")
-            ex_task = ExampleTask(task_parameters=ex_parameters)
+            ex_task = ExampleTask(task_parameters=ex_parameters)  # noqa: F841
 
         def invalid_field():
             ex_parameters = ExampleTaskParameters(field_4=5)
-            ex_task = ExampleTask(task_parameters=ex_parameters)
+            ex_task = ExampleTask(task_parameters=ex_parameters)  # noqa: F841
 
         self.assertRaises(Exception, unknown_field)
         self.assertRaises(Exception, invalid_type)
