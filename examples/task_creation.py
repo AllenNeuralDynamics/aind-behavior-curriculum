@@ -9,11 +9,7 @@ from pydantic import Field, ValidationInfo, field_validator
 import aind_behavior_curriculum as abc
 
 
-class ExampleTask(abc.Task):
-    """
-    Example Task
-    """
-
+class ExampleTaskParameters(abc.TaskParameters):
     # Required: Define type annotations for strict type checks.
     # Make fields immutable with Literal type.
     field_1: int = Field(default=0, ge=0.0)
@@ -30,22 +26,51 @@ class ExampleTask(abc.Task):
         return v
 
 
+class ExampleTask(abc.Task):
+    name: Literal['TaskName'] = 'TaskName'
+    description: str = Field(default='Example description of task')
+    version: abc.SemVerAnnotation = abc.__version__
+    # ^Use the version of your task repo package!
+
+    task_parameters: ExampleTaskParameters = Field(...,
+                                                   description=ExampleTaskParameters.__doc__)
+
+
 if __name__ == "__main__":
     # Create task, optionally add parameters
-    ex = ExampleTask(name="Task", field_2=100, field_4=0.6)
-    print(ex)
+    ex_parameters = ExampleTaskParameters(field_2=50, field_4=0.8)
+    ex_task = ExampleTask(task_parameters=ex_parameters)
+    print(ex_task)
 
     # Update Task parameters individually
-    ex.field_1 = 100
-    ex.field_2 = 200
-    print(ex)
+    ex_task.task_parameters.field_1 = 100
+    ex_task.task_parameters.field_2 = 200
+    print(ex_task)
 
     # Or use Task.update_parameters(...)
-    ex.update_parameters(
-        description="new description",
+    ex_task.update_parameters(
         field_1=123,
         field_2=456,
         field_3=0.8,
         field_4=0.9,
     )
-    print(ex)
+    print(ex_task)
+
+    import json
+    # Export/Serialize Task Schema:
+    with open('examples/task_schema.json', 'w') as f:
+        json_dict = ExampleTask.model_json_schema()
+        json_string = json.dumps(json_dict, indent=4)
+        f.write(json_string)
+
+    # Export/Serialize Instance:
+    with open('examples/task_instance.json', 'w') as f:
+        json_dict = ex_task.model_dump()
+        json_string = json.dumps(json_dict, indent=4)
+        f.write(json_string)
+
+    # Import/De-serialize Instance:
+    with open('examples/task_instance.json', 'r') as f:
+        json_data = f.read()
+    task_instance = ExampleTask.model_validate_json(json_data)
+    print(task_instance)

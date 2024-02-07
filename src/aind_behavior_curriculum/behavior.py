@@ -3,17 +3,28 @@ Base Behavior Models
 """
 from __future__ import annotations
 
-from functools import partial
-from typing import Generic, TypeVar
-from enum import Enum
+import aind_behavior_curriculum
+
+from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_core import core_schema
+from semver import Version
 
 
-class GenericModel(BaseModel, extra="allow"):
-    pass
+class SemVerAnnotation(str):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: Any,
+        _handler: Callable[[Any], core_schema.CoreSchema],
+    ) -> core_schema.CoreSchema:
+        def validate_from_str(value: str) -> Version:
+            Version.parse(value)
+            return value
 
-
-GenericType = TypeVar("GenericType", bound=GenericModel)
+        return core_schema.no_info_after_validator_function(
+            validate_from_str, _handler(str)
+        )
 
 
 class AindBehaviorModel(BaseModel):
@@ -38,8 +49,10 @@ class AindBehaviorModel(BaseModel):
         strict=True,
     )
 
+class TaskParameters(AindBehaviorModel):
+    pass
 
-class Task(AindBehaviorModel, Generic[GenericType]):
+class Task(AindBehaviorModel):
     """
     Set of parameters associated with a mouse task.
     Task parameters may be updated and are revalidated on assignment.
@@ -47,40 +60,17 @@ class Task(AindBehaviorModel, Generic[GenericType]):
 
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field("", description="Description of the task.")
-    version: str = Field(..., description="Version of the task.") # I would prefer using this: https://github.com/AllenNeuralDynamics/Aind.Behavior.MouseUniversity/blob/1ea05884ac58276c72ab01bcc069f0de8c62e281/src/aind_behavior_mouse_university/base/__init__.py#L37
-    task_parameters: GenericType = Field(..., description="Task parameters.", )
+    version: str = aind_behavior_curriculum.__version__
+    task_parameters: TaskParameters = Field(..., description="Task parameters.", )
 
     def update_parameters(self, **kwargs) -> None:
-        """
-        Convenience utility for updating multiple task parameters at once.
-        Works across all subclass levels.
-        kwargs: dictionary of keyword args
-        """
-        for key, value in kwargs.items():
-            try:
-                setattr(self, key, value)
-            except Exception as e:
-                raise e
-
-
-class AllowModification(Enum):
-    """
-    Enum class representing the options for allowing modification.
-
-    Attributes:
-        TRUE: Represents the option to allow modification (True).
-        FALSE: Represents the option to disallow modification (False).
-    """
-
-    TRUE = True
-    FALSE = False
-
-    def __str__(self):
-        return str(self.value)
-
-    def __repr__(self):
-        return str(self.value)
-
-
-ModifiableAttr = partial(Field, allow_modification=AllowModification.TRUE)
-ModifiableAttr.__doc__ = "Tags a property as modifiable."
+         """
+         Convenience utility for updating multiple task parameters at once.
+         Works across all subclass levels.
+         kwargs: dictionary of keyword args
+         """
+         for key, value in kwargs.items():
+             try:
+                 self.task_parameters.__setattr__(key, value)
+             except Exception as e:
+                 raise e
