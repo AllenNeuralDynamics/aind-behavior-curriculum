@@ -10,6 +10,10 @@ import aind_behavior_curriculum as abc
 
 
 class ExampleTaskParameters(abc.TaskParameters):
+    """
+    Example Task Parameters
+    """
+
     # Required: Define type annotations for strict type checks.
     # Make fields immutable with Literal type.
     field_1: int = Field(default=0, ge=0.0)
@@ -27,13 +31,18 @@ class ExampleTaskParameters(abc.TaskParameters):
 
 
 class ExampleTask(abc.Task):
-    name: Literal['TaskName'] = 'TaskName'
-    description: str = Field(default='Example description of task')
+    """
+    Example Task
+    """
+
+    name: Literal["TaskName"] = "TaskName"
+    description: str = Field(default="Example description of task")
     version: abc.SemVerAnnotation = abc.__version__
     # ^Use the version of your task repo package!
 
-    task_parameters: ExampleTaskParameters = Field(...,
-                                                   description=ExampleTaskParameters.__doc__)
+    task_parameters: ExampleTaskParameters = Field(
+        ..., description=ExampleTaskParameters.__doc__
+    )
 
 
 if __name__ == "__main__":
@@ -57,20 +66,21 @@ if __name__ == "__main__":
     print(ex_task)
 
     import json
+
     # Export/Serialize Task Schema:
-    with open('examples/task_schema.json', 'w') as f:
+    with open("examples/task_schema.json", "w") as f:
         json_dict = ExampleTask.model_json_schema()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
 
     # Export/Serialize Instance:
-    with open('examples/task_instance.json', 'w') as f:
+    with open("examples/task_instance.json", "w") as f:
         json_dict = ex_task.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
 
     # Import/De-serialize Instance:
-    with open('examples/task_instance.json', 'r') as f:
+    with open("examples/task_instance.json", "r") as f:
         json_data = f.read()
     task_instance = ExampleTask.model_validate_json(json_data)
     print(task_instance)
