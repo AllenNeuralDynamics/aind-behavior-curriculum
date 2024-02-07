@@ -1,7 +1,7 @@
 {
     "$defs": {
         "ExampleTaskParameters": {
-            "additionalProperties": false,
+            "description": "Example Task Parameters",
             "properties": {
                 "field_1": {
                     "default": 0,
@@ -40,6 +40,7 @@
         }
     },
     "additionalProperties": false,
+    "description": "Example Task",
     "properties": {
         "name": {
             "const": "TaskName",
@@ -57,7 +58,12 @@
             "type": "string"
         },
         "task_parameters": {
-            "$ref": "#/$defs/ExampleTaskParameters"
+            "allOf": [
+                {
+                    "$ref": "#/$defs/ExampleTaskParameters"
+                }
+            ],
+            "description": "\n    Example Task Parameters\n    "
         }
     },
     "required": [
