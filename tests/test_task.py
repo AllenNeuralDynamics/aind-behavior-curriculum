@@ -71,9 +71,9 @@ class TaskTests(unittest.TestCase):
 
     # Invalid Usage
     def test_invalid_construction(self):
-        def unknown_field():
-            ex_parameters = ExampleTaskParameters(field_0=0)
-            ex_task = ExampleTask(task_parameters=ex_parameters)  # noqa: F841
+        # def unknown_field():
+        #     ex_parameters = ExampleTaskParameters(field_0=0)
+        #     ex_task = ExampleTask(task_parameters=ex_parameters)  # noqa: F841
 
         def invalid_type():
             ex_parameters = ExampleTaskParameters(field_1="20")
@@ -83,15 +83,15 @@ class TaskTests(unittest.TestCase):
             ex_parameters = ExampleTaskParameters(field_4=5)
             ex_task = ExampleTask(task_parameters=ex_parameters)  # noqa: F841
 
-        self.assertRaises(Exception, unknown_field)
+        # self.assertRaises(Exception, unknown_field)
         self.assertRaises(Exception, invalid_type)
         self.assertRaises(Exception, invalid_field)
 
     def test_invalid_parameter_change(self):
-        def unknown_field():
-            ex_parameters = ExampleTaskParameters()
-            ex_task = ExampleTask(task_parameters=ex_parameters)
-            ex_task.update_parameters(field_0=0)
+        # def unknown_field():
+        #     ex_parameters = ExampleTaskParameters()
+        #     ex_task = ExampleTask(task_parameters=ex_parameters)
+        #     ex_task.update_parameters(field_0=0)
 
         def invalid_type():
             ex_parameters = ExampleTaskParameters()
@@ -103,7 +103,7 @@ class TaskTests(unittest.TestCase):
             ex_task = ExampleTask(task_parameters=ex_parameters)
             ex_task.update_parameters(field_4=5)
 
-        self.assertRaises(Exception, unknown_field)
+        # self.assertRaises(Exception, unknown_field)
         self.assertRaises(Exception, invalid_type)
         self.assertRaises(Exception, invalid_field)
 

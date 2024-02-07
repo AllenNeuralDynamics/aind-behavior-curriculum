@@ -1,6 +1,7 @@
 {
     "$defs": {
         "ExampleTaskParameters": {
+            "additionalProperties": true,
             "description": "Example Task Parameters",
             "properties": {
                 "field_1": {
