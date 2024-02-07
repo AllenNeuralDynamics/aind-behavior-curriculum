@@ -64,16 +64,16 @@ class AindBehaviorModel(BaseModel):
 
 
 class TaskParameters(BaseModel):
+    """
+    Set of parameters associated with a mouse task.
+    Task parameters may be updated and are revalidated on assignment.
+    """
+
     model_config = ConfigDict(
         validate_assignment=True,
         validate_defaults=True,
         strict=True
     )
-
-    """
-    Set of parameters associated with a mouse task.
-    Task parameters may be updated and are revalidated on assignment.
-    """
 
     pass
 
