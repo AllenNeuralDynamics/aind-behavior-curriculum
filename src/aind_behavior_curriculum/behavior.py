@@ -72,13 +72,15 @@ class TaskParameters(BaseModel):
     model_config = ConfigDict(
         validate_assignment=True,
         validate_defaults=True,
-        strict=True
+        extra='allow'
     )
 
     pass
+from typing import Generic, TypeVar
+GenericType = TypeVar("GenericType", bound=TaskParameters)
 
 
-class Task(AindBehaviorModel):
+class Task(AindBehaviorModel, Generic[GenericType]):
     """
     Base Task Primitive.
     Holds Task metadata and parameters.
@@ -87,7 +89,7 @@ class Task(AindBehaviorModel):
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field("", description="Description of the task.")
     version: str = aind_behavior_curriculum.__version__
-    task_parameters: TaskParameters = Field(
+    task_parameters: GenericType = Field(
         ..., description=TaskParameters.__doc__
     )
 
