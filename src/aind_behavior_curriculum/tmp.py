@@ -3,6 +3,7 @@ Work in Progress Curriculum
 """
 
 from collections import defaultdict
+from typing import Any
 
 class Task:
     """
@@ -20,12 +21,15 @@ class Metric:
 
 class Evaluation:
     """
-    Serializable Callable, takes in a list of metrics that is serialized alongside.
+    Serializable Callable that performs evaluation,
+    based on set of input metrics. Also serializes metrics.
     """
     pass
 
 
 # TODO: De/serialization
+# Define de/serialization such that calling serialization on Curriculum
+# recursively serializes graph components: (Task, Metric, Evaluation)
 class Curriculum:
     def __init__(self) -> None:
         TaskId = int
@@ -74,7 +78,29 @@ class Principal:
     """
 
     def __init__(self) -> None:
+        # Connect to databases, or create them if they do not exist.
         pass
 
-    def update_mouse_status(self) -> None:
+    # --- Various Read/Write Operations to Database ---
+    def list_status(self) -> None:
+        # Retrieve current status of all mice
+        pass
+    def get_individual_status(self) -> None:
+        pass
+    def get_individual_curriculum(self) -> None:
+        pass
+
+
+    def perform_regular_evaluation(self) -> None:
+        # Iterate through (mice, curriculum) pairs.
+        # Publish suggested next step in database.
+        pass
+
+    def override_individual_status(self) -> None:
+        # Advance, Hold back, Graduate, Remove
+        pass
+
+    def export_visual(self) -> None:
+        # Export a visual representation of mice status.
+        # (See Han's Code)
         pass
