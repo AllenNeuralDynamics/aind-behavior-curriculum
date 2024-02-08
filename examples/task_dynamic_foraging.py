@@ -9,20 +9,20 @@ from pydantic import Field, ValidationInfo, field_validator
 
 import aind_behavior_curriculum as abc
 
-class DynamicForagingSubTask(Enum):
+class DynamicForagingSubTask(str, Enum):
     """Foraging tasks"""
     C1B1 = "Coupled Baiting"
     C0B0 = "Uncoupled Without Baiting"
     C1B0 = "Coupled Without Baiting"
     C0B1 = "Uncoupled Baiting"
     
-class AdvancedBlockMode(Enum):
+class AdvancedBlockMode(str, Enum):
     ''' Modes for advanced block '''
     OFF = "off"
     NOW = "now"
     ONCE = "once"
     
-class AutoWaterMode(Enum):
+class AutoWaterMode(str, Enum):
     ''' Modes for auto water '''
     NATURAL = "Natural"
     BOTH = "Both"
