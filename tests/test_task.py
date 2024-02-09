@@ -11,10 +11,14 @@ import aind_behavior_curriculum as abc
 
 
 class ExampleTaskParameters(abc.TaskParameters):
+    """
+    Example Task Parameters
+    """
+
     # Required: Define type annotations for strict type checks.
     # Make fields immutable with Literal type.
-    field_1: int = Field(default=0, ge=0.0)
-    field_2: int = Field(default=0, ge=0.0)
+    field_1: int = abc.ModifiableAttr(default=0, ge=0.0)
+    field_2: int = abc.ModifiableAttr(default=0, ge=0.0)
     field_3: float = Field(default=0.5, ge=0.0, le=1.0)
     field_4: float = Field(default=0.5, ge=0.0, le=1.0)
     field_5: Literal["Immutable Field"] = "Immutable Field"
