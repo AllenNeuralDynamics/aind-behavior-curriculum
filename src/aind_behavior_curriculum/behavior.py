@@ -4,6 +4,7 @@ Base Behavior Models
 
 from __future__ import annotations
 
+from functools import partial
 from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -61,6 +62,10 @@ class AindBehaviorModel(BaseModel):
         validate_defaults=True,
         strict=True,
     )
+
+
+"""Tag fields inside of TaskParameters as Modifiable, seen in schema export"""
+ModifiableAttr = partial(Field, allow_modification=True)
 
 
 class TaskParameters(BaseModel):
