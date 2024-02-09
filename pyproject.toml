@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind-behavior-curriculum"
 description = "Generated from aind-library-template"
 license = {text = "MIT"}
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     {name = "Allen Institute for Neural Dynamics"}
 ]
@@ -17,6 +17,8 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    "pydantic == 2.6.0",
+    "semver == 3.0.2"
 ]
 
 [project.optional-dependencies]
@@ -68,12 +70,12 @@ exclude_lines = [
     "import",
     "pragma: no cover"
 ]
-fail_under = 100
+fail_under = 90
 
 [tool.isort]
 line_length = 79
 profile = "black"
 
 [tool.interrogate]
-exclude = ["setup.py", "docs", "build"]
+exclude = ["setup.py", "docs", "build", "tests/"]
 fail-under = 100

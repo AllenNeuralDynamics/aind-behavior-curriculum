@@ -1,0 +1,12 @@
+{
+    "name": "TaskName",
+    "description": "Ex description of task",
+    "version": "0.0.0",
+    "task_parameters": {
+        "field_1": 123,
+        "field_2": 456,
+        "field_3": 0.8,
+        "field_4": 0.9,
+        "field_5": "Immutable Field"
+    }
+}
