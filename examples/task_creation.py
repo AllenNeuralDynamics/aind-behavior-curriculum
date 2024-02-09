@@ -30,10 +30,6 @@ class ExampleTaskParameters(abc.TaskParameters):
         return v
 
 
-class ExampleTaskParameters2(ExampleTaskParameters):
-    field_6: int = 8
-
-
 class ExampleTask(abc.Task):
     """
     Example Task
@@ -51,7 +47,7 @@ class ExampleTask(abc.Task):
 
 if __name__ == "__main__":
     # Create task, optionally add parameters
-    ex_parameters = ExampleTaskParameters2(field_2=50, field_4=0.8)
+    ex_parameters = ExampleTaskParameters(field_2=50, field_4=0.8)
     ex_task = ExampleTask(task_parameters=ex_parameters)
     print(ex_task)
 
