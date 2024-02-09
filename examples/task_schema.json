@@ -51,7 +51,8 @@
             "title": "Name"
         },
         "description": {
-            "default": "Example description of task",
+            "allow_modification": true,
+            "default": "Ex description of task",
             "title": "Description",
             "type": "string"
         },
@@ -66,8 +67,7 @@
                     "$ref": "#/$defs/ExampleTaskParameters"
                 }
             ],
-            "allow_modification": true,
-            "description": "\n    Example Task Parameters\n    "
+            "allow_modification": true
         }
     },
     "required": [

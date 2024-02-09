@@ -61,6 +61,7 @@ class AindBehaviorModel(BaseModel):
         validate_assignment=True,
         validate_defaults=True,
         strict=True,
+        str_strip_whitespace=True,
     )
 
 
@@ -79,6 +80,7 @@ class TaskParameters(BaseModel):
         validate_assignment=True,
         validate_defaults=True,
         strict=True,
+        str_strip_whitespace=True,
     )
 
 
@@ -89,10 +91,12 @@ class Task(AindBehaviorModel):
     """
 
     name: str = Field(..., description="Name of the task.", frozen=True)
-    description: str = Field("", description="Description of the task.")
+    description: str = Field(
+        default="", description="Description of the task."
+    )
     version: str = aind_behavior_curriculum.__version__
     task_parameters: TaskParameters = Field(
-        ..., description=TaskParameters.__doc__
+        ..., description=TaskParameters.__doc__.strip()
     )
 
     def update_parameters(self, **kwargs) -> None:

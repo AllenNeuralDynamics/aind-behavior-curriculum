@@ -2,6 +2,7 @@
 Example of Task creation
 """
 
+import json
 from typing import Literal
 
 from pydantic import Field, ValidationInfo, field_validator
@@ -37,11 +38,12 @@ class ExampleTask(abc.Task):
 
     name: Literal["TaskName"] = "TaskName"
     description: str = abc.ModifiableAttr(default="Ex description of task")
-    version: abc.SemVerAnnotation = abc.__version__
-    # ^Use the version of your task repo package!
+    version: abc.SemVerAnnotation = "0.0.0"
+    # NOTE: '0.0.0' is a placeholder.
+    # Use the version of your task repo package!
 
     task_parameters: ExampleTaskParameters = abc.ModifiableAttr(
-        ..., description=ExampleTaskParameters.__doc__
+        ..., description=ExampleTaskParameters.__doc__.strip()
     )
 
 
@@ -64,8 +66,6 @@ if __name__ == "__main__":
         field_4=0.9,
     )
     print(ex_task)
-
-    import json
 
     # Export/Serialize Task Schema:
     with open("examples/task_schema.json", "w") as f:
