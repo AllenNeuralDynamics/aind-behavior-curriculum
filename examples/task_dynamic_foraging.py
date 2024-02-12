@@ -179,17 +179,6 @@ if __name__ == "__main__":
         )
     print(ex_task)
 
-    # Update Task parameters individually
-    ex_task.task_parameters.field_1 = 100
-    ex_task.task_parameters.field_2 = 200
-    print(ex_task)
-
-    # Or use Task.update_parameters(...)
-    ex_task.update_parameters(
-
-    )
-    print(ex_task)
-
     import json
 
     # Export/Serialize Task Schema:
