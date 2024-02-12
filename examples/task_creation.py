@@ -2,6 +2,7 @@
 Example of Task creation
 """
 
+import json
 from typing import Literal
 
 from pydantic import Field, ValidationInfo, field_validator
@@ -16,8 +17,8 @@ class ExampleTaskParameters(abc.TaskParameters):
 
     # Required: Define type annotations for strict type checks.
     # Make fields immutable with Literal type.
-    field_1: int = Field(default=0, ge=0.0)
-    field_2: int = Field(default=0, ge=0.0)
+    field_1: int = abc.ModifiableAttr(default=0, ge=0.0)
+    field_2: int = abc.ModifiableAttr(default=0, ge=0.0)
     field_3: float = Field(default=0.5, ge=0.0, le=1.0)
     field_4: float = Field(default=0.5, ge=0.0, le=1.0)
     field_5: Literal["Immutable Field"] = "Immutable Field"
@@ -30,28 +31,25 @@ class ExampleTaskParameters(abc.TaskParameters):
         return v
 
 
-class ExampleTaskParameters2(ExampleTaskParameters):
-    field_6: int = 8
-
-
 class ExampleTask(abc.Task):
     """
     Example Task
     """
 
     name: Literal["TaskName"] = "TaskName"
-    description: str = Field(default="Example description of task")
-    version: abc.SemVerAnnotation = abc.__version__
-    # ^Use the version of your task repo package!
+    description: str = abc.ModifiableAttr(default="Ex description of task")
+    version: abc.SemVerAnnotation = "0.0.0"
+    # NOTE: '0.0.0' is a placeholder.
+    # Use the version of your task repo package!
 
-    task_parameters: ExampleTaskParameters = Field(
-        ..., description=ExampleTaskParameters.__doc__
+    task_parameters: ExampleTaskParameters = abc.ModifiableAttr(
+        ..., description=ExampleTaskParameters.__doc__.strip()
     )
 
 
 if __name__ == "__main__":
     # Create task, optionally add parameters
-    ex_parameters = ExampleTaskParameters2(field_2=50, field_4=0.8)
+    ex_parameters = ExampleTaskParameters(field_2=50, field_4=0.8)
     ex_task = ExampleTask(task_parameters=ex_parameters)
     print(ex_task)
 
@@ -68,8 +66,6 @@ if __name__ == "__main__":
         field_4=0.9,
     )
     print(ex_task)
-
-    import json
 
     # Export/Serialize Task Schema:
     with open("examples/task_schema.json", "w") as f:

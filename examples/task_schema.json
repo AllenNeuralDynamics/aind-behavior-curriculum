@@ -5,12 +5,14 @@
             "description": "Example Task Parameters",
             "properties": {
                 "field_1": {
+                    "allow_modification": true,
                     "default": 0,
                     "minimum": 0,
                     "title": "Field 1",
                     "type": "integer"
                 },
                 "field_2": {
+                    "allow_modification": true,
                     "default": 0,
                     "minimum": 0,
                     "title": "Field 2",
@@ -49,7 +51,8 @@
             "title": "Name"
         },
         "description": {
-            "default": "Example description of task",
+            "allow_modification": true,
+            "default": "Ex description of task",
             "title": "Description",
             "type": "string"
         },
@@ -64,7 +67,7 @@
                     "$ref": "#/$defs/ExampleTaskParameters"
                 }
             ],
-            "description": "\n    Example Task Parameters\n    "
+            "allow_modification": true
         }
     },
     "required": [

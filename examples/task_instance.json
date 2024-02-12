@@ -1,6 +1,6 @@
 {
     "name": "TaskName",
-    "description": "Example description of task",
+    "description": "Ex description of task",
     "version": "0.0.0",
     "task_parameters": {
         "field_1": 123,

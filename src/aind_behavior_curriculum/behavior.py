@@ -4,6 +4,7 @@ Base Behavior Models
 
 from __future__ import annotations
 
+from functools import partial
 from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -60,7 +61,12 @@ class AindBehaviorModel(BaseModel):
         validate_assignment=True,
         validate_defaults=True,
         strict=True,
+        str_strip_whitespace=True,
     )
+
+
+"""Tag fields inside of TaskParameters as Modifiable, seen in schema export"""
+ModifiableAttr = partial(Field, allow_modification=True)
 
 
 class TaskParameters(BaseModel):
@@ -70,27 +76,27 @@ class TaskParameters(BaseModel):
     """
 
     model_config = ConfigDict(
+        extra="allow",
         validate_assignment=True,
         validate_defaults=True,
-        extra='allow'
+        strict=True,
+        str_strip_whitespace=True,
     )
 
-    pass
-from typing import Generic, TypeVar
-GenericType = TypeVar("GenericType", bound=TaskParameters)
 
-
-class Task(AindBehaviorModel, Generic[GenericType]):
+class Task(AindBehaviorModel):
     """
     Base Task Primitive.
     Holds Task metadata and parameters.
     """
 
     name: str = Field(..., description="Name of the task.", frozen=True)
-    description: str = Field("", description="Description of the task.")
+    description: str = Field(
+        default="", description="Description of the task."
+    )
     version: str = aind_behavior_curriculum.__version__
-    task_parameters: GenericType = Field(
-        ..., description=TaskParameters.__doc__
+    task_parameters: TaskParameters = Field(
+        ..., description=TaskParameters.__doc__.strip()
     )
 
     def update_parameters(self, **kwargs) -> None:
