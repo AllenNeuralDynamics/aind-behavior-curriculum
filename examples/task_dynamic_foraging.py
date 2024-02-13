@@ -6,7 +6,7 @@ from typing import Literal
 from enum import Enum
 import json
 
-from pydantic import Field, ValidationInfo, field_validator
+from pydantic import Field
 
 import aind_behavior_curriculum as abc
 
@@ -52,8 +52,7 @@ class DynamicForagingParas(abc.TaskParameters):
     )
 
     # Reward probability
-    BaseRewardSum: float = Field(
-        ..., title="Sum of p_reward", ge=0.0, le=1.0)
+    BaseRewardSum: float = Field(..., title="Sum of p_reward", ge=0.0, le=1.0)
     RewardFamily: int = Field(
         ..., title="Reward family", ge=1
     )  # Should be explicit here
@@ -140,7 +139,6 @@ class DynamicForagingParas(abc.TaskParameters):
     LeftValue_volume: float = Field(3.0, title="Left reward size (uL)", ge=0.0)
 
 
-
 class DynamicForagingTask(abc.Task):
     """
     Example Task
@@ -203,8 +201,10 @@ if __name__ == "__main__":
 
     ex_task = DynamicForagingTask(
         version="1.0.0",
-        description=("Phase B in Han's slides "
-                     "(block = [10, 20, 5], p_sum = 0.8, p_ratio = [1:0])"),
+        description=(
+            "Phase B in Han's slides "
+            "(block = [10, 20, 5], p_sum = 0.8, p_ratio = [1:0])"
+        ),
         task_parameters=ex_parameters,
     )
     print(ex_task)
