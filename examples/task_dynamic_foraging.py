@@ -4,6 +4,7 @@ Example of Task creation
 
 from typing import Literal
 from enum import Enum
+import json
 
 from pydantic import Field, ValidationInfo, field_validator
 
@@ -51,7 +52,8 @@ class DynamicForagingParas(abc.TaskParameters):
     )
 
     # Reward probability
-    BaseRewardSum: float = Field(..., title="Sum of p_reward", ge=0.0, le=1.0)
+    BaseRewardSum: float = Field(
+        ..., title="Sum of p_reward", ge=0.0, le=1.0)
     RewardFamily: int = Field(
         ..., title="Reward family", ge=1
     )  # Should be explicit here
@@ -137,12 +139,6 @@ class DynamicForagingParas(abc.TaskParameters):
     )
     LeftValue_volume: float = Field(3.0, title="Left reward size (uL)", ge=0.0)
 
-    # Optional: Add additional validation to fields.
-    @field_validator("UncoupledReward")
-    @classmethod
-    def check_something(cls, v: int, info: ValidationInfo):
-        """Your validation code here"""
-        return v
 
 
 class DynamicForagingTask(abc.Task):
@@ -212,8 +208,6 @@ if __name__ == "__main__":
         task_parameters=ex_parameters,
     )
     print(ex_task)
-
-    import json
 
     # Export/Serialize Task Schema:
     with open("examples/task_schema.json", "w") as f:
