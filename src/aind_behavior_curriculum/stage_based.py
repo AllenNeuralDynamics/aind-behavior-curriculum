@@ -2,31 +2,19 @@
 Stage-based implementation
 """
 
+from abc import ABC, abstractmethod
 from collections import defaultdict
 
 from pydantic import Field
 import aind_behavior_curriculum as abc
 
 
-class Stage(abc.AindBehaviorModel):
-    """
-    Instance of a Task containing TaskParameters.
-    """
-
-    name: str = Field(..., description='Stage name.')
-    task: abc.Task = Field(..., description='Task in which this stage is based off of.')
-
-    # TODO: Check serialization of Task and see if overriding the field serializer is necessary
-GRADUATED = Stage(...)
-# ^TODO, Fill Graduated
 
 class Metrics(abc.AindBehaviorModel):
     """
     Abstract Metrics class.
     Subclass with Metric values.
     """
-
-    # TODO: Add some schema check
 
 
 class Rule:
@@ -49,6 +37,68 @@ class Rule:
     # TODO: Check serialization of Rule and see what overrides are necessary.
 
 
+
+# Rule is simply a wrapper around a Callable.
+# You still need to define explicuit function signatures for each of the
+# callable primitives.
+
+class StageTransition(ABC):
+    """
+    User-defined function that defines metrics
+    criteria for transitioning stages.
+    """
+
+    @abstractmethod
+    def __call__(self, metrics: Metrics) -> bool:
+        """
+        User-defined.
+        Input is metrics instance with user-defined Metric subclass schema.
+        Returns a True/False go/no-go condition to next stage.
+        """
+        return NotImplementedError
+
+
+class Policy(ABC):
+    """
+    ...
+    """
+    def __call__(self, metrics: Metrics, task: abc.Task):
+        """
+        User-defined.
+        Input is metrics instance with user-defined Metric subclass schema.
+        Returns and
+        """
+
+
+
+
+class PolicyGraph(abc.AindBehaviorModel):
+    graph: dict[Rule, list[tuple[Rule, Rule]]]
+
+
+class Stage(abc.AindBehaviorModel):
+    """
+    Instance of a Task.
+    Task Parameters may change according to rules defined in PolicyGraph.
+    Stage manages a PolicyGraph instance with a read/write API.
+    """
+
+    name: str = Field(..., description='Stage name.')
+    task: abc.Task = Field(..., description='Task in which this stage is based off of.')
+    graph: PolicyGraph = defaultdict(list)
+
+
+
+
+    # TODO: Field serializer is probably not necessary--
+    # Pydantic performs recursive checks on initalization/assignment.
+    # Teechnically, someone could change it though, so an additional check
+    # on export is okay.
+
+GRADUATED = Stage(...)
+# ^TODO, Fill Graduated
+
+
 class CurriculumGraph(abc.AindBehaviorModel):
     """
     Graph of mouse tasks.
@@ -60,16 +110,11 @@ class CurriculumGraph(abc.AindBehaviorModel):
     graph: dict[Stage, list[tuple[Rule, Stage]]]
 
 
-class Curriculum:
+class Curriculum(abc.AindBehaviorModel):
     """
-    Pairs Curriculum Graph with utilities.
+    Curriculum manages a CurriculumGraph instance with a read/write API.
     """
-
-    def __init__(self):
-        """
-        Simply manages a graph instance.
-        """
-        self.graph: CurriculumGraph = defaultdict(list)
+    graph: CurriculumGraph = defaultdict(list)
 
     def import_curriculum(self, json_data: dict):
         """
@@ -196,7 +241,7 @@ class Trainer:
 
     def override_mouse_stage(self, m_id: int, override_stage: Stage):
         """
-        Override mouse stage 
+        Override mouse stage
         """
         assert m_id in self.mouse_ids, \
             f'mouse id {m_id} not in self.mouse_ids.'
