@@ -38,9 +38,7 @@ class ExampleTask(abc.Task):
 
     name: Literal["TaskName"] = "TaskName"
     description: str = abc.ModifiableAttr(default="Ex description of task")
-    version: abc.SemVerAnnotation = "0.0.0"
-    # NOTE: '0.0.0' is a placeholder.
-    # Use the version of your task repo package!
+    version: abc.SemVerAnnotation = abc.__version__
 
     task_parameters: ExampleTaskParameters = abc.ModifiableAttr(
         ..., description=ExampleTaskParameters.__doc__.strip()
