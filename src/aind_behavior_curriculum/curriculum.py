@@ -35,7 +35,7 @@ class Rule:
     ) -> core_schema.CoreSchema:
         """
         Custom validation, Ref:
-        https://docs.pydantic.dev/latest/concepts/types/#as-a-method-on-a-custom-type
+        https://docs.pydantic.dev/latest/concepts/types/#handling-third-party-types
         """
 
         def validate_from_str(value: str) -> Callable:
@@ -95,7 +95,7 @@ class Rule:
     def _serialize_callable(value: str | Callable) -> Callable:
         """
         Custom Serialization.
-        Simply exports reference to function as package + function name.
+        Simlply exports reference to function as package + function name.
         """
         if isinstance(value, str):
             value = Rule._deserialize_callable(value)
@@ -108,12 +108,12 @@ class Policy(Rule):
     how current Task parameters change according to metrics.
     """
 
-    def __hash__(self) -> str:
+    def __hash__(self) -> int:
         """
         Custom Hash Function so that Policy
         can be keys inside of a PolicyGraph.
         """
-        return self.__module__ + '.' + self.__name__
+        return hash(type(self).__name__)
 
     @abstractmethod
     def __call__(self,
@@ -158,16 +158,6 @@ class PolicyTransition(Rule):
         return NotImplementedError
 
 
-class PolicyGraph(abc.AindBehaviorModel):
-    """
-    Graph of Polices.
-    Nodes are Polices and directed edges are PolicyTransitions.
-    Each Policy holds a reference to a list of PolicyTransitions
-    ordered in transition priority.
-    """
-    graph: dict[Policy, list[tuple[PolicyTransition, Policy]]]
-
-
 class Stage(abc.AindBehaviorModel):
     """
     Instance of a Task.
@@ -177,14 +167,14 @@ class Stage(abc.AindBehaviorModel):
 
     name: str = Field(..., description='Stage name.')
     task: abc.Task = Field(..., description='Task in which this stage is based off of.')
-    graph: PolicyGraph = defaultdict(list)
+    graph: dict[Policy, list[tuple[PolicyTransition, Policy]]] = defaultdict(list)
 
-    def __hash__(self) -> str:
+    def __hash__(self) -> int:
         """
         Custom Hash Function so that Stages
         can be keys inside of a StageGraph.
         """
-        return self.name + '.' + self.task.name
+        return hash(self.name + '.' + self.task.name)
 
 
     def add_policy_transition(self,
@@ -278,22 +268,11 @@ class StageTransition(Rule):
         return NotImplementedError
 
 
-class StageGraph(abc.AindBehaviorModel):
-    """
-    Graph of Stages.
-    Nodes are Stages, instances of tasks.
-    Directed Edges are StageTransitions.
-    Each Stage holds a reference to a list of StageTransitions
-    ordered in transition priority.
-    """
-    graph: dict[Stage, list[tuple[StageTransition, Stage]]]
-
-
 class Curriculum(abc.AindBehaviorModel):
     """
     Curriculum manages a StageGraph instance with a read/write API.
     """
-    graph: StageGraph = defaultdict(list)
+    graph: dict[Stage, list[tuple[StageTransition, Stage]]] = defaultdict(list)
     metrics: Metrics = Field(..., description='Reference Metrics object' + \
                              'that defines what Metrics are used in this curriculum.')
 
