@@ -40,6 +40,7 @@ class SemVerAnnotation(str):
             validate_from_str, _handler(str)
         )
 
+
 """Tag fields inside of TaskParameters as Modifiable, seen in schema export"""
 ModifiableAttr = partial(Field, allow_modification=True)
 
@@ -49,6 +50,7 @@ class TaskParameters(abc.AindBehaviorModelExtra):
     Set of parameters associated with a mouse task.
     Subclass with Task Parameters.
     """
+
     pass
 
 

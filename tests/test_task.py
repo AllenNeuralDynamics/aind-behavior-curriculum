@@ -4,8 +4,10 @@ Task Test Suite
 
 import unittest
 
-import aind_behavior_curriculum as abc
 import example_project as ex
+
+import aind_behavior_curriculum as abc
+
 
 class TaskTests(unittest.TestCase):
     """Unit tests for valid and invalid Task usage"""
@@ -42,11 +44,15 @@ class TaskTests(unittest.TestCase):
     def test_invalid_construction(self):
         def invalid_type():
             ex_parameters = ex.ExampleTaskParameters(field_1="20")
-            ex_task = ex.ExampleTask(task_parameters=ex_parameters)  # noqa: F841
+            ex_task = ex.ExampleTask(
+                task_parameters=ex_parameters
+            )  # noqa: F841
 
         def invalid_field():
             ex_parameters = ex.ExampleTaskParameters(field_4=5)
-            ex_task = ex.ExampleTask(task_parameters=ex_parameters)  # noqa: F841
+            ex_task = ex.ExampleTask(
+                task_parameters=ex_parameters
+            )  # noqa: F841
 
         self.assertRaises(Exception, invalid_type)
         self.assertRaises(Exception, invalid_field)

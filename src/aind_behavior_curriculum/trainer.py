@@ -10,11 +10,11 @@ class Trainer:
     """
 
     @abstractmethod
-    def load_data(self,
-                  mouse_id: int
-                  ) -> tuple[abc.Curriculum,
-                             list[tuple[abc.Stage, abc.Policy]],
-                             abc.Metrics]:
+    def load_data(
+        self, mouse_id: int
+    ) -> tuple[
+        abc.Curriculum, list[tuple[abc.Stage, abc.Policy]], abc.Metrics
+    ]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
@@ -25,11 +25,12 @@ class Trainer:
         raise NotImplementedError
 
     @abstractmethod
-    def write_data(self,
-                   mouse_id: int,
-                   curriculum: abc.Curriculum,
-                   history: list[tuple[abc.Stage, abc.Policy]],
-                   ) -> None:
+    def write_data(
+        self,
+        mouse_id: int,
+        curriculum: abc.Curriculum,
+        history: list[tuple[abc.Stage, abc.Policy]],
+    ) -> None:
         """
         User-defined.
         Exports 3 pieces of data to database.
@@ -82,8 +83,9 @@ class Trainer:
                     # Trainer.write_data requires that every stage will have an init policy
                     # as stage_history can only store (stage, policy) tuples.
                     dest_policy = dest_stage.see_policies()[0]
-                    updated_params = dest_policy(curr_metrics,
-                                                 dest_stage.get_task_parameters())
+                    updated_params = dest_policy(
+                        curr_metrics, dest_stage.get_task_parameters()
+                    )
                     dest_stage.set_task_parameters(updated_params)
                     stage_history.append(dest_stage, dest_policy)
 
@@ -98,35 +100,38 @@ class Trainer:
                     # On first true evaluation, update stage history
                     # and publish back to database.
                     if policy_eval(curr_metrics):
-                        updated_params = dest_policy(curr_metrics,
-                                                     dest_stage.get_task_parameters())
+                        updated_params = dest_policy(
+                            curr_metrics, dest_stage.get_task_parameters()
+                        )
                         dest_stage.set_task_parameters(updated_params)
                         stage_history.append(dest_stage, dest_policy)
 
                         self.write_data(m_id, curriculum, stage_history)
 
-    def override_mouse_status(self,
-                              m_id: int,
-                              override_stage: abc.Stage,
-                              override_policy: abc.Policy):
+    def override_mouse_status(
+        self, m_id: int, override_stage: abc.Stage, override_policy: abc.Policy
+    ):
         """
         Override mouse (stage, policy) independent of evaluation.
         Stage and Policy objects may be accessed by calling
         Trainer.load_data and looking inside of the returned Curriculum.
         """
-        assert m_id in self.mouse_ids, \
-            f'mouse id {m_id} not in self.mouse_ids.'
+        assert (
+            m_id in self.mouse_ids
+        ), f"mouse id {m_id} not in self.mouse_ids."
 
         a, b, c = self.load_data(m_id)
         curriculum: abc.Curriculum = a
         stage_history: list[tuple[abc.Stage, abc.Policy]] = b
         curr_metrics: abc.Metrics = c
 
-        assert override_stage in curriculum.see_stages(), \
-            f'override stage {override_stage} not in curriculum stages for mouse id {m_id}.'
+        assert (
+            override_stage in curriculum.see_stages()
+        ), f"override stage {override_stage} not in curriculum stages for mouse id {m_id}."
 
-        assert override_policy in override_stage.see_policies(), \
-            f'override policy {override_policy} not in given override stage {override_stage}.'
+        assert (
+            override_policy in override_stage.see_policies()
+        ), f"override policy {override_policy} not in given override stage {override_stage}."
 
         stage_history.append((override_stage, override_policy))
         self.write_data(m_id, curriculum, stage_history)
