@@ -12,3 +12,5 @@ import examples.example_project as ex
 # 2) Pure Policy Evaluation
 # 3) Stage-Policy Integration
 # 4) Override Stage Policy
+# 5) Empty Stages
+# 6) Multiple trajectories within a Stage (2 metrics assigned to a stage)

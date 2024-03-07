@@ -27,3 +27,16 @@ class AindBehaviorModel(BaseModel):
         strict=True,
         str_strip_whitespace=True,
     )
+
+class AindBehaviorModelExtra(BaseModel):
+    """
+    Same as AindBehaviorModel w/ extra = "allow".
+    Helpful for deserialization of nested subclasses.
+    """
+    model_config = ConfigDict(
+        extra="allow",
+        validate_assignment=True,
+        validate_defaults=True,
+        strict=True,
+        str_strip_whitespace=True,
+    )

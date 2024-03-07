@@ -7,7 +7,7 @@ from __future__ import annotations
 from functools import partial
 from typing import Any, Callable
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 from pydantic_core import core_schema
 from semver import Version
 
@@ -44,19 +44,12 @@ class SemVerAnnotation(str):
 ModifiableAttr = partial(Field, allow_modification=True)
 
 
-class TaskParameters(BaseModel):
+class TaskParameters(abc.AindBehaviorModelExtra):
     """
     Set of parameters associated with a mouse task.
-    Task parameters may be updated and are revalidated on assignment.
+    Subclass with Task Parameters.
     """
-
-    model_config = ConfigDict(
-        extra="allow",
-        validate_assignment=True,
-        validate_defaults=True,
-        strict=True,
-        str_strip_whitespace=True,
-    )
+    pass
 
 
 class Task(abc.AindBehaviorModel):

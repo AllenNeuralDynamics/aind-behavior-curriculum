@@ -3,7 +3,6 @@ Stage-based implementation
 """
 
 from abc import abstractmethod
-from collections import defaultdict
 from importlib import import_module
 from typing import Any, Callable
 
@@ -14,18 +13,24 @@ from pydantic.json_schema import JsonSchemaValue
 import aind_behavior_curriculum as abc
 
 
-class Metrics(abc.AindBehaviorModel):
+class Metrics(abc.AindBehaviorModelExtra):
     """
     Abstract Metrics class.
     Subclass with Metric values.
     """
-    pass
 
 
 class Rule:
     """
     Custom Pydantic Type that defines de/serialiation for Callables.
     """
+
+    def __eq__(self, __value: object) -> bool:
+        """
+        Custom equality method.
+        Two instances of the same subclass type are considered equal.
+        """
+        return isinstance(__value, self.__class__)
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -80,16 +85,13 @@ class Rule:
             return value
         else:
             split = value.rsplit(".", 1)
-            if len(split) == 0:
-                raise ValueError(
-                    "Invalid rule value while attempting to deserialize callable. \
-                        Got {value}, expected string in the format 'module.function'}"
-                )
-            elif len(split) == 1:
-                return globals()[split]
-            else:
-                module = import_module(split[0])
-                return getattr(module, split[1])
+            assert len(split) > 0, \
+                f"Invalid rule value while attempting to deserialize callable. \
+                Got {value}, expected string in the format '<module>.Rule'"
+
+            module = import_module(split[0])
+            obj = getattr(module, split[1])
+            return obj()
 
     @staticmethod
     def _serialize_callable(value: str | Callable) -> Callable:
@@ -99,7 +101,7 @@ class Rule:
         """
         if isinstance(value, str):
             value = Rule._deserialize_callable(value)
-        return value.__module__ + "." + value.__name__
+        return value.__module__ + "." + type(value).__name__
 
 
 class Policy(Rule):
@@ -107,13 +109,6 @@ class Policy(Rule):
     User-defined function that defines
     how current Task parameters change according to metrics.
     """
-
-    def __hash__(self) -> int:
-        """
-        Custom Hash Function so that Policy
-        can be keys inside of a PolicyGraph.
-        """
-        return hash(type(self).__name__)
 
     @abstractmethod
     def __call__(self,
@@ -164,31 +159,56 @@ class Stage(abc.AindBehaviorModel):
     Task Parameters may change according to rules defined in PolicyGraph.
     Stage manages a PolicyGraph instance with a read/write API.
     """
-
     name: str = Field(..., description='Stage name.')
     task: abc.Task = Field(..., description='Task in which this stage is based off of.')
-    graph: dict[Policy, list[tuple[PolicyTransition, Policy]]] = defaultdict(list)
 
-    def __hash__(self) -> int:
-        """
-        Custom Hash Function so that Stages
-        can be keys inside of a StageGraph.
-        """
-        return hash(self.name + '.' + self.task.name)
+    policies: dict[int, Policy] = {}
+    graph: dict[int, list[tuple[PolicyTransition, int]]] = {}
 
+    def _get_policy_id(self, p: Policy) -> int:
+        """
+        Dictionaries are ordered for Python 3.7+ so this is safe.
+        This library requires Python 3.8+.
+        """
+        dict_keys = list(self.policies.keys())
+        dict_values = list(self.policies.values())
+
+        i = dict_values.index(p)
+        return dict_keys[i]
 
     def add_policy_transition(self,
-                       start_policy: Policy,
-                       dest_policy: Policy,
-                       rule: PolicyTransition
-                       ) -> None:
+                              start_policy: Policy,
+                              dest_policy: Policy,
+                              rule: PolicyTransition
+                              ) -> None:
         """
         Add transition to policy graph.
         NOTE: The order in which this method
         is called is the order of transition priority.
         """
 
-        self.graph[start_policy].append((rule, dest_policy))
+        def _create_policy_id() -> int:
+            """
+            Helper method. More readable than using hash(Policy).
+            """
+            new_id = 0
+            if len(self.policies) > 0:
+                new_id = max(len(self.policies), max(self.policies.keys()) + 1)
+            return new_id
+
+        if not (start_policy in self.policies.values()):
+            new_id = _create_policy_id()
+            self.policies[new_id] = start_policy
+        start_id = self._get_policy_id(start_policy)
+
+        if not (dest_policy in self.policies.values()):
+            new_id = _create_policy_id()
+            self.policies[new_id] = dest_policy
+        dest_id = self._get_policy_id(dest_policy)
+
+        if not (start_id in self.graph):
+            self.graph[start_id] = []
+        self.graph[start_id].append((rule, dest_id))
 
     def remove_policy_transition(self,
                           start_policy: Policy,
@@ -197,26 +217,44 @@ class Stage(abc.AindBehaviorModel):
                           ) -> None:
         """
         Remove a transition from curriculum graph.
+        Destination policies with no transitions to them are
+        also removed from the managed Stage.policies record.
+        NOTE: Potentially changes the order of transition priority.
         """
-        assert start_policy in self.graph.keys(), \
-            'start_policy is not in curriculum.'
+        assert start_policy in self.policies.values(), \
+            'start_policy is not in stage.'
 
-        assert (rule, dest_policy) in self.graph[start_policy], \
-            '(rule, dest_policy) pair is not in curriculum.'
+        start_id = self._get_policy_id(start_policy)
+        dest_id = self._get_policy_id(dest_policy)
+        assert (rule, dest_id) in self.graph[start_id], \
+            '(rule, dest_policy) pair is not in stage.'
 
-        self.graph[start_policy].remove((rule, dest_policy))
+        # Remove the policy transition
+        self.graph[start_id].remove((rule, dest_id))
+
+        # Final cleanup:
+        # Check if removed dest_id exists anywhere in the graph values
+        # and remove dest_id from policies if this is not the case.
+        collapsed_values = [item[1] for sublist in self.graph.values() for item in sublist]
+        if not (dest_id in collapsed_values):
+            self.policies.pop(dest_id)
 
     def see_policy_transitions(self, policy: Policy) -> list[tuple[PolicyTransition, Policy]]:
         """
         See transitions of stage in policy graph.
         """
-        return self.graph[policy]
+
+        assert policy in self.policies.values(), \
+            f'policy {policy} is not in curriculum.'
+        policy_id = self._get_policy_id(policy)
+
+        return self.graph[policy_id]
 
     def see_policies(self) -> list[Policy]:
         """
         See policies of policy graph.
         """
-        return list(self.graph.keys())
+        return list(self.policies.values())
 
     def get_task_parameters(self) -> abc.TaskParameters:
         """
@@ -271,10 +309,30 @@ class StageTransition(Rule):
 class Curriculum(abc.AindBehaviorModel):
     """
     Curriculum manages a StageGraph instance with a read/write API.
+    To use, subclass this and add subclass metrics.
     """
-    graph: dict[Stage, list[tuple[StageTransition, Stage]]] = defaultdict(list)
+    pkg_location: str = ""
+    name: str = Field(..., description='Curriculum name')
     metrics: Metrics = Field(..., description='Reference Metrics object' + \
                              'that defines what Metrics are used in this curriculum.')
+
+    stages: dict[int, Stage] = {}
+    graph: dict[int, list[tuple[StageTransition, int]]] = {}
+
+    def model_post_init(self, __context: Any) -> None:
+        super().model_post_init(__context)
+        self.pkg_location = self.__module__ + '.' + type(self).__name__
+
+    def _get_stage_id(self, s: Stage) -> int:
+        """
+        Dictionaries are ordered for Python 3.7+ so this is safe.
+        This library requires Python 3.8+.
+        """
+        dict_keys = list(self.stages.keys())
+        dict_values = list(self.stages.values())
+
+        i = dict_values.index(s)
+        return dict_keys[i]
 
     def add_stage_transition(self,
                        start_stage: Stage,
@@ -287,7 +345,28 @@ class Curriculum(abc.AindBehaviorModel):
         is called is the order of transition priority.
         """
 
-        self.graph[start_stage].append((rule, dest_stage))
+        def _create_stage_id() -> int:
+            """
+            Helper method. More readable than using hash(Stage).
+            """
+            new_id = 0
+            if len(self.stages) > 0:
+                new_id = max(len(self.stages), max(self.stages.keys()) + 1)
+            return new_id
+
+        if not (start_stage in self.stages.values()):
+            new_id = _create_stage_id()
+            self.stages[new_id] = start_stage
+        start_id = self._get_stage_id(start_stage)
+
+        if not (dest_stage in self.stages.values()):
+            new_id = _create_stage_id()
+            self.stages[new_id] = dest_stage
+        dest_id = self._get_stage_id(dest_stage)
+
+        if not (start_id in self.graph):
+            self.graph[start_id] = []
+        self.graph[start_id].append((rule, dest_id))
 
     def remove_stage_transition(self,
                           start_stage: Stage,
@@ -296,26 +375,44 @@ class Curriculum(abc.AindBehaviorModel):
                           ) -> None:
         """
         Remove a transition from curriculum graph.
+        Destination stages with no transitions to them are
+        also removed from the managed curriculum.stages record.
+        NOTE: Potentially changes the order of transition priority.
         """
-        assert start_stage in self.graph.keys(), \
+
+        assert start_stage in self.stages.values(), \
             'start_stage is not in curriculum.'
 
-        assert (rule, dest_stage) in self.graph[start_stage], \
+        start_id = self._get_stage_id(start_stage)
+        dest_id = self._get_stage_id(dest_stage)
+        assert (rule, dest_id) in self.graph[start_id], \
             '(rule, dest_stage) pair is not in curriculum.'
 
-        self.graph[start_stage].remove((rule, dest_stage))
+        # Remove the policy transition
+        self.graph[start_id].remove((rule, dest_id))
+
+        # Final cleanup:
+        # Check if removed dest_id exists anywhere in the graph values
+        # and remove dest_id from policies if this is not the case.
+        collapsed_values = [item[1] for sublist in self.graph.values() for item in sublist]
+        if not (dest_id in collapsed_values):
+            self.stages.pop(dest_id)
 
     def see_stage_transitions(self, stage: Stage) -> list[tuple[StageTransition, Stage]]:
         """
         See transitions of stage in curriculum graph.
         """
-        return self.graph[stage]
+        assert stage in self.stages.values(), \
+            f'Stage {stage} is not in curriculum.'
+        stage_id = self._get_stage_id(stage)
+
+        return self.graph[stage_id]
 
     def see_stages(self) -> list[Stage]:
         """
         See stages of curriculum graph.
         """
-        return list(self.graph.keys())
+        return list(self.stages.values())
 
     def export_visual():
         """

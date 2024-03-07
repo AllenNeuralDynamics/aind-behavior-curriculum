@@ -1,0 +1,108 @@
+{
+    "pkg_location": "__main__.MyCurriculum",
+    "name": "My Curriculum",
+    "metrics": {
+        "theta_1": 0,
+        "theta_2": 0,
+        "theta_3": 0
+    },
+    "stages": {
+        "0": {
+            "name": "Stage A",
+            "task": {
+                "name": "Task A",
+                "description": "",
+                "version": "0.0.1",
+                "task_parameters": {
+                    "field_a": 8
+                }
+            },
+            "policies": {
+                "0": "aind_behavior_curriculum.curriculum.InitalizeStage",
+                "1": "__main__.StageA_PolicyB",
+                "2": "__main__.StageA_PolicyA"
+            },
+            "graph": {
+                "0": [
+                    [
+                        "__main__.T1_10",
+                        1
+                    ],
+                    [
+                        "__main__.T1_5",
+                        2
+                    ]
+                ],
+                "2": [
+                    [
+                        "__main__.T1_10",
+                        1
+                    ]
+                ]
+            }
+        },
+        "1": {
+            "name": "GRADUATED STAGE",
+            "task": {
+                "name": "Empty Task",
+                "description": "",
+                "version": "0.0.0",
+                "task_parameters": {}
+            },
+            "policies": {},
+            "graph": {}
+        },
+        "2": {
+            "name": "Stage B",
+            "task": {
+                "name": "Task B",
+                "description": "",
+                "version": "0.0.1",
+                "task_parameters": {
+                    "field_b": 0.0
+                }
+            },
+            "policies": {
+                "0": "aind_behavior_curriculum.curriculum.InitalizeStage",
+                "1": "__main__.StageB_PolicyB",
+                "2": "__main__.StageB_PolicyA"
+            },
+            "graph": {
+                "0": [
+                    [
+                        "__main__.T3_10",
+                        1
+                    ],
+                    [
+                        "__main__.T3_5",
+                        2
+                    ]
+                ],
+                "2": [
+                    [
+                        "__main__.T3_10",
+                        1
+                    ]
+                ]
+            }
+        }
+    },
+    "graph": {
+        "0": [
+            [
+                "__main__.T2_10",
+                1
+            ],
+            [
+                "__main__.T2_5",
+                2
+            ]
+        ],
+        "2": [
+            [
+                "__main__.T2_10",
+                1
+            ]
+        ]
+    }
+}

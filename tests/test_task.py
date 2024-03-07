@@ -5,7 +5,7 @@ Task Test Suite
 import unittest
 
 import aind_behavior_curriculum as abc
-import examples.example_project as ex
+import example_project as ex
 
 class TaskTests(unittest.TestCase):
     """Unit tests for valid and invalid Task usage"""
