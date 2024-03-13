@@ -1,7 +1,7 @@
 """
 Stage-based implementation
 """
-
+from __future__ import annotations
 from abc import abstractmethod
 from importlib import import_module
 from typing import Any, Callable, Generic, TypeVar, overload, Optional
