@@ -4,16 +4,20 @@ Stage-based implementation
 
 from abc import abstractmethod
 from importlib import import_module
-from typing import Any, Callable
+from typing import Any, Callable, Generic, TypeVar, overload, Optional
 
 from pydantic import Field, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
 import aind_behavior_curriculum as abc
+from aind_behavior_curriculum import Task
 
 
-class Metrics(abc.AindBehaviorModelExtra):
+TTask = TypeVar("TTask", bound=Task)
+
+
+class Metrics(abc.AindBehaviorModelExtra, Generic[TTask]):
     """
     Abstract Metrics class.
     Subclass with Metric values.
@@ -111,16 +115,16 @@ class Rule:
         return value.__module__ + "." + type(value).__name__
 
 
-class Policy(Rule):
+class Policy(Rule, Generic[TTask]):
     """
     User-defined function that defines
     how current Task parameters change according to metrics.
     """
-
+    
     @abstractmethod
     def __call__(
-        self, metrics: Metrics, task_params: abc.TaskParameters
-    ) -> abc.TaskParameters:
+        self, metrics: Metrics[TTask], task_params: abc.TaskParameters[TTask]
+    ) -> abc.TaskParameters[TTask]:
         """
         User-defined.
         Input is metrics instance with user-defined Metric subclass schema
@@ -131,16 +135,30 @@ class Policy(Rule):
         return NotImplementedError
 
 
-class InitalizeStage(Policy):
+class InitalizeStage(Policy[TTask]):
     """
     First Policy in a Stage's Policy Graph.
     """
 
+    @overload
     def __call__(
-        self, metrics: Metrics, task_params: abc.TaskParameters
-    ) -> abc.TaskParameters:
+        self,
+        task_params: abc.TaskParameters[TTask],
+        metrics: Metrics[TTask],
+    ) -> abc.TaskParameters[TTask]: ...
+
+    @overload
+    def __call__(
+        self, task_params: abc.TaskParameters[TTask]
+    ) -> abc.TaskParameters[TTask]: ...
+
+    def __call__(
+        self,
+        task_params: abc.TaskParameters[TTask],
+        metrics: Optional[Metrics[TTask]] = None,
+    ) -> abc.TaskParameters[TTask]:
         """
-        Trivially pass the default values defined in Task initalization.
+        Trivially pass the default
         """
         return task_params
 
@@ -148,14 +166,14 @@ class InitalizeStage(Policy):
 INIT_STAGE = InitalizeStage()
 
 
-class PolicyTransition(Rule):
+class PolicyTransition(Rule, Generic[TTask]):
     """
     User-defined function that defines
     criteria for transitioning between policies based on metrics.
     """
 
     @abstractmethod
-    def __call__(self, metrics: Metrics) -> bool:
+    def __call__(self, metrics: Metrics[TTask]) -> bool:
         """
         User-defined.
         Input is metrics instance with user-defined Metric subclass schema.
@@ -164,7 +182,7 @@ class PolicyTransition(Rule):
         return NotImplementedError
 
 
-class Stage(abc.AindBehaviorModel):
+class Stage(abc.AindBehaviorModel, Generic[TTask]):
     """
     Instance of a Task.
     Task Parameters may change according to rules defined in PolicyGraph.
@@ -172,14 +190,14 @@ class Stage(abc.AindBehaviorModel):
     """
 
     name: str = Field(..., description="Stage name.")
-    task: abc.Task = Field(
+    task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
 
-    policies: dict[int, Policy] = {}
-    graph: dict[int, list[tuple[PolicyTransition, int]]] = {}
+    policies: dict[int, Policy[TTask]] = {}
+    graph: dict[int, list[tuple[PolicyTransition[TTask], int]]] = {}
 
-    def _get_policy_id(self, p: Policy) -> int:
+    def _get_policy_id(self, p: Policy[TTask]) -> int:
         """
         Dictionaries are ordered for Python 3.7+ so this is safe.
         This library requires Python 3.8+.
@@ -190,8 +208,16 @@ class Stage(abc.AindBehaviorModel):
         i = dict_values.index(p)
         return dict_keys[i]
 
+    @overload
+    def add_policy_transition(self, start_policy: Policy[TTask], dest_policy: Policy[TTask], rule: PolicyTransition[TTask]) -> None: ...
+
+
+    @overload
+    def add_policy_transition(self, start_policy: Policy[TTask]) -> None: ...
+    # TODO Ensure this overload is handled correctly for floating policies
+
     def add_policy_transition(
-        self, start_policy: Policy, dest_policy: Policy, rule: PolicyTransition
+        self, start_policy: Policy[TTask], dest_policy: Optional[Policy[TTask]]=None, rule: Optional[PolicyTransition[TTask]]=None
     ) -> None:
         """
         Add transition to policy graph.
@@ -223,8 +249,9 @@ class Stage(abc.AindBehaviorModel):
         self.graph[start_id].append((rule, dest_id))
 
     def remove_policy_transition(
-        self, start_policy: Policy, dest_policy: Policy, rule: PolicyTransition
+        self, start_policy: Policy[TTask], dest_policy: Policy[TTask], rule: PolicyTransition[TTask]
     ) -> None:
+        # TODO I think you will need a method to just remove a float policy too
         """
         Remove a transition from curriculum graph.
         Destination policies with no transitions to them are
@@ -254,8 +281,8 @@ class Stage(abc.AindBehaviorModel):
             self.policies.pop(dest_id)
 
     def see_policy_transitions(
-        self, policy: Policy
-    ) -> list[tuple[PolicyTransition, Policy]]:
+        self, policy: Policy[TTask]
+    ) -> list[tuple[PolicyTransition[TTask], Policy[TTask]]]:
         """
         See transitions of stage in policy graph.
         """
@@ -267,19 +294,19 @@ class Stage(abc.AindBehaviorModel):
 
         return self.graph[policy_id]
 
-    def see_policies(self) -> list[Policy]:
+    def see_policies(self) -> list[Policy[TTask]]:
         """
         See policies of policy graph.
         """
         return list(self.policies.values())
 
-    def get_task_parameters(self) -> abc.TaskParameters:
+    def get_task_parameters(self) -> abc.TaskParameters[TTask]:
         """
         See current task parameters of Task.
         """
         return self.task.task_parameters
 
-    def set_task_parameters(self, task_params: abc.TaskParameters) -> None:
+    def set_task_parameters(self, task_params: abc.TaskParameters[TTask]) -> None:
         """
         Set task with new set of task parameters.
         Task revalidates TaskParameters on assignment.
@@ -310,14 +337,14 @@ class Graduated(Stage):
 GRADUATED = Graduated()
 
 
-class StageTransition(Rule):
+class StageTransition(Rule, Generic[TTask]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
     """
 
     @abstractmethod
-    def __call__(self, metrics: Metrics) -> bool:
+    def __call__(self, task_parameters: abc.TaskParameters[TTask], metrics: Metrics[TTask]) -> bool:
         """
         User-defined.
         Input is metrics instance with user-defined Metric subclass schema.
@@ -325,6 +352,8 @@ class StageTransition(Rule):
         """
         return NotImplementedError
 
+InboundStage = TypeVar("InboundStage", bound='Stage')
+OutboundStage = TypeVar("OutboundStage", bound='Stage')
 
 class Curriculum(abc.AindBehaviorModel):
     """
@@ -334,13 +363,8 @@ class Curriculum(abc.AindBehaviorModel):
 
     pkg_location: str = ""
     name: str = Field(..., description="Curriculum name")
-    metrics: Metrics = Field(
-        ...,
-        description="Reference Metrics object"
-        + "that defines what Metrics are used in this curriculum.",
-    )
 
-    stages: dict[int, Stage] = {}
+    stages: dict[int, InboundStage] = {}
     graph: dict[int, list[tuple[StageTransition, int]]] = {}
 
     def model_post_init(self, __context: Any) -> None:
@@ -350,7 +374,7 @@ class Curriculum(abc.AindBehaviorModel):
         super().model_post_init(__context)
         self.pkg_location = self.__module__ + "." + type(self).__name__
 
-    def _get_stage_id(self, s: Stage) -> int:
+    def _get_stage_id(self, s: InboundStage) -> int:
         """
         Dictionaries are ordered for Python 3.7+ so this is safe.
         This library requires Python 3.8+.
@@ -363,8 +387,8 @@ class Curriculum(abc.AindBehaviorModel):
 
     def add_stage_transition(
         self,
-        start_stage: Stage,
-        dest_stage: Stage,
+        start_stage: InboundStage,
+        dest_stage: OutboundStage,
         rule: StageTransition,
     ) -> None:
         """
@@ -398,8 +422,8 @@ class Curriculum(abc.AindBehaviorModel):
 
     def remove_stage_transition(
         self,
-        start_stage: Stage,
-        dest_stage: Stage,
+        start_stage: InboundStage,
+        dest_stage: OutboundStage,
         rule: StageTransition,
     ) -> None:
         """
@@ -432,8 +456,8 @@ class Curriculum(abc.AindBehaviorModel):
             self.stages.pop(dest_id)
 
     def see_stage_transitions(
-        self, stage: Stage
-    ) -> list[tuple[StageTransition, Stage]]:
+        self, stage: InboundStage
+    ) -> list[tuple[StageTransition, OutboundStage]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -444,7 +468,7 @@ class Curriculum(abc.AindBehaviorModel):
 
         return self.graph[stage_id]
 
-    def see_stages(self) -> list[Stage]:
+    def see_stages(self) -> list[InboundStage]:
         """
         See stages of curriculum graph.
         """
