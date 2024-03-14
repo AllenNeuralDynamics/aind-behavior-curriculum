@@ -62,7 +62,7 @@ class Trainer:
                          subject_id: int,
                          curriculum: abc.Curriculum,
                          start_stage: abc.Stage,
-                         start_policy: Optional[abc.Policy] = abc.INIT_STAGE):
+                         start_policy: abc.Policy):
         """
         Adds subject into the Trainer system.
         """
@@ -70,9 +70,8 @@ class Trainer:
         assert start_stage in curriculum.stages.values(), \
             "Provided start_stage is not in provided curriculum."
 
-        if len(start_stage.policies) > 0:
-            assert start_policy in start_stage.policies.values(), \
-                "Provided start_policy is not in provided stage_stage."
+        assert start_policy in start_stage.policies.values(), \
+            "Provided start_policy is not in provided stage_stage."
 
         assert subject_id not in self.subject_ids, \
             f"Subject_id {subject_id} is already registered."
@@ -82,7 +81,7 @@ class Trainer:
                         curriculum,
                         history=[(start_stage, start_policy)])
 
-    def evaluate_subject(self):
+    def evaluate_subjects(self):
         """
         Calls user-defined functions to automatically update
         subject stage along curriculum.
@@ -173,7 +172,3 @@ class Trainer:
         """
 
         # TODO
-
-class S(Trainer):
-    def __init__(self):
-        super().__init__()

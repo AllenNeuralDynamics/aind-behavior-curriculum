@@ -56,3 +56,18 @@ class ExampleTrainer(abc.Trainer):
         """
         MICE_CURRICULUMS[subject_id] = curriculum
         MICE_STAGE_HISTORY[subject_id] = history
+
+
+    def clear_database(self) -> None:
+        """
+        Testing utility, clears the database for the next unit test.
+        """
+        MICE_CURRICULUMS: dict[int, abc.Curriculum] = {}
+        MICE_STAGE_HISTORY: dict[int, list[tuple[abc.Stage, abc.Policy]]] = (
+            defaultdict(list)
+        )
+        MICE_METRICS: dict[int, abc.Metrics] = {
+            0: ex.ExampleMetrics(),
+            1: ex.ExampleMetrics(),
+            2: ex.ExampleMetrics(),
+        }
