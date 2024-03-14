@@ -123,25 +123,28 @@ if __name__ == "__main__":
     stageA = StageA(task=taskA)
     stageB = StageB(task=taskB)
 
-    stageA.add_policy_transition(start_policy=UpdateThreshold())
+    #stageA.add_policy_transition(start_policy=UpdateThreshold()) # this crashes serialization because of the nullable type
+    stageA.add_policy_transition(abc.INIT_STAGE, UpdateThreshold(), UpdateThreshold())
+
     #  TODO should be possible to have policies without transitions. I would say that the method should be:
 
     # Construct the Curriculum
     ex_curr = abc.Curriculum(
         #metrics=VrForagingMetrics()
+        name = "example_curriculum",
     )  # TODO why do we have metrics here???
     ex_curr.add_stage_transition(stageA, stageB, UpdateStageOnReward())
 
     # TODO: TEST THIS
 
     # Export/Serialize Curriculum Instance:
-    with open("examples/curriculum_instance.json", "w") as f:
+    with open("examples/vr_for.json", "w") as f:
         json_dict = ex_curr.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
 
     # Import/De-serialize Instance:
-    with open("examples/curriculum_instance.json", "w") as f:
+    with open("examples/vr_for.json", "r") as f:
         json_data = f.read()
     curriculum_instance = abc.Curriculum.model_validate_json(json_data)
     print(curriculum_instance)
