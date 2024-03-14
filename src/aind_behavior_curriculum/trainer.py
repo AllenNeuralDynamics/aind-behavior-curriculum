@@ -1,62 +1,93 @@
 from abc import abstractmethod
 
+from typing import Optional
+
 import aind_behavior_curriculum as abc
 
 
 class Trainer:
     """
-    Pulls mouse curriculum and history,
+    Pulls subject curriculum and history,
     and performs fundamental curriculum evaluation/update.
+
+    Intended usage:
+    1) Implement abstract methods
+    2) Call Trainer.register_subject() x N
+    3) Call Trainer.evaluate_subject() or
+            Trainer.override_subject_status() x N
     """
+
+    def __init__(self):
+        """
+        Trainer manages a list of subjects initalized here.
+        NOTE: Within Trainer subclass, please call super().__init__()
+        """
+        self.subject_ids = []
 
     @abstractmethod
     def load_data(
-        self, mouse_id: int
+        self, subject_id: int
     ) -> tuple[
         abc.Curriculum, list[tuple[abc.Stage, abc.Policy]], abc.Metrics
     ]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
-        - Mouse Curriculum
+        - subject Curriculum
         - List of (Stage History, Policy) Tuples
-        - Mouse Metrics
+        - subject Metrics
         """
         raise NotImplementedError
 
     @abstractmethod
     def write_data(
         self,
-        mouse_id: int,
+        subject_id: int,
         curriculum: abc.Curriculum,
         history: list[tuple[abc.Stage, abc.Policy]],
     ) -> None:
         """
         User-defined.
         Exports 3 pieces of data to database.
-        - Mouse Id
-        - Mouse Curriculum
+        - subject Id
+        - subject Curriculum
         - List of (Stage History, Policy) Tuples
 
         For Curriculums with no internal policies, insert tacit abc.INIT_STAGE
         """
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def mouse_ids(self) -> list[int]:
-        """
-        User-defined.
-        Returns list of mouse ids that this Trainer is managing.
-        """
-        raise NotImplementedError
 
-    def evaluate_mice(self):
+    def register_subject(self,
+                         subject_id: int,
+                         curriculum: abc.Curriculum,
+                         start_stage: abc.Stage,
+                         start_policy: Optional[abc.Policy] = abc.INIT_STAGE):
+        """
+        Adds subject into the Trainer system.
+        """
+
+        assert start_stage in curriculum.stages.values(), \
+            "Provided start_stage is not in provided curriculum."
+
+        if len(start_stage.policies) > 0:
+            assert start_policy in start_stage.policies.values(), \
+                "Provided start_policy is not in provided stage_stage."
+
+        assert subject_id not in self.subject_ids, \
+            f"Subject_id {subject_id} is already registered."
+
+        self.subject_ids.append(subject_id)
+        self.write_data(subject_id,
+                        curriculum,
+                        history=[(start_stage, start_policy)])
+
+    def evaluate_subject(self):
         """
         Calls user-defined functions to automatically update
-        mouse stage along curriculum.
-        The timestep between evaluate_mice calls is flexible--
-        this function will skip mice to the latest stage/policy
+        subject stage along curriculum.
+        The timestep between evaluate_subject calls is flexible--
+        this function will skip subject to the latest stage/policy
         they are applicable for.
         """
 
@@ -66,8 +97,8 @@ class Trainer:
 
         # 2) Policy transition: update stage history with
         #   policy and execute the policy
-        for m_id in self.mouse_ids:
-            a, b, c = self.load_data(m_id)
+        for s_id in self.subject_ids:
+            a, b, c = self.load_data(s_id)
             curriculum: abc.Curriculum = a
             stage_history: list[tuple[abc.Stage, abc.Policy]] = b
             curr_metrics: abc.Metrics = c
@@ -89,7 +120,7 @@ class Trainer:
                     dest_stage.set_task_parameters(updated_params)
                     stage_history.append(dest_stage, dest_policy)
 
-                    self.write_data(m_id, curriculum, stage_history)
+                    self.write_data(s_id, curriculum, stage_history)
                     advance_stage = True
                     break
 
@@ -106,35 +137,35 @@ class Trainer:
                         dest_stage.set_task_parameters(updated_params)
                         stage_history.append(dest_stage, dest_policy)
 
-                        self.write_data(m_id, curriculum, stage_history)
+                        self.write_data(s_id, curriculum, stage_history)
 
-    def override_mouse_status(
-        self, m_id: int, override_stage: abc.Stage, override_policy: abc.Policy
+    def override_subject_status(
+        self, s_id: int, override_stage: abc.Stage, override_policy: abc.Policy
     ):
         """
-        Override mouse (stage, policy) independent of evaluation.
+        Override subject (stage, policy) independent of evaluation.
         Stage and Policy objects may be accessed by calling
         Trainer.load_data and looking inside of the returned Curriculum.
         """
         assert (
-            m_id in self.mouse_ids
-        ), f"mouse id {m_id} not in self.mouse_ids."
+            s_id in self.subject_ids
+        ), f"subject id {s_id} not in self.subject_ids."
 
-        a, b, c = self.load_data(m_id)
+        a, b, c = self.load_data(s_id)
         curriculum: abc.Curriculum = a
         stage_history: list[tuple[abc.Stage, abc.Policy]] = b
         curr_metrics: abc.Metrics = c
 
         assert (
             override_stage in curriculum.see_stages()
-        ), f"override stage {override_stage} not in curriculum stages for mouse id {m_id}."
+        ), f"override stage {override_stage} not in curriculum stages for subject id {s_id}."
 
         assert (
             override_policy in override_stage.see_policies()
         ), f"override policy {override_policy} not in given override stage {override_stage}."
 
         stage_history.append((override_stage, override_policy))
-        self.write_data(m_id, curriculum, stage_history)
+        self.write_data(s_id, curriculum, stage_history)
 
     def export_visual(self):
         """
@@ -142,3 +173,7 @@ class Trainer:
         """
 
         # TODO
+
+class S(Trainer):
+    def __init__(self):
+        super().__init__()

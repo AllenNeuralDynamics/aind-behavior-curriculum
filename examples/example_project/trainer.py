@@ -24,11 +24,15 @@ MICE_METRICS: dict[int, abc.Metrics] = {
 
 class ExampleTrainer(abc.Trainer):
     def __init__(self) -> None:
+        """
+        Custom init w/ super.__init__()
+        Add database connections, etc. here
+        """
         super().__init__()
-        self.m_ids = []
+
 
     def load_data(
-        self, mouse_id: int
+        self, subject_id: int
     ) -> tuple[
         abc.Curriculum, list[tuple[abc.Stage, abc.Policy]], abc.Metrics
     ]:
@@ -36,43 +40,19 @@ class ExampleTrainer(abc.Trainer):
         Read from proxy database.
         """
         return (
-            MICE_CURRICULUMS[mouse_id],
-            MICE_STAGE_HISTORY[mouse_id],
-            MICE_METRICS[mouse_id],
+            MICE_CURRICULUMS[subject_id],
+            MICE_STAGE_HISTORY[subject_id],
+            MICE_METRICS[subject_id],
         )
 
     def write_data(
         self,
-        mouse_id: int,
+        subject_id: int,
         curriculum: abc.Curriculum,
         history: list[tuple[abc.Stage, abc.Policy]],
     ) -> None:
         """
         Add to proxy database.
         """
-        MICE_CURRICULUMS[mouse_id] = curriculum
-        MICE_STAGE_HISTORY[mouse_id] = history
-        self.m_ids.append(mouse_id)
-
-    @property
-    def mouse_ids(self) -> list[int]:
-        """
-        Return managed mouse_ids.
-        """
-        return self.m_ids
-
-
-if __name__ == "__main__":
-    # TODO: TEST THIS
-
-    # Simulation: Alternate between evaluating mice
-    # and editing metrics.
-    ex_trainer = ExampleTrainer()
-    ex_trainer.evaluate_mice()
-    MICE_METRICS[...] = ...
-
-    ex_trainer.evaluate_mice()
-    MICE_METRICS[...] = ...
-
-    ex_trainer.evaluate_mice()
-    MICE_METRICS[...] = ...
+        MICE_CURRICULUMS[subject_id] = curriculum
+        MICE_STAGE_HISTORY[subject_id] = history

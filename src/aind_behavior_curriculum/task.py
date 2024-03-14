@@ -47,7 +47,7 @@ ModifiableAttr = partial(Field, allow_modification=True)
 
 class TaskParameters(abc.AindBehaviorModelExtra):
     """
-    Set of parameters associated with a mouse task.
+    Set of parameters associated with a subject task.
     Subclass with Task Parameters.
     """
 
