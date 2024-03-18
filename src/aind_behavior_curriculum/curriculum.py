@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from importlib import import_module
 from typing import Any, Callable, Generic, TypeVar, overload, Optional
+import warnings
 
 from pydantic import Field, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
@@ -120,7 +121,7 @@ class Policy(Rule, Generic[TTask]):
     User-defined function that defines
     how current Task parameters change according to metrics.
     """
-    
+
     @abstractmethod
     def __call__(
         self, metrics: Metrics[TTask], task_params: abc.TaskParameters[TTask]
@@ -208,77 +209,128 @@ class Stage(abc.AindBehaviorModel, Generic[TTask]):
         i = dict_values.index(p)
         return dict_keys[i]
 
-    @overload
-    def add_policy_transition(self, start_policy: Policy[TTask], dest_policy: Policy[TTask], rule: PolicyTransition[TTask]) -> None: ...
+    def _create_policy_id(self) -> int:
+        """
+        Helper method for add_node and add_transition.
+        More readable than using hash(Policy).
+        """
+        new_id = 0
+        if len(self.policies) > 0:
+            new_id = max(len(self.policies), max(self.policies.keys()) + 1)
+        return new_id
 
+    def add_policy(self, policy: Policy[TTask]) -> None:
+        """
+        Adds a floating policy to the Stage adjacency graph.
+        """
 
-    @overload
-    def add_policy_transition(self, start_policy: Policy[TTask]) -> None: ...
-    # TODO Ensure this overload is handled correctly for floating policies
+        if policy in self.policies.values():
+            warnings.warn(f'Policy {policy} has already been added to this Stage.
+                            Stages cannot have duplicate policies.')
+        else:
+            p_id = self._create_policy_id()
+            self.policies[p_id] = policy
+
+    def remove_policy(self, policy: Policy[TTask]) -> None:
+        """
+        Removes policy and all associated incoming/outgoing
+        transition rules from the stage graph.
+        NOTE: Removed nodes and transitions have the side effect
+        of changing transition priority.
+        """
+        assert (policy in self.policies.values()), \
+            f'Policy {policy} is not in the stage graph to be removed.'
+
+        # Resolve policy id
+        p_id = self._get_policy_id(policy)
+
+        # Remove policy from policy list
+        del self.policies[p_id]
+
+        # Remove policy from stage graph
+        for start_id in self.graph:
+            if start_id == p_id:
+                # Remove outgoing transitions
+                del self.graph[p_id]
+                continue
+
+            for (rule, dest_id) in self.graph[start_id]:
+                if dest_id == p_id:
+                    # Remove incoming transitions
+                    self.graph[start_id].remove((rule, dest_id))
 
     def add_policy_transition(
-        self, start_policy: Policy[TTask], dest_policy: Optional[Policy[TTask]]=None, rule: Optional[PolicyTransition[TTask]]=None
+        self,
+        start_policy: Policy[TTask],
+        dest_policy: Policy[TTask],
+        rule: PolicyTransition[TTask]
     ) -> None:
         """
-        Add transition to policy graph.
+        Add policy transition between two policies:
+        Policy_A -> Policy_B.
+
+        If Policy_A has been added to stage before, this method starts a transition
+            from the exisiting Policy_A.
+        If Policy_B has been added to stage before, this method creates a transition
+            into the existing Policy_B.
+
         NOTE: The order in which this method
-        is called is the order of transition priority.
+        is called sets the order of transition priority.
         """
 
-        def _create_policy_id() -> int:
-            """
-            Helper method. More readable than using hash(Policy).
-            """
-            new_id = 0
-            if len(self.policies) > 0:
-                new_id = max(len(self.policies), max(self.policies.keys()) + 1)
-            return new_id
-
+        # Resolve id of start_policy
         if not (start_policy in self.policies.values()):
-            new_id = _create_policy_id()
+            new_id = self._create_policy_id()
             self.policies[new_id] = start_policy
         start_id = self._get_policy_id(start_policy)
 
+        # Resolve id of dest_policy
         if not (dest_policy in self.policies.values()):
-            new_id = _create_policy_id()
+            new_id = self._create_policy_id()
             self.policies[new_id] = dest_policy
         dest_id = self._get_policy_id(dest_policy)
 
+        # Add the new transition to the stage graph
         if not (start_id in self.graph):
             self.graph[start_id] = []
         self.graph[start_id].append((rule, dest_id))
 
     def remove_policy_transition(
-        self, start_policy: Policy[TTask], dest_policy: Policy[TTask], rule: PolicyTransition[TTask]
+        self,
+        start_policy: Policy[TTask],
+        dest_policy: Policy[TTask],
+        rule: PolicyTransition[TTask],
+        remove_start_policy: bool = False,
+        remove_dest_policy: bool = False
     ) -> None:
-        # TODO I think you will need a method to just remove a float policy too
         """
-        Remove a transition from curriculum graph.
-        Destination policies with no transitions to them are
-        also removed from the managed Stage.policies record.
-        NOTE: Potentially changes the order of transition priority.
+        Removes transition with options to remove start/end policies
+        associated with the transition.
+        NOTE: Removed nodes and transitions has the side effect
+        of changing transition priority.
+
         """
-        assert (
-            start_policy in self.policies.values()
-        ), "start_policy is not in stage."
+
+        assert (start_policy in self.policies.values()), \
+            f'Policy {start_policy} is not in the stage graph to be removed.'
+
+        assert (dest_policy in self.policies.values()), \
+            f'Policy {dest_policy} is not in the stage graph to be removed.'
 
         start_id = self._get_policy_id(start_policy)
         dest_id = self._get_policy_id(dest_policy)
-        assert (rule, dest_id) in self.graph[
-            start_id
-        ], "(rule, dest_policy) pair is not in stage."
+        assert (rule, dest_id) in self.graph[start_id], \
+            f'Policy {start_policy} does not transition' + \
+            f'into Policy {dest_policy} with Rule {rule}.'
 
-        # Remove the policy transition
+        # Optionally remove nodes
+        if remove_start_policy:
+            self.remove_policy(start_policy)
+        if remove_dest_policy:
+            self.remove_policy(dest_policy)
+
+        # Remove transition
         self.graph[start_id].remove((rule, dest_id))
-
-        # Final cleanup:
-        # Check if removed dest_id exists anywhere in the graph values
-        # and remove dest_id from policies if this is not the case.
-        collapsed_values = [
-            item[1] for sublist in self.graph.values() for item in sublist
-        ]
-        if not (dest_id in collapsed_values):
-            self.policies.pop(dest_id)
 
     def see_policy_transitions(
         self, policy: Policy[TTask]
@@ -289,7 +341,7 @@ class Stage(abc.AindBehaviorModel, Generic[TTask]):
 
         assert (
             policy in self.policies.values()
-        ), f"policy {policy} is not in curriculum."
+        ), f"Policy {policy} is not in curriculum."
         policy_id = self._get_policy_id(policy)
 
         return self.graph[policy_id]
@@ -355,8 +407,6 @@ class StageTransition(Rule, Generic[TTask]):
         """
         return NotImplementedError
 
-InboundStage = TypeVar("InboundStage", bound='Stage')
-OutboundStage = TypeVar("OutboundStage", bound='Stage')
 
 class Curriculum(abc.AindBehaviorModel):
     """
@@ -367,7 +417,7 @@ class Curriculum(abc.AindBehaviorModel):
     pkg_location: str = ""
     name: str = Field(..., description="Curriculum name")
 
-    stages: dict[int, InboundStage] = {}
+    stages: dict[int, Stage] = {}
     graph: dict[int, list[tuple[StageTransition, int]]] = {}
 
     def model_post_init(self, __context: Any) -> None:
@@ -377,7 +427,7 @@ class Curriculum(abc.AindBehaviorModel):
         super().model_post_init(__context)
         self.pkg_location = self.__module__ + "." + type(self).__name__
 
-    def _get_stage_id(self, s: InboundStage) -> int:
+    def _get_stage_id(self, s: Stage) -> int:
         """
         Dictionaries are ordered for Python 3.7+ so this is safe.
         This library requires Python 3.8+.
@@ -388,79 +438,132 @@ class Curriculum(abc.AindBehaviorModel):
         i = dict_values.index(s)
         return dict_keys[i]
 
+    def _create_stage_id(self) -> int:
+        """
+        Helper method. More readable than using hash(Stage).
+        """
+        new_id = 0
+        if len(self.stages) > 0:
+            new_id = max(len(self.stages), max(self.stages.keys()) + 1)
+        return new_id
+
+    def add_stage(self, stage: Stage) -> None:
+        """
+        Adds a floating stage to the Curriculum adjacency graph.
+        """
+
+        if stage in self.stages.values():
+            warnings.warn(f'Stage {stage} has already been added to this Curriculum.
+                            A Curriculum cannot have duplicate stages.')
+        else:
+            p_id = self._create_stage_id()
+            self.stages[p_id] = stage
+
+    def remove_stage(self, stage: Stage) -> None:
+        """
+        Removes stage and all associated incoming/outgoing
+        transition rules from the curriculum graph.
+        NOTE: Removed nodes and transitions have the side effect
+        of changing transition priority.
+        """
+
+        assert (stage in self.stages.values()), \
+            f'Stage {stage} is not in the stage graph to be removed.'
+
+        # Resolve policy id
+        p_id = self._get_stage_id(stage)
+
+        # Remove policy from policy list
+        del self.stages[p_id]
+
+        # Remove policy from stage graph
+        for start_id in self.graph:
+            if start_id == p_id:
+                # Remove outgoing transitions
+                del self.graph[p_id]
+                continue
+
+            for (rule, dest_id) in self.graph[start_id]:
+                if dest_id == p_id:
+                    # Remove incoming transitions
+                    self.graph[start_id].remove((rule, dest_id))
+
     def add_stage_transition(
         self,
-        start_stage: InboundStage,
-        dest_stage: OutboundStage,
+        start_stage: Stage,
+        dest_stage: Stage,
         rule: StageTransition,
     ) -> None:
         """
-        Add transition to curriculum graph.
+        Add stage transition between two stages:
+        Stage_A -> Stage_B.
+
+        If Stage_A has been added to stage before, this method starts a transition
+            from the exisiting Stage_A.
+        If Stage_B has been added to stage before, this method creates a transition
+            into the existing Stage_B.
+
         NOTE: The order in which this method
-        is called is the order of transition priority.
+        is called sets the order of transition priority.
         """
 
-        def _create_stage_id() -> int:
-            """
-            Helper method. More readable than using hash(Stage).
-            """
-            new_id = 0
-            if len(self.stages) > 0:
-                new_id = max(len(self.stages), max(self.stages.keys()) + 1)
-            return new_id
-
+        # Resolve id of start_stage
         if not (start_stage in self.stages.values()):
-            new_id = _create_stage_id()
+            new_id = self._create_stage_id()
             self.stages[new_id] = start_stage
         start_id = self._get_stage_id(start_stage)
 
+        # Resolve id of dest_stage
         if not (dest_stage in self.stages.values()):
-            new_id = _create_stage_id()
+            new_id = self._create_stage_id()
             self.stages[new_id] = dest_stage
         dest_id = self._get_stage_id(dest_stage)
 
+        # Add the new transition to the stage graph
         if not (start_id in self.graph):
             self.graph[start_id] = []
         self.graph[start_id].append((rule, dest_id))
 
     def remove_stage_transition(
         self,
-        start_stage: InboundStage,
-        dest_stage: OutboundStage,
-        rule: StageTransition,
+        start_stage: Policy[TTask],
+        dest_stage: Policy[TTask],
+        rule: PolicyTransition[TTask],
+        remove_start_stage: bool = False,
+        remove_dest_stage: bool = False
     ) -> None:
         """
-        Remove a transition from curriculum graph.
-        Destination stages with no transitions to them are
-        also removed from the managed curriculum.stages record.
-        NOTE: Potentially changes the order of transition priority.
+        Removes transition with options to remove start/end stages
+        associated with the transition.
+        NOTE: Removed nodes and transitions has the side effect
+        of changing transition priority.
+
         """
 
-        assert (
-            start_stage in self.stages.values()
-        ), "start_stage is not in curriculum."
+        assert (start_stage in self.stages.values()), \
+            f'Stage {start_stage} is not in the stage graph to be removed.'
+
+        assert (dest_stage in self.stages.values()), \
+            f'Policy {dest_stage} is not in the stage graph to be removed.'
 
         start_id = self._get_stage_id(start_stage)
         dest_id = self._get_stage_id(dest_stage)
-        assert (rule, dest_id) in self.graph[
-            start_id
-        ], "(rule, dest_stage) pair is not in curriculum."
+        assert (rule, dest_id) in self.graph[start_id], \
+            f'Stage {start_stage} does not transition' + \
+            f'into Stage {dest_stage} with Rule {rule}.'
 
-        # Remove the policy transition
+        # Optionally remove nodes
+        if remove_start_stage:
+            self.remove_stage(start_stage)
+        if remove_dest_stage:
+            self.remove_stage(dest_stage)
+
+        # Remove transition
         self.graph[start_id].remove((rule, dest_id))
 
-        # Final cleanup:
-        # Check if removed dest_id exists anywhere in the graph values
-        # and remove dest_id from policies if this is not the case.
-        collapsed_values = [
-            item[1] for sublist in self.graph.values() for item in sublist
-        ]
-        if not (dest_id in collapsed_values):
-            self.stages.pop(dest_id)
-
     def see_stage_transitions(
-        self, stage: InboundStage
-    ) -> list[tuple[StageTransition, OutboundStage]]:
+        self, stage: Stage
+    ) -> list[tuple[StageTransition, Stage]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -471,7 +574,7 @@ class Curriculum(abc.AindBehaviorModel):
 
         return self.graph[stage_id]
 
-    def see_stages(self) -> list[InboundStage]:
+    def see_stages(self) -> list[Stage]:
         """
         See stages of curriculum graph.
         """
