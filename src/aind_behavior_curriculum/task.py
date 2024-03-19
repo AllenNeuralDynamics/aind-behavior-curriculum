@@ -5,7 +5,7 @@ Base Behavior Models
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar, Generic
 
 from pydantic import Field
 from pydantic_core import core_schema
@@ -45,7 +45,10 @@ class SemVerAnnotation(str):
 ModifiableAttr = partial(Field, allow_modification=True)
 
 
-class TaskParameters(abc.AindBehaviorModelExtra):
+TTask = TypeVar("TTask", bound="Task")
+
+
+class TaskParameters(abc.AindBehaviorModelExtra, Generic[TTask]):
     """
     Set of parameters associated with a subject task.
     Subclass with Task Parameters.
@@ -65,8 +68,8 @@ class Task(abc.AindBehaviorModel):
         default="", description="Description of the task."
     )
     version: str = abc.__version__
-    task_parameters: TaskParameters = Field(
-        ..., description=TaskParameters.__doc__.strip()
+    task_parameters: TaskParameters[TTask] = Field(
+        ..., description=TaskParameters.__doc__.strip(), validate_default=True
     )
 
     def update_parameters(self, **kwargs) -> None:
