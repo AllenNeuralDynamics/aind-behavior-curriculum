@@ -50,7 +50,7 @@ TTask = TypeVar("TTask", bound="Task")
 
 class TaskParameters(abc.AindBehaviorModelExtra, Generic[TTask]):
     """
-    Set of parameters associated with a mouse task.
+    Set of parameters associated with a subject task.
     Subclass with Task Parameters.
     """
 

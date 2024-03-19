@@ -333,6 +333,9 @@ class Graduated(Stage):
         task_parameters=abc.TaskParameters(),
     )
 
+    def model_post_init(self, __context: Any) -> None:
+        self.add_policy_transition(INIT_STAGE)  # Floating stage
+
 
 GRADUATED = Graduated()
 
