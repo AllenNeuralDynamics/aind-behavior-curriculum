@@ -9,25 +9,37 @@
         }
     },
     "policies": {
-        "0": "aind_behavior_curriculum.curriculum.InitalizeStage",
-        "1": "__main__.StageA_PolicyB",
-        "2": "__main__.StageA_PolicyA"
+        "0": {
+            "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+        },
+        "1": {
+            "rule": "__main__.stageA_policyA_rule"
+        },
+        "2": {
+            "rule": "__main__.stageA_policyB_rule"
+        }
     },
     "graph": {
         "0": [
             [
-                "__main__.T1_10",
+                {
+                    "rule": "__main__.t1_10_rule"
+                },
                 1
             ],
             [
-                "__main__.T1_5",
-                2
+                {
+                    "rule": "__main__.t1_5_rule"
+                },
+                1
             ]
         ],
-        "2": [
+        "1": [
             [
-                "__main__.T1_10",
-                1
+                {
+                    "rule": "__main__.t1_10_rule"
+                },
+                2
             ]
         ]
     }

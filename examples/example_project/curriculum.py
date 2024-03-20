@@ -57,85 +57,70 @@ class StageB(abc.Stage):
 
 
 # --- POLICIES ---
-class StageA_PolicyA(abc.Policy):
-    def __call__(
-        self, metrics: abc.Metrics, task_params: abc.TaskParameters
-    ) -> abc.TaskParameters:
-        param_dict = task_params.model_dump()
-        param_dict["field_a"] = 8
+def stageA_policyA_rule(metrics: ExampleMetrics,
+                   task_params: TaskAParameters
+                   ) -> TaskAParameters:
+    task_params = task_params.model_copy(deep=True)
+    task_params.field_a = 8
+    return task_params
+stageA_policyA = abc.Policy(rule=stageA_policyA_rule)
 
-        task_param_class = type(task_params)
-        return task_param_class.model_validate(param_dict)
+def stageA_policyB_rule(metrics: ExampleMetrics,
+                   task_params: TaskAParameters
+                   ) -> TaskAParameters:
+    task_params = task_params.model_copy(deep=True)
+    task_params.field_a = 16
+    return task_params
+stageA_policyB = abc.Policy(rule=stageA_policyB_rule)
 
+def stageB_policyA_rule(metrics: ExampleMetrics,
+                   task_params: TaskBParameters
+                   ) -> TaskBParameters:
+    task_params = task_params.model_copy(deep=True)
+    task_params.field_b = 8
+    return task_params
+stageB_policyA = abc.Policy(rule=stageB_policyA_rule)
 
-class StageA_PolicyB(abc.Policy):
-    def __call__(
-        self, metrics: abc.Metrics, task_params: abc.TaskParameters
-    ) -> abc.TaskParameters:
-        param_dict = task_params.model_dump()
-        param_dict["field_a"] = 16
-
-        task_param_class = type(task_params)
-        return task_param_class.model_validate(param_dict)
-
-
-class StageB_PolicyA(abc.Policy):
-    def __call__(
-        self, metrics: abc.Metrics, task_params: abc.TaskParameters
-    ) -> abc.TaskParameters:
-        param_dict = task_params.model_dump()
-        param_dict["field_b"] = 8
-
-        task_param_class = type(task_params)
-        return task_param_class.model_validate(param_dict)
-
-
-class StageB_PolicyB(abc.Policy):
-    def __call__(
-        self, metrics: abc.Metrics, task_params: abc.TaskParameters
-    ) -> abc.TaskParameters:
-        param_dict = task_params.model_dump()
-        param_dict["field_b"] = 16
-
-        task_param_class = type(task_params)
-        return task_param_class.model_validate(param_dict)
+def stageB_policyB_rule(metrics: ExampleMetrics,
+                   task_params: TaskBParameters
+                   ) -> TaskBParameters:
+    task_params = task_params.model_copy(deep=True)
+    task_params.field_b = 16
+    return task_params
+stageB_policyB = abc.Policy(rule=stageB_policyB_rule)
 
 
 # --- POLICY TRANSTITIONS ---
-class T1_5(abc.PolicyTransition):
-    def __call__(self, metrics: abc.Metrics) -> bool:
-        return metrics.theta_1 > 5
+def t1_5_rule(metrics: ExampleMetrics) -> bool:
+    return metrics.theta_1 > 5
+t1_5 = abc.PolicyTransition(rule=t1_5_rule)
 
+def t1_10_rule(metrics: ExampleMetrics) -> bool:
+    return metrics.theta_1 > 10
+t1_10 = abc.PolicyTransition(rule=t1_10_rule)
 
-class T1_10(abc.PolicyTransition):
-    def __call__(self, metrics: abc.Metrics) -> bool:
-        return metrics.theta_1 > 10
+def t3_5_rule(metrics: ExampleMetrics) -> bool:
+    return metrics.theta_3 > 5
+t3_5 = abc.PolicyTransition(rule=t3_5_rule)
 
-
-class T3_5(abc.PolicyTransition):
-    def __call__(self, metrics: abc.Metrics) -> bool:
-        return metrics.theta_3 > 5
-
-
-class T3_10(abc.PolicyTransition):
-    def __call__(self, metrics: abc.Metrics) -> bool:
-        return metrics.theta_3 > 10
+def t3_10_rule(metrics: ExampleMetrics) -> bool:
+    return metrics.theta_3 > 10
+t3_10 = abc.PolicyTransition(rule=t3_10_rule)
 
 
 # --- STAGE TRANSITIONS ---
-class T2_5(abc.StageTransition):
-    def __call__(self, metrics: abc.Metrics) -> bool:
-        return metrics.theta_2 > 5
+def t2_5_rule(metrics: ExampleMetrics) -> bool:
+    return metrics.theta_2 > 5
+t2_5 = abc.StageTransition(rule=t2_5_rule)
+
+def t2_10_rule(metrics: ExampleMetrics) -> bool:
+    return metrics.theta_2 > 10
+t2_10 = abc.StageTransition(rule=t2_10_rule)
 
 
-class T2_10(abc.StageTransition):
-    def __call__(self, metrics: abc.Metrics) -> bool:
-        return metrics.theta_2 > 10
-
-
+# --- CURRICULUM ---
 class MyCurriculum(abc.Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    metrics: ExampleMetrics = Field(...)
 
     stages: dict[int, Union[StageA, StageB, abc.Graduated]] = {}
     graph: dict[int, list[tuple[abc.StageTransition, int]]] = {}
@@ -151,19 +136,20 @@ def construct_curriculum() -> MyCurriculum:
     taskB = TaskB(task_parameters=TaskBParameters())
     stageA = StageA(task=taskA)
     stageB = StageB(task=taskB)
-    stageA.add_policy_transition(abc.INIT_STAGE, StageA_PolicyB(), T1_10())
-    stageA.add_policy_transition(abc.INIT_STAGE, StageA_PolicyA(), T1_5())
-    stageA.add_policy_transition(StageA_PolicyA(), StageA_PolicyB(), T1_10())
 
-    stageB.add_policy_transition(abc.INIT_STAGE, StageB_PolicyB(), T3_10())
-    stageB.add_policy_transition(abc.INIT_STAGE, StageB_PolicyA(), T3_5())
-    stageB.add_policy_transition(StageB_PolicyA(), StageB_PolicyB(), T3_10())
+    stageA.add_policy_transition(abc.INIT_STAGE, stageA_policyA, t1_10)
+    stageA.add_policy_transition(abc.INIT_STAGE, stageA_policyA, t1_5)
+    stageA.add_policy_transition(stageA_policyA, stageA_policyB, t1_10)
+
+    stageB.add_policy_transition(abc.INIT_STAGE, stageB_policyB, t3_10)
+    stageB.add_policy_transition(abc.INIT_STAGE, stageB_policyA, t3_5)
+    stageB.add_policy_transition(stageB_policyA, stageB_policyB, t3_10)
 
     # Construct the Curriculum
-    ex_curr = MyCurriculum(name="My Curriculum", metrics=ExampleMetrics())
-    ex_curr.add_stage_transition(stageA, abc.GRADUATED, T2_10())
-    ex_curr.add_stage_transition(stageA, stageB, T2_5())
-    ex_curr.add_stage_transition(stageB, abc.GRADUATED, T2_10())
+    ex_curr = MyCurriculum(name="My Curriculum")
+    ex_curr.add_stage_transition(stageA, abc.GRADUATED, t2_10)
+    ex_curr.add_stage_transition(stageA, stageB, t2_5)
+    ex_curr.add_stage_transition(stageB, abc.GRADUATED, t2_10)
 
     return ex_curr
 

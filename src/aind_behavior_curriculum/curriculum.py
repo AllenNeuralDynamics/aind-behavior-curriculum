@@ -1,24 +1,27 @@
 """
-Stage-based implementation
+Core Stage and Curriculum Primitives.
 """
 from __future__ import annotations
-from abc import abstractmethod
 from importlib import import_module
-from typing import Any, Callable, Generic, TypeVar, overload, Optional
+import inspect
+from typing import Any, Callable, Generic, TypeVar
 import warnings
 
-from pydantic import Field, GetJsonSchemaHandler
+from pydantic import Field, field_validator, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
-import aind_behavior_curriculum as abc
-from aind_behavior_curriculum import Task
-
+from aind_behavior_curriculum import (
+    AindBehaviorModel,
+    AindBehaviorModelExtra,
+    Task,
+    TaskParameters
+)
 
 TTask = TypeVar("TTask", bound=Task)
 
 
-class Metrics(abc.AindBehaviorModelExtra, Generic[TTask]):
+class Metrics(AindBehaviorModelExtra, Generic[TTask]):
     """
     Abstract Metrics class.
     Subclass with Metric values.
@@ -103,7 +106,7 @@ class Rule:
 
             module = import_module(split[0])
             obj = getattr(module, split[1])
-            return obj()
+            return obj
 
     @staticmethod
     def _serialize_callable(value: str | Callable) -> Callable:
@@ -113,77 +116,104 @@ class Rule:
         """
         if isinstance(value, str):
             value = Rule._deserialize_callable(value)
-        return value.__module__ + "." + type(value).__name__
+
+        return value.__module__ + "." + value.__name__
 
 
-class Policy(Rule, Generic[TTask]):
+class Policy(AindBehaviorModel, Generic[TTask]):
     """
     User-defined function that defines
     how current Task parameters change according to metrics.
     """
+    rule: Rule = Field(..., description="Callable with Serialization.")
 
-    @abstractmethod
-    def __call__(
-        self, metrics: Metrics[TTask], task_params: abc.TaskParameters[TTask]
-    ) -> abc.TaskParameters[TTask]:
+    @field_validator('rule')
+    @classmethod
+    def validate_rule(cls, r: Rule):
         """
-        User-defined.
-        Input is metrics instance with user-defined Metric subclass schema
-        and Task instance managed by the current Stage.
+        Policy Signature:
+        I:
+        - metrics: Metrics object
+        - task_parameters: TaskParameters object
 
-        Returns set of updated TaskParameters.
+        O:
+        - result: TaskParameters object
         """
-        return NotImplementedError
+        if not callable(r):
+            raise ValueError('Rule must be callable.')
+
+        # Check rule follows Transition signature
+        params = list(inspect.signature(r).parameters)
+        param_1 = inspect.signature(r).parameters[params[0]].annotation
+        param_2 = inspect.signature(r).parameters[params[1]].annotation
+        return_type = inspect.signature(r).return_annotation
+
+        module = import_module(param_1.__module__)
+        param_1_obj = getattr(module, param_1.__name__)
+        module = import_module(param_2.__module__)
+        param_2_obj = getattr(module, param_2.__name__)
+        module = import_module(return_type.__module__)
+        return_type_obj = getattr(module, return_type.__name__)
+
+        incorrect_num_params = (len(inspect.signature(r).parameters) != 2)
+        incorrect_input_types = not (issubclass(param_1_obj, Metrics) and
+                                     issubclass(param_2_obj, TaskParameters))
+        incorrect_return_type = not (issubclass(return_type_obj, TaskParameters))
+
+        if (incorrect_num_params or
+            incorrect_input_types or
+            incorrect_return_type):
+            raise ValueError('Invalid signature.' \
+                             f'{Policy.validate_rule.__doc__}')
+
+        return r
 
 
-class InitalizeStage(Policy[TTask]):
-    """
-    First Policy in a Stage's Policy Graph.
-    """
-
-    @overload
-    def __call__(
-        self,
-        task_params: abc.TaskParameters[TTask],
-        metrics: Metrics[TTask],
-    ) -> abc.TaskParameters[TTask]: ...
-
-    @overload
-    def __call__(
-        self, task_params: abc.TaskParameters[TTask]
-    ) -> abc.TaskParameters[TTask]: ...
-
-    def __call__(
-        self,
-        task_params: abc.TaskParameters[TTask],
-        metrics: Optional[Metrics[TTask]] = None,
-    ) -> abc.TaskParameters[TTask]:
-        """
-        Trivially pass the default
-        """
-        return task_params
-
-
-INIT_STAGE = InitalizeStage()
-
-
-class PolicyTransition(Rule, Generic[TTask]):
+class PolicyTransition(AindBehaviorModel, Generic[TTask]):
     """
     User-defined function that defines
     criteria for transitioning between policies based on metrics.
     """
+    rule: Rule = Field(..., description="Callable with Serialization.")
 
-    @abstractmethod
-    def __call__(self, metrics: Metrics[TTask]) -> bool:
+    @field_validator('rule')
+    @classmethod
+    def validate_rule(cls, r: Rule):
         """
-        User-defined.
-        Input is metrics instance with user-defined Metric subclass schema.
-        Returns a True/False go/no-go condition to next stage.
+        Policy Transition Signature:
+        I:
+        - metrics: Metrics object
+
+        O:
+        - result: bool
         """
-        return NotImplementedError
+        if not callable(r):
+            raise ValueError('Rule must be callable.')
+
+        # Check rule follows Transition signature
+        params = list(inspect.signature(r).parameters)
+        param_1 = inspect.signature(r).parameters[params[0]].annotation
+        return_type = inspect.signature(r).return_annotation
+
+        module = import_module(param_1.__module__)
+        param_1_obj = getattr(module, param_1.__name__)
+        module = import_module(return_type.__module__)
+        return_type_obj = getattr(module, return_type.__name__)
+
+        incorrect_num_params = (len(inspect.signature(r).parameters) != 1)
+        incorrect_input_types = not (issubclass(param_1_obj, Metrics))
+        incorrect_return_type = not (issubclass(return_type_obj, bool))
+
+        if (incorrect_num_params or
+            incorrect_input_types or
+            incorrect_return_type):
+            raise ValueError('Invalid signature.' \
+                             f'{PolicyTransition.validate_rule.__doc__}')
+
+        return r
 
 
-class Stage(abc.AindBehaviorModel, Generic[TTask]):
+class Stage(AindBehaviorModel, Generic[TTask]):
     """
     Instance of a Task.
     Task Parameters may change according to rules defined in PolicyGraph.
@@ -225,8 +255,8 @@ class Stage(abc.AindBehaviorModel, Generic[TTask]):
         """
 
         if policy in self.policies.values():
-            warnings.warn(f'Policy {policy} has already been added to this Stage.
-                            Stages cannot have duplicate policies.')
+            warnings.warn(f'Policy {policy} has already been added to this Stage.' \
+                            'Stages cannot have duplicate policies.')
         else:
             p_id = self._create_policy_id()
             self.policies[p_id] = policy
@@ -352,13 +382,13 @@ class Stage(abc.AindBehaviorModel, Generic[TTask]):
         """
         return list(self.policies.values())
 
-    def get_task_parameters(self) -> abc.TaskParameters[TTask]:
+    def get_task_parameters(self) -> TaskParameters[TTask]:
         """
         See current task parameters of Task.
         """
         return self.task.task_parameters
 
-    def set_task_parameters(self, task_params: abc.TaskParameters[TTask]) -> None:
+    def set_task_parameters(self, task_params: TaskParameters[TTask]) -> None:
         """
         Set task with new set of task parameters.
         Task revalidates TaskParameters on assignment.
@@ -372,43 +402,50 @@ class Stage(abc.AindBehaviorModel, Generic[TTask]):
         # TODO
 
 
-class Graduated(Stage):
-    """
-    Optional:
-    Use this Stage as the final Stage in a Curriculums's PolicyGraph.
-    """
-
-    name: str = Field("GRADUATED STAGE", description="Stage name.")
-    task: abc.Task = abc.Task(
-        name="Empty Task",
-        version="0.0.0",
-        task_parameters=abc.TaskParameters(),
-    )
-
-    def model_post_init(self, __context: Any) -> None:
-        self.add_policy_transition(INIT_STAGE)  # Floating stage
-
-
-GRADUATED = Graduated()
-
-
-class StageTransition(Rule, Generic[TTask]):
+class StageTransition(AindBehaviorModel, Generic[TTask]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
     """
+    rule: Rule = Field(..., description="Callable with Serialization.")
 
-    @abstractmethod
-    def __call__(self, task_parameters: abc.TaskParameters[TTask], metrics: Metrics[TTask]) -> bool:
+    @field_validator('rule')
+    @classmethod
+    def validate_rule(cls, r: Rule):
         """
-        User-defined.
-        Input is metrics instance with user-defined Metric subclass schema.
-        Returns a True/False go/no-go condition to next stage.
+        Stage Transition Signature:
+        I:
+        - metrics: Metrics object
+
+        O:
+        - result: bool
         """
-        return NotImplementedError
+        if not callable(r):
+            raise ValueError('Rule must be callable.')
+
+        # Check rule follows Transition signature
+        params = list(inspect.signature(r).parameters)
+        param_1 = inspect.signature(r).parameters[params[0]].annotation
+        return_type = inspect.signature(r).return_annotation
+
+        module = import_module(param_1.__module__)
+        param_1_obj = getattr(module, param_1.__name__)
+        module = import_module(return_type.__module__)
+        return_type_obj = getattr(module, return_type.__name__)
+
+        incorrect_num_params = (len(inspect.signature(r).parameters) != 1)
+        incorrect_input_types = not (issubclass(param_1_obj, Metrics))
+        incorrect_return_type = not (issubclass(return_type_obj, bool))
+
+        if (incorrect_num_params or
+            incorrect_input_types or
+            incorrect_return_type):
+            raise ValueError('Invalid signature.' \
+                             f'{StageTransition.validate_rule.__doc__}')
+        return r
 
 
-class Curriculum(abc.AindBehaviorModel):
+class Curriculum(AindBehaviorModel):
     """
     Curriculum manages a StageGraph instance with a read/write API.
     To use, subclass this and add subclass metrics.
@@ -453,8 +490,8 @@ class Curriculum(abc.AindBehaviorModel):
         """
 
         if stage in self.stages.values():
-            warnings.warn(f'Stage {stage} has already been added to this Curriculum.
-                            A Curriculum cannot have duplicate stages.')
+            warnings.warn(f'Stage {stage} has already been added to this Curriculum.' \
+                            'A Curriculum cannot have duplicate stages.')
         else:
             p_id = self._create_stage_id()
             self.stages[p_id] = stage
@@ -537,7 +574,6 @@ class Curriculum(abc.AindBehaviorModel):
         associated with the transition.
         NOTE: Removed nodes and transitions has the side effect
         of changing transition priority.
-
         """
 
         assert (start_stage in self.stages.values()), \

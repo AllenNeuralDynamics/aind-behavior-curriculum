@@ -1,11 +1,6 @@
 {
     "pkg_location": "__main__.MyCurriculum",
     "name": "My Curriculum",
-    "metrics": {
-        "theta_1": 0,
-        "theta_2": 0,
-        "theta_3": 0
-    },
     "stages": {
         "0": {
             "name": "Stage A",
@@ -18,25 +13,37 @@
                 }
             },
             "policies": {
-                "0": "aind_behavior_curriculum.curriculum.InitalizeStage",
-                "1": "__main__.StageA_PolicyB",
-                "2": "__main__.StageA_PolicyA"
+                "0": {
+                    "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                },
+                "1": {
+                    "rule": "__main__.stageA_policyA_rule"
+                },
+                "2": {
+                    "rule": "__main__.stageA_policyB_rule"
+                }
             },
             "graph": {
                 "0": [
                     [
-                        "__main__.T1_10",
+                        {
+                            "rule": "__main__.t1_10_rule"
+                        },
                         1
                     ],
                     [
-                        "__main__.T1_5",
-                        2
+                        {
+                            "rule": "__main__.t1_5_rule"
+                        },
+                        1
                     ]
                 ],
-                "2": [
+                "1": [
                     [
-                        "__main__.T1_10",
-                        1
+                        {
+                            "rule": "__main__.t1_10_rule"
+                        },
+                        2
                     ]
                 ]
             }
@@ -49,7 +56,11 @@
                 "version": "0.0.0",
                 "task_parameters": {}
             },
-            "policies": {},
+            "policies": {
+                "0": {
+                    "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                }
+            },
             "graph": {}
         },
         "2": {
@@ -63,24 +74,36 @@
                 }
             },
             "policies": {
-                "0": "aind_behavior_curriculum.curriculum.InitalizeStage",
-                "1": "__main__.StageB_PolicyB",
-                "2": "__main__.StageB_PolicyA"
+                "0": {
+                    "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                },
+                "1": {
+                    "rule": "__main__.stageB_policyB_rule"
+                },
+                "2": {
+                    "rule": "__main__.stageB_policyA_rule"
+                }
             },
             "graph": {
                 "0": [
                     [
-                        "__main__.T3_10",
+                        {
+                            "rule": "__main__.t3_10_rule"
+                        },
                         1
                     ],
                     [
-                        "__main__.T3_5",
+                        {
+                            "rule": "__main__.t3_5_rule"
+                        },
                         2
                     ]
                 ],
                 "2": [
                     [
-                        "__main__.T3_10",
+                        {
+                            "rule": "__main__.t3_10_rule"
+                        },
                         1
                     ]
                 ]
@@ -90,17 +113,23 @@
     "graph": {
         "0": [
             [
-                "__main__.T2_10",
+                {
+                    "rule": "__main__.t2_10_rule"
+                },
                 1
             ],
             [
-                "__main__.T2_5",
+                {
+                    "rule": "__main__.t2_5_rule"
+                },
                 2
             ]
         ],
         "2": [
             [
-                "__main__.T2_10",
+                {
+                    "rule": "__main__.t2_10_rule"
+                },
                 1
             ]
         ]

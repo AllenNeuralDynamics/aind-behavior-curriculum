@@ -36,13 +36,13 @@ class CurriculumTests(unittest.TestCase):
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         stageA = ex.StageA(task=taskA)
         stageA.add_policy_transition(
-            abc.INIT_STAGE, ex.StageA_PolicyB(), ex.T1_10()
+            abc.INIT_STAGE, ex.stageA_policyB, ex.t1_10
         )
         stageA.add_policy_transition(
-            abc.INIT_STAGE, ex.StageA_PolicyA(), ex.T1_5()
+            abc.INIT_STAGE, ex.stageA_policyA, ex.t1_5
         )
         stageA.add_policy_transition(
-            ex.StageA_PolicyA(), ex.StageA_PolicyB(), ex.T1_10()
+            ex.stageA_policyA, ex.stageA_policyB, ex.t1_10
         )
 
         # Serialize from Child
@@ -62,9 +62,7 @@ class CurriculumTests(unittest.TestCase):
         self.assertTrue(stageA == instance_prime)
 
     def test_round_trip_empty_curriculum(self):
-        ex_curr = ex.MyCurriculum(
-            name="My Curriculum", metrics=ex.ExampleMetrics()
-        )
+        ex_curr = ex.MyCurriculum(name="My Curriculum")
 
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
