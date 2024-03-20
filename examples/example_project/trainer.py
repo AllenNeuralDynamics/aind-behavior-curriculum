@@ -6,23 +6,30 @@ from collections import defaultdict
 
 import example_project as ex
 
-import aind_behavior_curriculum as abc
+from aind_behavior_curriculum import (
+    Curriculum,
+    Stage,
+    Policy,
+    Metrics,
+    Trainer
+)
+
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation
 # assumes a higher-level process defines mouse ID's ahead of time
-MICE_CURRICULUMS: dict[int, abc.Curriculum] = {}
-MICE_STAGE_HISTORY: dict[int, list[tuple[abc.Stage, abc.Policy]]] = (
+MICE_CURRICULUMS: dict[int, Curriculum] = {}
+MICE_STAGE_HISTORY: dict[int, list[tuple[Stage, Policy]]] = (
     defaultdict(list)
 )
-MICE_METRICS: dict[int, abc.Metrics] = {
+MICE_METRICS: dict[int, Metrics] = {
     0: ex.ExampleMetrics(),
     1: ex.ExampleMetrics(),
     2: ex.ExampleMetrics(),
 }
 
 
-class ExampleTrainer(abc.Trainer):
+class ExampleTrainer(Trainer):
     def __init__(self) -> None:
         """
         Custom init w/ super.__init__()
@@ -34,7 +41,7 @@ class ExampleTrainer(abc.Trainer):
     def load_data(
         self, subject_id: int
     ) -> tuple[
-        abc.Curriculum, list[tuple[abc.Stage, abc.Policy]], abc.Metrics
+        Curriculum, list[tuple[Stage, Policy]], Metrics
     ]:
         """
         Read from proxy database.
@@ -48,8 +55,8 @@ class ExampleTrainer(abc.Trainer):
     def write_data(
         self,
         subject_id: int,
-        curriculum: abc.Curriculum,
-        history: list[tuple[abc.Stage, abc.Policy]],
+        curriculum: Curriculum,
+        history: list[tuple[Stage, Policy]],
     ) -> None:
         """
         Add to proxy database.
@@ -62,11 +69,11 @@ class ExampleTrainer(abc.Trainer):
         """
         Testing utility, clears the database for the next unit test.
         """
-        MICE_CURRICULUMS: dict[int, abc.Curriculum] = {}
-        MICE_STAGE_HISTORY: dict[int, list[tuple[abc.Stage, abc.Policy]]] = (
+        MICE_CURRICULUMS: dict[int, Curriculum] = {}
+        MICE_STAGE_HISTORY: dict[int, list[tuple[Stage, Policy]]] = (
             defaultdict(list)
         )
-        MICE_METRICS: dict[int, abc.Metrics] = {
+        MICE_METRICS: dict[int, Metrics] = {
             0: ex.ExampleMetrics(),
             1: ex.ExampleMetrics(),
             2: ex.ExampleMetrics(),

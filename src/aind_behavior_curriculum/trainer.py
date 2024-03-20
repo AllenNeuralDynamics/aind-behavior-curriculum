@@ -1,9 +1,11 @@
 from abc import abstractmethod
 
-from typing import Optional
-
-import aind_behavior_curriculum as abc
-
+from aind_behavior_curriculum import (
+    Curriculum,
+    Stage,
+    Policy,
+    Metrics,
+)
 
 class Trainer:
     """
@@ -28,7 +30,7 @@ class Trainer:
     def load_data(
         self, subject_id: int
     ) -> tuple[
-        abc.Curriculum, list[tuple[abc.Stage, abc.Policy]], abc.Metrics
+        Curriculum, list[tuple[Stage, Policy]], Metrics
     ]:
         """
         User-defined.
@@ -43,8 +45,8 @@ class Trainer:
     def write_data(
         self,
         subject_id: int,
-        curriculum: abc.Curriculum,
-        history: list[tuple[abc.Stage, abc.Policy]],
+        curriculum: Curriculum,
+        history: list[tuple[Stage, Policy]],
     ) -> None:
         """
         User-defined.
@@ -53,16 +55,15 @@ class Trainer:
         - subject Curriculum
         - List of (Stage History, Policy) Tuples
 
-        For Curriculums with no internal policies, insert tacit abc.INIT_STAGE
+        For Curriculums with no internal policies, insert tacit INIT_STAGE
         """
         raise NotImplementedError
 
-
     def register_subject(self,
                          subject_id: int,
-                         curriculum: abc.Curriculum,
-                         start_stage: abc.Stage,
-                         start_policy: abc.Policy):
+                         curriculum: Curriculum,
+                         start_stage: Stage,
+                         start_policy: Policy):
         """
         Adds subject into the Trainer system.
         """
@@ -88,58 +89,77 @@ class Trainer:
         The timestep between evaluate_subject calls is flexible--
         this function will skip subject to the latest stage/policy
         they are applicable for.
+
+        Evaluation checks for stage transitions before policy transitions.
+
+        If subject does not satisfy any transition criteria,
+        this method creates a duplicate current (stage, policy) entry
+        in stage history.
         """
 
-        # Two notions of transitions:
+        # Three Transition Cases:
         # 1) Stage transition: update stage history with
         #   both stage + policy and execute the policy
 
         # 2) Policy transition: update stage history with
         #   policy and execute the policy
+
+        # 3) No transition: update stage history with
+        #   current stage + policy
+
         for s_id in self.subject_ids:
             a, b, c = self.load_data(s_id)
-            curriculum: abc.Curriculum = a
-            stage_history: list[tuple[abc.Stage, abc.Policy]] = b
-            curr_metrics: abc.Metrics = c
+            curriculum: Curriculum = a
+            stage_history: list[tuple[Stage, Policy]] = b
+            curr_metrics: Metrics = c
+            current_stage, current_policy = stage_history[-1]
 
-            current_stage, _ = stage_history[-1]
             # 1) Stage Transition
             advance_stage = False
             stage_transitions = curriculum.see_stage_transitions(current_stage)
             for stage_eval, dest_stage in stage_transitions:
                 # On first true evaluation, update stage history
                 # and publish back to database.
-                if stage_eval(curr_metrics):
+                if stage_eval.rule(curr_metrics):
                     # Trainer.write_data requires that every stage will have an init policy
                     # as stage_history can only store (stage, policy) tuples.
                     dest_policy = dest_stage.see_policies()[0]
-                    updated_params = dest_policy(
+                    updated_params = dest_policy.rule(
                         curr_metrics, dest_stage.get_task_parameters()
                     )
                     dest_stage.set_task_parameters(updated_params)
-                    stage_history.append(dest_stage, dest_policy)
+                    stage_history.append((dest_stage, dest_policy))
 
                     self.write_data(s_id, curriculum, stage_history)
                     advance_stage = True
                     break
 
             # 2) Policy Transition
+            advance_policy = False
             if not advance_stage:
-                policy_transitions = current_stage.see_policy_transitions()
+                policy_transitions = current_stage.see_policy_transitions(current_policy)
                 for policy_eval, dest_policy in policy_transitions:
                     # On first true evaluation, update stage history
                     # and publish back to database.
-                    if policy_eval(curr_metrics):
-                        updated_params = dest_policy(
-                            curr_metrics, dest_stage.get_task_parameters()
+                    if policy_eval.rule(curr_metrics):
+
+                        updated_params = dest_policy.rule(
+                            curr_metrics, current_stage.get_task_parameters()
                         )
-                        dest_stage.set_task_parameters(updated_params)
-                        stage_history.append(dest_stage, dest_policy)
+                        current_stage.set_task_parameters(updated_params)
+                        stage_history.append((current_stage, dest_policy))
 
                         self.write_data(s_id, curriculum, stage_history)
+                        advance_policy = True
+                        break
+
+            # 3) No Transition
+            if not (advance_stage or advance_policy):
+                stage_history.append((current_stage, current_policy))
+                self.write_data(s_id, curriculum, stage_history)
 
     def override_subject_status(
-        self, s_id: int, override_stage: abc.Stage, override_policy: abc.Policy
+        self, s_id: int, override_stage: Stage, override_policy: Policy
     ):
         """
         Override subject (stage, policy) independent of evaluation.
@@ -151,9 +171,9 @@ class Trainer:
         ), f"subject id {s_id} not in self.subject_ids."
 
         a, b, c = self.load_data(s_id)
-        curriculum: abc.Curriculum = a
-        stage_history: list[tuple[abc.Stage, abc.Policy]] = b
-        curr_metrics: abc.Metrics = c
+        curriculum: Curriculum = a
+        stage_history: list[tuple[Stage, Policy]] = b
+        curr_metrics: Metrics = c
 
         assert (
             override_stage in curriculum.see_stages()

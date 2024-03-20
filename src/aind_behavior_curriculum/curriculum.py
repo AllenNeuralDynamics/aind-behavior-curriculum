@@ -260,6 +260,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         else:
             p_id = self._create_policy_id()
             self.policies[p_id] = policy
+            self.graph[p_id] = []
 
     def remove_policy(self, policy: Policy[TTask]) -> None:
         """
@@ -312,17 +313,17 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         if not (start_policy in self.policies.values()):
             new_id = self._create_policy_id()
             self.policies[new_id] = start_policy
+            self.graph[new_id] = []
         start_id = self._get_policy_id(start_policy)
 
         # Resolve id of dest_policy
         if not (dest_policy in self.policies.values()):
             new_id = self._create_policy_id()
             self.policies[new_id] = dest_policy
+            self.graph[new_id] = []
         dest_id = self._get_policy_id(dest_policy)
 
         # Add the new transition to the stage graph
-        if not (start_id in self.graph):
-            self.graph[start_id] = []
         self.graph[start_id].append((rule, dest_id))
 
     def remove_policy_transition(
@@ -373,8 +374,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             policy in self.policies.values()
         ), f"Policy {policy} is not in curriculum."
         policy_id = self._get_policy_id(policy)
+        policy_list = self.graph[policy_id]
+        policy_list = [(rule, self.policies[p_id]) for (rule, p_id) in policy_list]
 
-        return self.graph[policy_id]
+        return policy_list
 
     def see_policies(self) -> list[Policy[TTask]]:
         """
@@ -493,8 +496,9 @@ class Curriculum(AindBehaviorModel):
             warnings.warn(f'Stage {stage} has already been added to this Curriculum.' \
                             'A Curriculum cannot have duplicate stages.')
         else:
-            p_id = self._create_stage_id()
-            self.stages[p_id] = stage
+            s_id = self._create_stage_id()
+            self.stages[s_id] = stage
+            self.graph[s_id] = []
 
     def remove_stage(self, stage: Stage) -> None:
         """
@@ -507,21 +511,21 @@ class Curriculum(AindBehaviorModel):
         assert (stage in self.stages.values()), \
             f'Stage {stage} is not in the stage graph to be removed.'
 
-        # Resolve policy id
-        p_id = self._get_stage_id(stage)
+        # Resolve stage id
+        s_id = self._get_stage_id(stage)
 
-        # Remove policy from policy list
-        del self.stages[p_id]
+        # Remove stage from stage list
+        del self.stages[s_id]
 
-        # Remove policy from stage graph
+        # Remove stage from curriculum graph
         for start_id in self.graph:
-            if start_id == p_id:
+            if start_id == s_id:
                 # Remove outgoing transitions
-                del self.graph[p_id]
+                del self.graph[s_id]
                 continue
 
             for (rule, dest_id) in self.graph[start_id]:
-                if dest_id == p_id:
+                if dest_id == s_id:
                     # Remove incoming transitions
                     self.graph[start_id].remove((rule, dest_id))
 
@@ -548,18 +552,19 @@ class Curriculum(AindBehaviorModel):
         if not (start_stage in self.stages.values()):
             new_id = self._create_stage_id()
             self.stages[new_id] = start_stage
+            self.graph[new_id] = []
         start_id = self._get_stage_id(start_stage)
 
         # Resolve id of dest_stage
         if not (dest_stage in self.stages.values()):
             new_id = self._create_stage_id()
             self.stages[new_id] = dest_stage
+            self.graph[new_id] = []
         dest_id = self._get_stage_id(dest_stage)
 
         # Add the new transition to the stage graph
-        if not (start_id in self.graph):
-            self.graph[start_id] = []
         self.graph[start_id].append((rule, dest_id))
+
 
     def remove_stage_transition(
         self,
@@ -607,8 +612,10 @@ class Curriculum(AindBehaviorModel):
             stage in self.stages.values()
         ), f"Stage {stage} is not in curriculum."
         stage_id = self._get_stage_id(stage)
+        stage_list = self.graph[stage_id]
+        stage_list = [(rule, self.stages[s_id]) for (rule, s_id) in stage_list]
 
-        return self.graph[stage_id]
+        return stage_list
 
     def see_stages(self) -> list[Stage]:
         """
