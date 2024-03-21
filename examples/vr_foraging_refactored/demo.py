@@ -1,7 +1,5 @@
 import aind_behavior_services.task_logic.distributions as distributions
-
 import aind_behavior_vr_foraging.task_logic as vr_task_logic
-
 from aind_behavior_vr_foraging.task_logic import AindVrForagingTaskLogic
 
 #  Create a new TaskLogic instance

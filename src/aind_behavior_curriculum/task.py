@@ -5,7 +5,7 @@ Base Behavior Models
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Callable, TypeVar, Generic
+from typing import Any, Callable, Generic, TypeVar
 
 from pydantic import Field
 from pydantic_core import core_schema

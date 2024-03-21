@@ -3,23 +3,27 @@ Useful Placeholders when making Curriculums
 """
 
 from typing import Any
+
 from pydantic import Field
 
 from aind_behavior_curriculum import (
     Metrics,
-    TaskParameters,
     Policy,
     Stage,
-    Task
+    Task,
+    TaskParameters,
 )
 
-def init_stage_rule(metrics: Metrics,
-                    task_params: TaskParameters
-                    ) -> TaskParameters:
+
+def init_stage_rule(
+    metrics: Metrics, task_params: TaskParameters
+) -> TaskParameters:
     """
     Trivially pass the default
     """
     return task_params
+
+
 INIT_STAGE = Policy(rule=init_stage_rule)
 
 
@@ -37,6 +41,10 @@ class Graduated(Stage):
     )
 
     def model_post_init(self, __context: Any) -> None:
+        """
+        Trivially add placeholder stage
+        """
         self.add_policy(INIT_STAGE)
+
 
 GRADUATED = Graduated()

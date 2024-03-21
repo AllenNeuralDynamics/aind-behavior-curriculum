@@ -8,20 +8,17 @@ import example_project as ex
 
 from aind_behavior_curriculum import (
     Curriculum,
-    Stage,
-    Policy,
     Metrics,
-    Trainer
+    Policy,
+    Stage,
+    Trainer,
 )
-
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
-MICE_STAGE_HISTORY: dict[int, list[tuple[Stage, Policy]]] = (
-    defaultdict(list)
-)
+MICE_STAGE_HISTORY: dict[int, list[tuple[Stage, Policy]]] = defaultdict(list)
 MICE_METRICS: dict[int, Metrics] = {
     0: ex.ExampleMetrics(),
     1: ex.ExampleMetrics(),
@@ -37,12 +34,9 @@ class ExampleTrainer(Trainer):
         """
         super().__init__()
 
-
     def load_data(
         self, subject_id: int
-    ) -> tuple[
-        Curriculum, list[tuple[Stage, Policy]], Metrics
-    ]:
+    ) -> tuple[Curriculum, list[tuple[Stage, Policy]], Metrics]:
         """
         Read from proxy database.
         """
@@ -63,7 +57,6 @@ class ExampleTrainer(Trainer):
         """
         MICE_CURRICULUMS[subject_id] = curriculum
         MICE_STAGE_HISTORY[subject_id] = history
-
 
     def clear_database(self) -> None:
         """

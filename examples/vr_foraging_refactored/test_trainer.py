@@ -4,9 +4,9 @@ Example of Trainer creation
 
 from collections import defaultdict
 
-import aind_behavior_curriculum as abc
 import example_project as ex
 
+import aind_behavior_curriculum as abc
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation

@@ -6,7 +6,7 @@ import unittest
 
 import example_project as ex
 
-import aind_behavior_curriculum as abc
+from aind_behavior_curriculum import INIT_STAGE, Curriculum, Stage
 
 
 class CurriculumTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Child
         instance_json = stageA.model_dump_json()
         # Deserialize from Parent
-        instance_parent = abc.Stage.model_validate_json(instance_json)
+        instance_parent = Stage.model_validate_json(instance_json)
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
@@ -35,12 +35,8 @@ class CurriculumTests(unittest.TestCase):
     def test_round_trip_stage(self):
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         stageA = ex.StageA(task=taskA)
-        stageA.add_policy_transition(
-            abc.INIT_STAGE, ex.stageA_policyB, ex.t1_10
-        )
-        stageA.add_policy_transition(
-            abc.INIT_STAGE, ex.stageA_policyA, ex.t1_5
-        )
+        stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyB, ex.t1_10)
+        stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyA, ex.t1_5)
         stageA.add_policy_transition(
             ex.stageA_policyA, ex.stageA_policyB, ex.t1_10
         )
@@ -54,7 +50,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Child
         instance_json = stageA.model_dump_json()
         # Deserialize from Parent
-        instance_parent = abc.Stage.model_validate_json(instance_json)
+        instance_parent = Stage.model_validate_json(instance_json)
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
@@ -73,7 +69,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
         # Deserialize from Parent
-        instance_parent = abc.Curriculum.model_validate_json(instance_json)
+        instance_parent = Curriculum.model_validate_json(instance_json)
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
@@ -92,7 +88,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
         # Deserialize from Parent
-        instance_parent = abc.Curriculum.model_validate_json(instance_json)
+        instance_parent = Curriculum.model_validate_json(instance_json)
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
@@ -115,7 +111,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
         # Deserialize from Parent
-        instance_parent = abc.Curriculum.model_validate_json(instance_json)
+        instance_parent = Curriculum.model_validate_json(instance_json)
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child

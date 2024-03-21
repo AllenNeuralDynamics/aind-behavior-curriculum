@@ -6,7 +6,7 @@ import unittest
 
 import example_project as ex
 
-import aind_behavior_curriculum as abc
+from aind_behavior_curriculum import Task
 
 
 class TaskTests(unittest.TestCase):
@@ -44,13 +44,13 @@ class TaskTests(unittest.TestCase):
     def test_invalid_construction(self):
         def invalid_type():
             ex_parameters = ex.ExampleTaskParameters(field_1="20")
-            ex_task = ex.ExampleTask(
+            ex_task = ex.ExampleTask(  # noqa: F841
                 task_parameters=ex_parameters
             )  # noqa: F841
 
         def invalid_field():
             ex_parameters = ex.ExampleTaskParameters(field_4=5)
-            ex_task = ex.ExampleTask(
+            ex_task = ex.ExampleTask(  # noqa: F841
                 task_parameters=ex_parameters
             )  # noqa: F841
 
@@ -84,7 +84,7 @@ class TaskTests(unittest.TestCase):
         # Serialize from Child
         instance_json = ex_task.model_dump_json()
         # Deserialize from Parent
-        instance_parent = abc.Task.model_validate_json(instance_json)
+        instance_parent = Task.model_validate_json(instance_json)
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child

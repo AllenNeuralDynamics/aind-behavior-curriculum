@@ -2,5 +2,7 @@
 exclude =
     .git,
     __pycache__,
-    build
+    build,
+    examples/
 max-complexity = 10
+max-line-length = 90

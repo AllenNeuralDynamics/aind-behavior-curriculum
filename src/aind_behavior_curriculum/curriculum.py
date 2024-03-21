@@ -1,13 +1,15 @@
 """
 Core Stage and Curriculum Primitives.
 """
-from __future__ import annotations
-from importlib import import_module
-import inspect
-from typing import Any, Callable, Generic, TypeVar
-import warnings
 
-from pydantic import Field, field_validator, GetJsonSchemaHandler
+from __future__ import annotations
+
+import inspect
+import warnings
+from importlib import import_module
+from typing import Any, Callable, Generic, TypeVar
+
+from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -15,7 +17,7 @@ from aind_behavior_curriculum import (
     AindBehaviorModel,
     AindBehaviorModelExtra,
     Task,
-    TaskParameters
+    TaskParameters,
 )
 
 TTask = TypeVar("TTask", bound=Task)
@@ -125,9 +127,10 @@ class Policy(AindBehaviorModel, Generic[TTask]):
     User-defined function that defines
     how current Task parameters change according to metrics.
     """
+
     rule: Rule = Field(..., description="Callable with Serialization.")
 
-    @field_validator('rule')
+    @field_validator("rule")
     @classmethod
     def validate_rule(cls, r: Rule):
         """
@@ -140,7 +143,7 @@ class Policy(AindBehaviorModel, Generic[TTask]):
         - result: TaskParameters object
         """
         if not callable(r):
-            raise ValueError('Rule must be callable.')
+            raise ValueError("Rule must be callable.")
 
         # Check rule follows Transition signature
         params = list(inspect.signature(r).parameters)
@@ -155,16 +158,23 @@ class Policy(AindBehaviorModel, Generic[TTask]):
         module = import_module(return_type.__module__)
         return_type_obj = getattr(module, return_type.__name__)
 
-        incorrect_num_params = (len(inspect.signature(r).parameters) != 2)
-        incorrect_input_types = not (issubclass(param_1_obj, Metrics) and
-                                     issubclass(param_2_obj, TaskParameters))
-        incorrect_return_type = not (issubclass(return_type_obj, TaskParameters))
+        incorrect_num_params = len(inspect.signature(r).parameters) != 2
+        incorrect_input_types = not (
+            issubclass(param_1_obj, Metrics)
+            and issubclass(param_2_obj, TaskParameters)
+        )
+        incorrect_return_type = not (
+            issubclass(return_type_obj, TaskParameters)
+        )
 
-        if (incorrect_num_params or
-            incorrect_input_types or
-            incorrect_return_type):
-            raise ValueError('Invalid signature.' \
-                             f'{Policy.validate_rule.__doc__}')
+        if (
+            incorrect_num_params
+            or incorrect_input_types
+            or incorrect_return_type
+        ):
+            raise ValueError(
+                "Invalid signature." f"{Policy.validate_rule.__doc__}"
+            )
 
         return r
 
@@ -174,9 +184,10 @@ class PolicyTransition(AindBehaviorModel, Generic[TTask]):
     User-defined function that defines
     criteria for transitioning between policies based on metrics.
     """
+
     rule: Rule = Field(..., description="Callable with Serialization.")
 
-    @field_validator('rule')
+    @field_validator("rule")
     @classmethod
     def validate_rule(cls, r: Rule):
         """
@@ -188,7 +199,7 @@ class PolicyTransition(AindBehaviorModel, Generic[TTask]):
         - result: bool
         """
         if not callable(r):
-            raise ValueError('Rule must be callable.')
+            raise ValueError("Rule must be callable.")
 
         # Check rule follows Transition signature
         params = list(inspect.signature(r).parameters)
@@ -200,15 +211,19 @@ class PolicyTransition(AindBehaviorModel, Generic[TTask]):
         module = import_module(return_type.__module__)
         return_type_obj = getattr(module, return_type.__name__)
 
-        incorrect_num_params = (len(inspect.signature(r).parameters) != 1)
+        incorrect_num_params = len(inspect.signature(r).parameters) != 1
         incorrect_input_types = not (issubclass(param_1_obj, Metrics))
         incorrect_return_type = not (issubclass(return_type_obj, bool))
 
-        if (incorrect_num_params or
-            incorrect_input_types or
-            incorrect_return_type):
-            raise ValueError('Invalid signature.' \
-                             f'{PolicyTransition.validate_rule.__doc__}')
+        if (
+            incorrect_num_params
+            or incorrect_input_types
+            or incorrect_return_type
+        ):
+            raise ValueError(
+                "Invalid signature."
+                f"{PolicyTransition.validate_rule.__doc__}"
+            )
 
         return r
 
@@ -227,6 +242,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     policies: dict[int, Policy[TTask]] = {}
     graph: dict[int, list[tuple[PolicyTransition[TTask], int]]] = {}
+
+    def __eq__(self, __value: object) -> bool:
+        """
+        Custom equality method.
+        Two instances of the same subclass type are considered equal.
+        """
+        return isinstance(__value, self.__class__)
 
     def _get_policy_id(self, p: Policy[TTask]) -> int:
         """
@@ -255,8 +277,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
 
         if policy in self.policies.values():
-            warnings.warn(f'Policy {policy} has already been added to this Stage.' \
-                            'Stages cannot have duplicate policies.')
+            warnings.warn(
+                f"Policy {policy} has already been added to this Stage."
+                "Stages cannot have duplicate policies."
+            )
         else:
             p_id = self._create_policy_id()
             self.policies[p_id] = policy
@@ -269,8 +293,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
-        assert (policy in self.policies.values()), \
-            f'Policy {policy} is not in the stage graph to be removed.'
+        assert (
+            policy in self.policies.values()
+        ), f"Policy {policy} is not in the stage graph to be removed."
 
         # Resolve policy id
         p_id = self._get_policy_id(policy)
@@ -285,7 +310,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
                 del self.graph[p_id]
                 continue
 
-            for (rule, dest_id) in self.graph[start_id]:
+            for rule, dest_id in self.graph[start_id]:
                 if dest_id == p_id:
                     # Remove incoming transitions
                     self.graph[start_id].remove((rule, dest_id))
@@ -294,7 +319,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         self,
         start_policy: Policy[TTask],
         dest_policy: Policy[TTask],
-        rule: PolicyTransition[TTask]
+        rule: PolicyTransition[TTask],
     ) -> None:
         """
         Add policy transition between two policies:
@@ -332,7 +357,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         dest_policy: Policy[TTask],
         rule: PolicyTransition[TTask],
         remove_start_policy: bool = False,
-        remove_dest_policy: bool = False
+        remove_dest_policy: bool = False,
     ) -> None:
         """
         Removes transition with options to remove start/end policies
@@ -342,17 +367,20 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
         """
 
-        assert (start_policy in self.policies.values()), \
-            f'Policy {start_policy} is not in the stage graph to be removed.'
+        assert (
+            start_policy in self.policies.values()
+        ), f"Policy {start_policy} is not in the stage graph to be removed."
 
-        assert (dest_policy in self.policies.values()), \
-            f'Policy {dest_policy} is not in the stage graph to be removed.'
+        assert (
+            dest_policy in self.policies.values()
+        ), f"Policy {dest_policy} is not in the stage graph to be removed."
 
         start_id = self._get_policy_id(start_policy)
         dest_id = self._get_policy_id(dest_policy)
-        assert (rule, dest_id) in self.graph[start_id], \
-            f'Policy {start_policy} does not transition' + \
-            f'into Policy {dest_policy} with Rule {rule}.'
+        assert (rule, dest_id) in self.graph[start_id], (
+            f"Policy {start_policy} does not transition"
+            + f"into Policy {dest_policy} with Rule {rule}."
+        )
 
         # Optionally remove nodes
         if remove_start_policy:
@@ -375,7 +403,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         ), f"Policy {policy} is not in curriculum."
         policy_id = self._get_policy_id(policy)
         policy_list = self.graph[policy_id]
-        policy_list = [(rule, self.policies[p_id]) for (rule, p_id) in policy_list]
+        policy_list = [
+            (rule, self.policies[p_id]) for (rule, p_id) in policy_list
+        ]
 
         return policy_list
 
@@ -410,9 +440,10 @@ class StageTransition(AindBehaviorModel, Generic[TTask]):
     User-defined function that defines
     criteria for transitioning stages based on metrics.
     """
+
     rule: Rule = Field(..., description="Callable with Serialization.")
 
-    @field_validator('rule')
+    @field_validator("rule")
     @classmethod
     def validate_rule(cls, r: Rule):
         """
@@ -424,7 +455,7 @@ class StageTransition(AindBehaviorModel, Generic[TTask]):
         - result: bool
         """
         if not callable(r):
-            raise ValueError('Rule must be callable.')
+            raise ValueError("Rule must be callable.")
 
         # Check rule follows Transition signature
         params = list(inspect.signature(r).parameters)
@@ -436,15 +467,18 @@ class StageTransition(AindBehaviorModel, Generic[TTask]):
         module = import_module(return_type.__module__)
         return_type_obj = getattr(module, return_type.__name__)
 
-        incorrect_num_params = (len(inspect.signature(r).parameters) != 1)
+        incorrect_num_params = len(inspect.signature(r).parameters) != 1
         incorrect_input_types = not (issubclass(param_1_obj, Metrics))
         incorrect_return_type = not (issubclass(return_type_obj, bool))
 
-        if (incorrect_num_params or
-            incorrect_input_types or
-            incorrect_return_type):
-            raise ValueError('Invalid signature.' \
-                             f'{StageTransition.validate_rule.__doc__}')
+        if (
+            incorrect_num_params
+            or incorrect_input_types
+            or incorrect_return_type
+        ):
+            raise ValueError(
+                "Invalid signature." f"{StageTransition.validate_rule.__doc__}"
+            )
         return r
 
 
@@ -493,8 +527,10 @@ class Curriculum(AindBehaviorModel):
         """
 
         if stage in self.stages.values():
-            warnings.warn(f'Stage {stage} has already been added to this Curriculum.' \
-                            'A Curriculum cannot have duplicate stages.')
+            warnings.warn(
+                f"Stage {stage} has already been added to this Curriculum."
+                "A Curriculum cannot have duplicate stages."
+            )
         else:
             s_id = self._create_stage_id()
             self.stages[s_id] = stage
@@ -508,8 +544,9 @@ class Curriculum(AindBehaviorModel):
         of changing transition priority.
         """
 
-        assert (stage in self.stages.values()), \
-            f'Stage {stage} is not in the stage graph to be removed.'
+        assert (
+            stage in self.stages.values()
+        ), f"Stage {stage} is not in the stage graph to be removed."
 
         # Resolve stage id
         s_id = self._get_stage_id(stage)
@@ -524,7 +561,7 @@ class Curriculum(AindBehaviorModel):
                 del self.graph[s_id]
                 continue
 
-            for (rule, dest_id) in self.graph[start_id]:
+            for rule, dest_id in self.graph[start_id]:
                 if dest_id == s_id:
                     # Remove incoming transitions
                     self.graph[start_id].remove((rule, dest_id))
@@ -565,14 +602,13 @@ class Curriculum(AindBehaviorModel):
         # Add the new transition to the stage graph
         self.graph[start_id].append((rule, dest_id))
 
-
     def remove_stage_transition(
         self,
         start_stage: Policy[TTask],
         dest_stage: Policy[TTask],
         rule: PolicyTransition[TTask],
         remove_start_stage: bool = False,
-        remove_dest_stage: bool = False
+        remove_dest_stage: bool = False,
     ) -> None:
         """
         Removes transition with options to remove start/end stages
@@ -581,17 +617,20 @@ class Curriculum(AindBehaviorModel):
         of changing transition priority.
         """
 
-        assert (start_stage in self.stages.values()), \
-            f'Stage {start_stage} is not in the stage graph to be removed.'
+        assert (
+            start_stage in self.stages.values()
+        ), f"Stage {start_stage} is not in the stage graph to be removed."
 
-        assert (dest_stage in self.stages.values()), \
-            f'Policy {dest_stage} is not in the stage graph to be removed.'
+        assert (
+            dest_stage in self.stages.values()
+        ), f"Policy {dest_stage} is not in the stage graph to be removed."
 
         start_id = self._get_stage_id(start_stage)
         dest_id = self._get_stage_id(dest_stage)
-        assert (rule, dest_id) in self.graph[start_id], \
-            f'Stage {start_stage} does not transition' + \
-            f'into Stage {dest_stage} with Rule {rule}.'
+        assert (rule, dest_id) in self.graph[start_id], (
+            f"Stage {start_stage} does not transition"
+            + f"into Stage {dest_stage} with Rule {rule}."
+        )
 
         # Optionally remove nodes
         if remove_start_stage:

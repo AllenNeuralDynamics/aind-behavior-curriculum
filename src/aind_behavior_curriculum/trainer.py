@@ -1,11 +1,11 @@
+"""
+Core Trainer primitive.
+"""
+
 from abc import abstractmethod
 
-from aind_behavior_curriculum import (
-    Curriculum,
-    Stage,
-    Policy,
-    Metrics,
-)
+from aind_behavior_curriculum import Curriculum, Metrics, Policy, Stage
+
 
 class Trainer:
     """
@@ -29,14 +29,12 @@ class Trainer:
     @abstractmethod
     def load_data(
         self, subject_id: int
-    ) -> tuple[
-        Curriculum, list[tuple[Stage, Policy]], Metrics
-    ]:
+    ) -> tuple[Curriculum, list[tuple[Stage, Policy]], Metrics]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
         - subject Curriculum
-        - List of (Stage History, Policy) Tuples
+        - List of (Stage, Policy) tuples recording subject history
         - subject Metrics
         """
         raise NotImplementedError
@@ -53,34 +51,39 @@ class Trainer:
         Exports 3 pieces of data to database.
         - subject Id
         - subject Curriculum
-        - List of (Stage History, Policy) Tuples
+        - List of (Stage, Policy) tuples recording subject history
 
         For Curriculums with no internal policies, insert tacit INIT_STAGE
         """
         raise NotImplementedError
 
-    def register_subject(self,
-                         subject_id: int,
-                         curriculum: Curriculum,
-                         start_stage: Stage,
-                         start_policy: Policy):
+    def register_subject(
+        self,
+        subject_id: int,
+        curriculum: Curriculum,
+        start_stage: Stage,
+        start_policy: Policy,
+    ):
         """
         Adds subject into the Trainer system.
         """
 
-        assert start_stage in curriculum.stages.values(), \
-            "Provided start_stage is not in provided curriculum."
+        assert (
+            start_stage in curriculum.stages.values()
+        ), "Provided start_stage is not in provided curriculum."
 
-        assert start_policy in start_stage.policies.values(), \
-            "Provided start_policy is not in provided stage_stage."
+        assert (
+            start_policy in start_stage.policies.values()
+        ), "Provided start_policy is not in provided stage_stage."
 
-        assert subject_id not in self.subject_ids, \
-            f"Subject_id {subject_id} is already registered."
+        assert (
+            subject_id not in self.subject_ids
+        ), f"Subject_id {subject_id} is already registered."
 
         self.subject_ids.append(subject_id)
-        self.write_data(subject_id,
-                        curriculum,
-                        history=[(start_stage, start_policy)])
+        self.write_data(
+            subject_id, curriculum, history=[(start_stage, start_policy)]
+        )
 
     def evaluate_subjects(self):
         """
@@ -108,6 +111,7 @@ class Trainer:
         #   current stage + policy
 
         for s_id in self.subject_ids:
+
             a, b, c = self.load_data(s_id)
             curriculum: Curriculum = a
             stage_history: list[tuple[Stage, Policy]] = b
@@ -121,12 +125,15 @@ class Trainer:
                 # On first true evaluation, update stage history
                 # and publish back to database.
                 if stage_eval.rule(curr_metrics):
-                    # Trainer.write_data requires that every stage will have an init policy
-                    # as stage_history can only store (stage, policy) tuples.
+                    # Trainer.write_data requires that every stage
+                    # will have an init policy as stage_history
+                    # can only store (stage, policy) tuples.
                     dest_policy = dest_stage.see_policies()[0]
+
                     updated_params = dest_policy.rule(
                         curr_metrics, dest_stage.get_task_parameters()
                     )
+                    dest_stage = dest_stage.model_copy(deep=True)
                     dest_stage.set_task_parameters(updated_params)
                     stage_history.append((dest_stage, dest_policy))
 
@@ -137,7 +144,9 @@ class Trainer:
             # 2) Policy Transition
             advance_policy = False
             if not advance_stage:
-                policy_transitions = current_stage.see_policy_transitions(current_policy)
+                policy_transitions = current_stage.see_policy_transitions(
+                    current_policy
+                )
                 for policy_eval, dest_policy in policy_transitions:
                     # On first true evaluation, update stage history
                     # and publish back to database.
@@ -146,6 +155,7 @@ class Trainer:
                         updated_params = dest_policy.rule(
                             curr_metrics, current_stage.get_task_parameters()
                         )
+                        current_stage = current_stage.model_copy(deep=True)
                         current_stage.set_task_parameters(updated_params)
                         stage_history.append((current_stage, dest_policy))
 
@@ -155,6 +165,8 @@ class Trainer:
 
             # 3) No Transition
             if not (advance_stage or advance_policy):
+
+                current_stage = current_stage.model_copy(deep=True)
                 stage_history.append((current_stage, current_policy))
                 self.write_data(s_id, curriculum, stage_history)
 
@@ -173,15 +185,17 @@ class Trainer:
         a, b, c = self.load_data(s_id)
         curriculum: Curriculum = a
         stage_history: list[tuple[Stage, Policy]] = b
-        curr_metrics: Metrics = c
+        curr_metrics: Metrics = c  # noqa: F841
 
         assert (
             override_stage in curriculum.see_stages()
-        ), f"override stage {override_stage} not in curriculum stages for subject id {s_id}."
+        ), f"override stage {override_stage} not in \
+            curriculum stages for subject id {s_id}."
 
         assert (
             override_policy in override_stage.see_policies()
-        ), f"override policy {override_policy} not in given override stage {override_stage}."
+        ), f"override policy {override_policy} not in \
+           given override stage {override_stage}."
 
         stage_history.append((override_stage, override_policy))
         self.write_data(s_id, curriculum, stage_history)

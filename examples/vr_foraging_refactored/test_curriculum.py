@@ -3,23 +3,23 @@ Example of Curriculum creation
 """
 
 from __future__ import annotations
+
 import json
-from pydantic import Field
-from typing import Literal, Dict, TypeVar
+from typing import Dict, Literal, TypeVar
+
 import aind_behavior_vr_foraging as vrf
 import aind_behavior_vr_foraging.task_logic as vrf_task_logic
-import aind_behavior_curriculum as abc
 import demo
+from pydantic import Field
 
+import aind_behavior_curriculum as abc
 
 TAindVrForagingTask = TypeVar(
     "TAindVrForagingTask", bound="AindVrForagingTask"
 )
 
 
-class AindVrForagingTaskLogic(
-    abc.TaskParameters[TAindVrForagingTask]
-):
+class AindVrForagingTaskLogic(abc.TaskParameters[TAindVrForagingTask]):
     describedBy: Literal[
         "https://raw.githubusercontent.com/AllenNeuralDynamics/Aind.Behavior.VrForaging/main/src/DataSchemas/aind_vr_foraging_task.json"
     ] = Field(
@@ -51,7 +51,9 @@ class AindVrForagingTask(abc.Task):
         default=demo.make(), validate_default=True
     )
 
+
 # --- METRICS ---
+
 
 class VrForagingMetrics(abc.Metrics[TAindVrForagingTask]):
     number_of_trials: float
@@ -73,13 +75,22 @@ class StageB(abc.Stage[TAindVrForagingTask]):
         ..., description="Fill with Task Instance"
     )
 
+
 # --- POLICIES ---
 
-def UpdateWaterCallable(metrics: VrForagingMetrics, task_params: AindVrForagingTaskLogic) -> AindVrForagingTaskLogic:
+
+def UpdateWaterCallable(
+    metrics: VrForagingMetrics, task_params: AindVrForagingTaskLogic
+) -> AindVrForagingTaskLogic:
     task_params = task_params.model_copy(deep=True)
     if metrics.number_of_trials > 300:
-        task_params.environment_statistics.patches[0].reward_specification.reward_function = vrf_task_logic.ConstantFunction(value=metrics.number_of_trials/100)
+        task_params.environment_statistics.patches[
+            0
+        ].reward_specification.reward_function = vrf_task_logic.ConstantFunction(
+            value=metrics.number_of_trials / 100
+        )
     return task_params
+
 
 class UpdateWater(abc.Policy):
     def __call__(
@@ -90,9 +101,11 @@ class UpdateWater(abc.Policy):
 
         return UpdateWaterCallable(metrics, task_params)
 
+
 # todo
 # the previous line should be simply:
-#UpdateWater = abc.Policy[TAindVrForagingTask](rule=UpdateWaterCallable)
+# UpdateWater = abc.Policy[TAindVrForagingTask](rule=UpdateWaterCallable)
+
 
 class UpdateThreshold(abc.Policy):
     def __call__(
@@ -123,15 +136,17 @@ if __name__ == "__main__":
     stageA = StageA(task=taskA)
     stageB = StageB(task=taskB)
 
-    #stageA.add_policy_transition(start_policy=UpdateThreshold()) # this crashes serialization because of the nullable type
-    stageA.add_policy_transition(abc.INIT_STAGE, UpdateThreshold(), UpdateThreshold())
+    # stageA.add_policy_transition(start_policy=UpdateThreshold()) # this crashes serialization because of the nullable type
+    stageA.add_policy_transition(
+        abc.INIT_STAGE, UpdateThreshold(), UpdateThreshold()
+    )
 
     #  TODO should be possible to have policies without transitions. I would say that the method should be:
 
     # Construct the Curriculum
     ex_curr = abc.Curriculum(
-        #metrics=VrForagingMetrics()
-        name = "example_curriculum",
+        # metrics=VrForagingMetrics()
+        name="example_curriculum",
     )  # TODO why do we have metrics here???
     ex_curr.add_stage_transition(stageA, stageB, UpdateStageOnReward())
 
