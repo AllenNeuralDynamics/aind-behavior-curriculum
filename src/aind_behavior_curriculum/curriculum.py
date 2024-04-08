@@ -9,9 +9,11 @@ import warnings
 from importlib import import_module
 from typing import Any, Callable, Generic, TypeVar
 
+from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
+import subprocess
 
 from aind_behavior_curriculum import (
     AindBehaviorModel,
@@ -228,80 +230,65 @@ class PolicyTransition(AindBehaviorModel, Generic[TTask]):
         return r
 
 
-class Stage(AindBehaviorModel, Generic[TTask]):
+class BehaviorGraph(AindBehaviorModel):
     """
-    Instance of a Task.
-    Task Parameters may change according to rules defined in PolicyGraph.
-    Stage manages a PolicyGraph instance with a read/write API.
+    Core directed graph data structure used in Stage and Curriculum.
     """
+    nodes: dict[int, Any] = {}
+    graph: dict[int, list[Rule, int]] = {}
 
-    name: str = Field(..., description="Stage name.")
-    task: TTask = Field(
-        ..., description="Task in which this stage is based off of."
-    )
-
-    policies: dict[int, Policy[TTask]] = {}
-    graph: dict[int, list[tuple[PolicyTransition[TTask], int]]] = {}
-
-    def __eq__(self, __value: object) -> bool:
-        """
-        Custom equality method.
-        Two instances of the same subclass type are considered equal.
-        """
-        return isinstance(__value, self.__class__)
-
-    def _get_policy_id(self, p: Policy[TTask]) -> int:
+    def _get_node_id(self, node: Any) -> int:
         """
         Dictionaries are ordered for Python 3.7+ so this is safe.
         This library requires Python 3.8+.
         """
-        dict_keys = list(self.policies.keys())
-        dict_values = list(self.policies.values())
+        dict_keys = list(self.nodes.keys())
+        dict_values = list(self.nodes.values())
 
-        i = dict_values.index(p)
+        i = dict_values.index(node)
         return dict_keys[i]
 
-    def _create_policy_id(self) -> int:
+    def _create_node_id(self) -> int:
         """
         Helper method for add_node and add_transition.
         More readable than using hash(Policy).
         """
         new_id = 0
-        if len(self.policies) > 0:
-            new_id = max(len(self.policies), max(self.policies.keys()) + 1)
+        if len(self.nodes) > 0:
+            new_id = max(len(self.nodes), max(self.nodes.keys()) + 1)
         return new_id
 
-    def add_policy(self, policy: Policy[TTask]) -> None:
+    def add_node(self, node: Any) -> None:
         """
-        Adds a floating policy to the Stage adjacency graph.
+        Adds a floating node to the behavior graph.
         """
 
-        if policy in self.policies.values():
+        if node in self.nodes.values():
             warnings.warn(
-                f"Policy {policy} has already been added to this Stage."
-                "Stages cannot have duplicate policies."
+                f"Node {node} has already been added to this graph."
+                "A behavior graph cannot have duplicate nodes."
             )
         else:
-            p_id = self._create_policy_id()
-            self.policies[p_id] = policy
+            p_id = self._create_node_id()
+            self.nodes[p_id] = node
             self.graph[p_id] = []
 
-    def remove_policy(self, policy: Policy[TTask]) -> None:
+    def remove_node(self, node: Any) -> None:
         """
-        Removes policy and all associated incoming/outgoing
+        Removes node and all associated incoming/outgoing
         transition rules from the stage graph.
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
         assert (
-            policy in self.policies.values()
-        ), f"Policy {policy} is not in the stage graph to be removed."
+            node in self.nodes.values()
+        ), f"Node {node} is not in the graph to be removed."
 
         # Resolve policy id
-        p_id = self._get_policy_id(policy)
+        p_id = self._get_node_id(node)
 
         # Remove policy from policy list
-        del self.policies[p_id]
+        del self.nodes[p_id]
 
         # Remove policy from stage graph
         for start_id in self.graph:
@@ -314,6 +301,204 @@ class Stage(AindBehaviorModel, Generic[TTask]):
                 if dest_id == p_id:
                     # Remove incoming transitions
                     self.graph[start_id].remove((rule, dest_id))
+
+    def add_transition(
+        self,
+        start_node: Any,
+        dest_node: Any,
+        rule: Rule,
+    ) -> None:
+        """
+        Add transition between two nodes:
+        start_node -> dest_node.
+
+        If start_node has been added to graph before, this method starts a transition
+            from the exisiting start_node.
+        If dest_node has been added to graph before, this method creates a transition
+            into the existing dest_node.
+
+        NOTE: The order in which this method
+        is called sets the order of transition priority.
+        """
+
+        # Resolve id of start_node
+        if not (start_node in self.nodes.values()):
+            new_id = self._create_node_id()
+            self.nodes[new_id] = start_node
+            self.graph[new_id] = []
+        start_id = self._get_node_id(start_node)
+
+        # Resolve id of dest_node
+        if not (dest_node in self.nodes.values()):
+            new_id = self._create_node_id()
+            self.nodes[new_id] = dest_node
+            self.graph[new_id] = []
+        dest_id = self._get_node_id(dest_node)
+
+        # Add the new transition to the graph
+        self.graph[start_id].append((rule, dest_id))
+
+    def remove_node_transition(
+        self,
+        start_node: Any,
+        dest_node: Any,
+        rule: Rule,
+        remove_start_node: bool = False,
+        remove_dest_node: bool = False,
+    ) -> None:
+        """
+        Removes transition with options to remove start/end nodes
+        associated with the transition.
+        NOTE: Removed nodes and transitions has the side effect
+        of changing transition priority.
+        """
+
+        assert (
+            start_node in self.nodes.values()
+        ), f"Node {start_node} is not in the behavior graph to be removed."
+
+        assert (
+            dest_node in self.nodes.values()
+        ), f"Node {dest_node} is not in the behavior graph to be removed."
+
+        start_id = self._get_node_id(start_node)
+        dest_id = self._get_node_id(dest_node)
+        assert (rule, dest_id) in self.graph[start_id], (
+            f"Node {start_node} does not transition"
+            + f"into Node {dest_node} with Rule {rule}."
+        )
+
+        # Optionally remove nodes
+        if remove_start_node:
+            self.remove_node(start_node)
+        if remove_dest_node:
+            self.remove_node(dest_node)
+
+        # Remove transition
+        self.graph[start_id].remove((rule, dest_id))
+
+    def see_nodes(self) -> list[Any]:
+        """
+        See nodes of behavior graph.
+        """
+        return list(self.nodes.values())
+
+    def see_node_transitions(
+        self, node: Any
+    ) -> list[tuple[Any, Any]]:
+        """
+        See transitions of node in behavior graph.
+        """
+
+        assert (
+            node in self.nodes.values()
+        ), f"Node {node} is not in behavior graph."
+        node_id = self._get_node_id(node)
+        node_list = self.graph[node_id]
+        node_list = [
+            (rule, self.nodes[p_id]) for (rule, p_id) in node_list
+        ]
+
+        return node_list
+
+    def set_transition_priority(
+        self, node: Any,
+        node_transitions: list[tuple[Any, Any]]
+        ) -> None:
+        """
+        Change order of node transitions listed under a node.
+        Highest priority is ordered in node_transition from left -> right.
+        """
+
+        input_transitions = []
+        for rule, n in node_transitions:
+            assert n in self.nodes.values(), \
+                f"Node {n} is not a node inside the behavior graph."
+            input_transitions.append(rule, self._get_node_id(n))
+
+        assert set(input_transitions) == set(self.graph[node]), \
+            f"Elements of input node transitions {node_transitions} does not
+              match the elements under this node: {self.see_node_transitions(node)}.
+              Please call 'see_node_transitions()' for a precise list of elements."
+
+        self.graph[node] = input_transitions
+
+    def export_diagram(self, img_path: str):
+        template_string = \
+        """
+        digraph G {
+            rankdir=LR; // Arrange nodes from left to right
+
+            // Define nodes with increased font visibility
+            node [shape=box, style=filled, fontname=Arial, fontsize=12, fillcolor=lightblue, color=black];
+
+            // Define nodes
+            {% for node in nodes %}
+            {{ node }};
+            {% endfor %}
+
+            // Define edges with labels and increased visibility
+            edge [fontname=Arial, fontsize=10, color=black];
+            {% for edge in edges %}
+            {{ edge }};
+            {% endfor %}
+        }
+        """
+
+        template = Template(template_string)
+        nodes = [f'{node_id} [label="Node {node.__name__}"]' for node_id, node in self.nodes.items()]
+        edges = []
+        for start_id, edge_list in self.graph.items():
+            for i, (rule, dest_id) in enumerate(edge_list):
+                edge_str = f'{start_id} -> {dest_id} [label="({i}) {rule.__name__}", minlen=2]'
+                edges.append(edge_str)
+
+        dot_script = template.render(nodes=nodes, edges=edges)
+
+        # Execute dot script in subprocess
+        dot_command = ['dot', '-Tpng', '-o', img_path]
+        dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
+        dot_process.communicate(input=dot_script.encode())
+
+
+class Stage(AindBehaviorModel, Generic[TTask]):
+
+    """
+    Instance of a Task.
+    Task Parameters may change according to rules defined in BehaviorGraph.
+    Stage manages a BehaviorGraph instance with a read/write API.
+    """
+
+    name: str = Field(..., description="Stage name.")
+    task: TTask = Field(
+        ..., description="Task in which this stage is based off of."
+    )
+
+    # Nodes are type Policy[TTask]
+    # Edges are type PolicyTransition[TTask]
+    graph: BehaviorGraph = BehaviorGraph()
+
+    def __eq__(self, __value: object) -> bool:
+        """
+        Custom equality method.
+        Two instances of the same subclass type are considered equal.
+        """
+        return isinstance(__value, self.__class__)
+
+    def add_policy(self, policy: Policy[TTask]) -> None:
+        """
+        Adds a floating policy to the Stage adjacency graph.
+        """
+        self.graph.add_node(policy)
+
+    def remove_policy(self, policy: Policy[TTask]) -> None:
+        """
+        Removes policy and all associated incoming/outgoing
+        transition rules from the stage graph.
+        NOTE: Removed nodes and transitions have the side effect
+        of changing transition priority.
+        """
+        self.graph.remove_node(policy)
 
     def add_policy_transition(
         self,
@@ -333,23 +518,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
-
-        # Resolve id of start_policy
-        if not (start_policy in self.policies.values()):
-            new_id = self._create_policy_id()
-            self.policies[new_id] = start_policy
-            self.graph[new_id] = []
-        start_id = self._get_policy_id(start_policy)
-
-        # Resolve id of dest_policy
-        if not (dest_policy in self.policies.values()):
-            new_id = self._create_policy_id()
-            self.policies[new_id] = dest_policy
-            self.graph[new_id] = []
-        dest_id = self._get_policy_id(dest_policy)
-
-        # Add the new transition to the stage graph
-        self.graph[start_id].append((rule, dest_id))
+        self.graph.add_transition(start_policy, dest_policy, rule)
 
     def remove_policy_transition(
         self,
@@ -364,32 +533,18 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         associated with the transition.
         NOTE: Removed nodes and transitions has the side effect
         of changing transition priority.
-
         """
+        self.graph.remove_node_transition(start_policy,
+                                          dest_policy,
+                                          rule,
+                                          remove_start_policy,
+                                          remove_dest_policy)
 
-        assert (
-            start_policy in self.policies.values()
-        ), f"Policy {start_policy} is not in the stage graph to be removed."
-
-        assert (
-            dest_policy in self.policies.values()
-        ), f"Policy {dest_policy} is not in the stage graph to be removed."
-
-        start_id = self._get_policy_id(start_policy)
-        dest_id = self._get_policy_id(dest_policy)
-        assert (rule, dest_id) in self.graph[start_id], (
-            f"Policy {start_policy} does not transition"
-            + f"into Policy {dest_policy} with Rule {rule}."
-        )
-
-        # Optionally remove nodes
-        if remove_start_policy:
-            self.remove_policy(start_policy)
-        if remove_dest_policy:
-            self.remove_policy(dest_policy)
-
-        # Remove transition
-        self.graph[start_id].remove((rule, dest_id))
+    def see_policies(self) -> list[Policy[TTask]]:
+        """
+        See policies of policy graph.
+        """
+        return self.graph.see_nodes()
 
     def see_policy_transitions(
         self, policy: Policy[TTask]
@@ -397,23 +552,20 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         See transitions of stage in policy graph.
         """
+        return self.graph.see_node_transitions(policy)
 
-        assert (
-            policy in self.policies.values()
-        ), f"Policy {policy} is not in curriculum."
-        policy_id = self._get_policy_id(policy)
-        policy_list = self.graph[policy_id]
-        policy_list = [
-            (rule, self.policies[p_id]) for (rule, p_id) in policy_list
-        ]
-
-        return policy_list
-
-    def see_policies(self) -> list[Policy[TTask]]:
+    def set_policy_transition_priority(
+        self,
+        policy: Policy[TTask],
+        policy_transitions: list[tuple[PolicyTransition[TTask], Policy[TTask]]]
+        ) -> None:
         """
-        See policies of policy graph.
+        Change the order of policy transitions listed under a policy.
+        To use, call see_policy_transitions() and order the transitions
+        in the desired priority from left -> right.
         """
-        return list(self.policies.values())
+
+        self.graph.set_transition_priority(policy, policy_transitions)
 
     def get_task_parameters(self) -> TaskParameters[TTask]:
         """
@@ -428,11 +580,11 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         self.task.task_parameters = task_params
 
-    def export_visual():
+    def export_diagram(self, image_path: str):
         """
         Export visual representation of graph to inspect correctness.
         """
-        # TODO
+        self.graph.export_diagram(image_path)
 
 
 class StageTransition(AindBehaviorModel, Generic[TTask]):
@@ -491,8 +643,9 @@ class Curriculum(AindBehaviorModel):
     pkg_location: str = ""
     name: str = Field(..., description="Curriculum name")
 
-    stages: dict[int, Stage] = {}
-    graph: dict[int, list[tuple[StageTransition, int]]] = {}
+    # Nodes are type Stage
+    # Edges are type StageTransition
+    graph: BehaviorGraph = BehaviorGraph()
 
     def model_post_init(self, __context: Any) -> None:
         """
@@ -501,40 +654,11 @@ class Curriculum(AindBehaviorModel):
         super().model_post_init(__context)
         self.pkg_location = self.__module__ + "." + type(self).__name__
 
-    def _get_stage_id(self, s: Stage) -> int:
-        """
-        Dictionaries are ordered for Python 3.7+ so this is safe.
-        This library requires Python 3.8+.
-        """
-        dict_keys = list(self.stages.keys())
-        dict_values = list(self.stages.values())
-
-        i = dict_values.index(s)
-        return dict_keys[i]
-
-    def _create_stage_id(self) -> int:
-        """
-        Helper method. More readable than using hash(Stage).
-        """
-        new_id = 0
-        if len(self.stages) > 0:
-            new_id = max(len(self.stages), max(self.stages.keys()) + 1)
-        return new_id
-
     def add_stage(self, stage: Stage) -> None:
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
-
-        if stage in self.stages.values():
-            warnings.warn(
-                f"Stage {stage} has already been added to this Curriculum."
-                "A Curriculum cannot have duplicate stages."
-            )
-        else:
-            s_id = self._create_stage_id()
-            self.stages[s_id] = stage
-            self.graph[s_id] = []
+        self.graph.add_node(stage)
 
     def remove_stage(self, stage: Stage) -> None:
         """
@@ -543,28 +667,7 @@ class Curriculum(AindBehaviorModel):
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
-
-        assert (
-            stage in self.stages.values()
-        ), f"Stage {stage} is not in the stage graph to be removed."
-
-        # Resolve stage id
-        s_id = self._get_stage_id(stage)
-
-        # Remove stage from stage list
-        del self.stages[s_id]
-
-        # Remove stage from curriculum graph
-        for start_id in self.graph:
-            if start_id == s_id:
-                # Remove outgoing transitions
-                del self.graph[s_id]
-                continue
-
-            for rule, dest_id in self.graph[start_id]:
-                if dest_id == s_id:
-                    # Remove incoming transitions
-                    self.graph[start_id].remove((rule, dest_id))
+        self.graph.remove_node(stage)
 
     def add_stage_transition(
         self,
@@ -584,23 +687,7 @@ class Curriculum(AindBehaviorModel):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
-
-        # Resolve id of start_stage
-        if not (start_stage in self.stages.values()):
-            new_id = self._create_stage_id()
-            self.stages[new_id] = start_stage
-            self.graph[new_id] = []
-        start_id = self._get_stage_id(start_stage)
-
-        # Resolve id of dest_stage
-        if not (dest_stage in self.stages.values()):
-            new_id = self._create_stage_id()
-            self.stages[new_id] = dest_stage
-            self.graph[new_id] = []
-        dest_id = self._get_stage_id(dest_stage)
-
-        # Add the new transition to the stage graph
-        self.graph[start_id].append((rule, dest_id))
+        self.graph.add_transition(start_stage, dest_stage, rule)
 
     def remove_stage_transition(
         self,
@@ -616,30 +703,17 @@ class Curriculum(AindBehaviorModel):
         NOTE: Removed nodes and transitions has the side effect
         of changing transition priority.
         """
+        self.graph.remove_node_transition(start_stage,
+                                          dest_stage,
+                                          rule,
+                                          remove_start_stage,
+                                          remove_dest_stage)
 
-        assert (
-            start_stage in self.stages.values()
-        ), f"Stage {start_stage} is not in the stage graph to be removed."
-
-        assert (
-            dest_stage in self.stages.values()
-        ), f"Policy {dest_stage} is not in the stage graph to be removed."
-
-        start_id = self._get_stage_id(start_stage)
-        dest_id = self._get_stage_id(dest_stage)
-        assert (rule, dest_id) in self.graph[start_id], (
-            f"Stage {start_stage} does not transition"
-            + f"into Stage {dest_stage} with Rule {rule}."
-        )
-
-        # Optionally remove nodes
-        if remove_start_stage:
-            self.remove_stage(start_stage)
-        if remove_dest_stage:
-            self.remove_stage(dest_stage)
-
-        # Remove transition
-        self.graph[start_id].remove((rule, dest_id))
+    def see_stages(self) -> list[Stage]:
+        """
+        See stages of curriculum graph.
+        """
+        return self.graph.see_nodes()
 
     def see_stage_transitions(
         self, stage: Stage
@@ -647,23 +721,23 @@ class Curriculum(AindBehaviorModel):
         """
         See transitions of stage in curriculum graph.
         """
-        assert (
-            stage in self.stages.values()
-        ), f"Stage {stage} is not in curriculum."
-        stage_id = self._get_stage_id(stage)
-        stage_list = self.graph[stage_id]
-        stage_list = [(rule, self.stages[s_id]) for (rule, s_id) in stage_list]
+        return self.graph.see_node_transitions(stage)
 
-        return stage_list
-
-    def see_stages(self) -> list[Stage]:
+    def set_stage_transition_priority(
+        self,
+        stage: Stage,
+        stage_transitions: list[tuple[StageTransition, Stage]]
+        ) -> None:
         """
-        See stages of curriculum graph.
+        Change the order of stage transitions listed under a stage.
+        To use, call see_stage_transitions() and order the transitions
+        in the desired priority from left -> right.
         """
-        return list(self.stages.values())
 
-    def export_visual():
+        self.graph.set_transition_priority(stage, stage_transitions)
+
+    def export_diagram(self, image_path: str):
         """
         Export visual representation of graph to inspect correctness.
         """
-        # TODO
+        self.graph.export_diagram(image_path)
