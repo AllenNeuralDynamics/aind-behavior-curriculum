@@ -71,15 +71,3 @@ class Task(abc.AindBehaviorModel):
     task_parameters: TaskParameters[TTask] = Field(
         ..., description=TaskParameters.__doc__.strip(), validate_default=True
     )
-
-    def update_parameters(self, **kwargs) -> None:
-        """
-        Convenience utility for updating multiple task parameters at once.
-        Works across all subclass levels.
-        kwargs: dictionary of keyword args
-        """
-        for key, value in kwargs.items():
-            try:
-                self.task_parameters.__setattr__(key, value)
-            except Exception as e:
-                raise e
