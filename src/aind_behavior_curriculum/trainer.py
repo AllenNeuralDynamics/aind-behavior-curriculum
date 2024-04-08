@@ -4,7 +4,33 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 
-from aind_behavior_curriculum import Curriculum, Metrics, Policy, Stage
+from aind_behavior_curriculum import AindBehaviorModel, Curriculum, Metrics, Policy, Stage
+
+class SubjectHistory(AindBehaviorModel):
+    """
+    Record of subject locations in Curriculum.
+    Pydantic model for de/serialization.
+    """
+
+    stage_history: list[Stage]
+    policy_history: list[tuple[Policy]]
+
+    def add_entry(
+        self,
+        stage: Stage,
+        policies: tuple[Policy]
+        ) -> None:
+        """
+        Add to stage and policy history synchronously.
+        """
+        self.stage_history.append(stage)
+        self.policy_history.append(policies)
+
+    def peek_last_entry(self) -> tuple[Stage, tuple[Policy]]:
+        """
+        Return most-recently added entry.
+        """
+        return (self.stage_history[-1], self.policy_history[-1])
 
 
 class Trainer:
@@ -29,12 +55,12 @@ class Trainer:
     @abstractmethod
     def load_data(
         self, subject_id: int
-    ) -> tuple[Curriculum, list[tuple[Stage, Policy]], Metrics]:
+    ) -> tuple[Curriculum, SubjectHistory, Metrics]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
         - subject Curriculum
-        - List of (Stage, Policy) tuples recording subject history
+        - subject History
         - subject Metrics
         """
         raise NotImplementedError
@@ -44,14 +70,14 @@ class Trainer:
         self,
         subject_id: int,
         curriculum: Curriculum,
-        history: list[tuple[Stage, Policy]],
+        history: SubjectHistory,
     ) -> None:
         """
         User-defined.
         Exports 3 pieces of data to database.
         - subject Id
         - subject Curriculum
-        - List of (Stage, Policy) tuples recording subject history
+        - subject History
 
         For Curriculums with no internal policies, insert tacit INIT_STAGE
         """
@@ -69,11 +95,11 @@ class Trainer:
         """
 
         assert (
-            start_stage in curriculum.stages.values()
+            start_stage in curriculum.see_stages()
         ), "Provided start_stage is not in provided curriculum."
 
         assert (
-            start_policy in start_stage.policies.values()
+            start_policy in start_stage.see_policies()
         ), "Provided start_policy is not in provided stage_stage."
 
         assert (
@@ -114,9 +140,9 @@ class Trainer:
 
             a, b, c = self.load_data(s_id)
             curriculum: Curriculum = a
-            stage_history: list[tuple[Stage, Policy]] = b
+            subject_history: SubjectHistory = b
             curr_metrics: Metrics = c
-            current_stage, current_policy = stage_history[-1]
+            current_stage, current_policies = subject_history.peek_last_entry()
 
             # 1) Stage Transition
             advance_stage = False
@@ -135,15 +161,22 @@ class Trainer:
                     )
                     dest_stage = dest_stage.model_copy(deep=True)
                     dest_stage.set_task_parameters(updated_params)
-                    stage_history.append((dest_stage, dest_policy))
+                    subject_history.add_entry(dest_stage, (dest_policy))
 
-                    self.write_data(s_id, curriculum, stage_history)
+                    self.write_data(s_id, curriculum, subject_history)
                     advance_stage = True
                     break
 
             # 2) Policy Transition
             advance_policy = False
             if not advance_stage:
+                # TODO: This becomes a double for-loop
+                # (current policy on the outside, transitions on the inside)
+                # Loop adds to output list/tuple of policies.
+                # Inner Loop breaks on successful transition
+                # to proceed to next set of transitions.
+                # Yup, that's pretty much it to that.
+
                 policy_transitions = current_stage.see_policy_transitions(
                     current_policy
                 )
@@ -157,18 +190,17 @@ class Trainer:
                         )
                         current_stage = current_stage.model_copy(deep=True)
                         current_stage.set_task_parameters(updated_params)
-                        stage_history.append((current_stage, dest_policy))
+                        subject_history.add_entry(current_stage, (dest_policy))
 
-                        self.write_data(s_id, curriculum, stage_history)
+                        self.write_data(s_id, curriculum, subject_history)
                         advance_policy = True
                         break
 
             # 3) No Transition
             if not (advance_stage or advance_policy):
-
                 current_stage = current_stage.model_copy(deep=True)
-                stage_history.append((current_stage, current_policy))
-                self.write_data(s_id, curriculum, stage_history)
+                subject_history.add_entry(current_stage, current_policies)
+                self.write_data(s_id, curriculum, subject_history)
 
     def override_subject_status(
         self, s_id: int, override_stage: Stage, override_policy: Policy
@@ -184,7 +216,7 @@ class Trainer:
 
         a, b, c = self.load_data(s_id)
         curriculum: Curriculum = a
-        stage_history: list[tuple[Stage, Policy]] = b
+        subject_history: SubjectHistory = b
         curr_metrics: Metrics = c  # noqa: F841
 
         assert (
@@ -197,12 +229,5 @@ class Trainer:
         ), f"override policy {override_policy} not in \
            given override stage {override_stage}."
 
-        stage_history.append((override_stage, override_policy))
-        self.write_data(s_id, curriculum, stage_history)
-
-    def export_visual(self):
-        """
-        Export visual representation of curriculum to inspect status.
-        """
-
-        # TODO
+        subject_history.add_entry(override_stage, (override_policy))
+        self.write_data(s_id, curriculum, subject_history)
