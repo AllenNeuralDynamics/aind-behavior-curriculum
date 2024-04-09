@@ -83,6 +83,7 @@ class CurriculumTests(unittest.TestCase):
         instance_json = ex_curr.model_dump_json()
         # Deserialize from Child
         recovered = ex.MyCurriculum.model_validate_json(instance_json)
+
         self.assertTrue(ex_curr == recovered)
 
         # Serialize from Child
@@ -98,9 +99,10 @@ class CurriculumTests(unittest.TestCase):
     def test_round_trip_edit_task_parameters(self):
         ex_curr = ex.construct_curriculum()
 
-        params = ex_curr.stages[0].get_task_parameters()
+        stage_0 = ex_curr.see_stages()[0]
+        params = stage_0.get_task_parameters()
         params.field_a = 8
-        ex_curr.stages[0].set_task_parameters(params)
+        stage_0.set_task_parameters(params)
 
         # Serialize from child
         instance_json = ex_curr.model_dump_json()
@@ -117,8 +119,7 @@ class CurriculumTests(unittest.TestCase):
         # Deserialize from Child
         instance_prime = ex.MyCurriculum.model_validate_json(parent_json)
         self.assertTrue(ex_curr == instance_prime)
-
-        self.assertTrue(ex_curr.stages[0] == instance_prime.stages[0])
+        self.assertTrue(stage_0 == instance_prime.see_stages()[0])
 
 
 if __name__ == "__main__":

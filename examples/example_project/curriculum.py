@@ -10,6 +10,7 @@ from pydantic import Field
 from aind_behavior_curriculum import (
     GRADUATED,
     INIT_STAGE,
+    BehaviorGraph,
     Curriculum,
     Graduated,
     Metrics,
@@ -159,11 +160,14 @@ t2_10 = StageTransition(rule=t2_10_rule)
 
 
 # --- CURRICULUM ---
+Curriculum_Stages = Union[StageA, StageB, Graduated]
+
+
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-
-    stages: dict[int, Union[StageA, StageB, Graduated]] = {}
-    graph: dict[int, list[tuple[StageTransition, int]]] = {}
+    graph: BehaviorGraph[Curriculum_Stages, StageTransition] = BehaviorGraph[
+        Curriculum_Stages, StageTransition
+    ]()
 
 
 def construct_curriculum() -> MyCurriculum:
@@ -180,10 +184,12 @@ def construct_curriculum() -> MyCurriculum:
     stageA.add_policy_transition(INIT_STAGE, stageA_policyB, t1_10)
     stageA.add_policy_transition(INIT_STAGE, stageA_policyA, t1_5)
     stageA.add_policy_transition(stageA_policyA, stageA_policyB, t1_10)
+    stageA.set_start_policies(INIT_STAGE)
 
     stageB.add_policy_transition(INIT_STAGE, stageB_policyB, t3_10)
     stageB.add_policy_transition(INIT_STAGE, stageB_policyA, t3_5)
     stageB.add_policy_transition(stageB_policyA, stageB_policyB, t3_10)
+    stageB.set_start_policies(INIT_STAGE)
 
     # Construct the Curriculum
     ex_curr = MyCurriculum(name="My Curriculum")
@@ -198,7 +204,7 @@ if __name__ == "__main__":
     ex_curr = construct_curriculum()
 
     with open("examples/stage_instance.json", "w") as f:
-        stageA = ex_curr.stages[0]
+        stageA = ex_curr.see_stages()[0]
         json_dict = stageA.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
@@ -207,3 +213,5 @@ if __name__ == "__main__":
         json_dict = ex_curr.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
+
+    ex_curr.export_diagram(output_directory="examples/my_curr_diagram/")

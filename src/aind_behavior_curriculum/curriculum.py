@@ -5,15 +5,16 @@ Core Stage and Curriculum Primitives.
 from __future__ import annotations
 
 import inspect
+import subprocess
 import warnings
 from importlib import import_module
+from pathlib import Path
 from typing import Any, Callable, Generic, TypeVar
 
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
-import subprocess
 
 from aind_behavior_curriculum import (
     AindBehaviorModel,
@@ -230,14 +231,19 @@ class PolicyTransition(AindBehaviorModel, Generic[TTask]):
         return r
 
 
-class BehaviorGraph(AindBehaviorModel):
+NodeTypes = TypeVar("NodeTypes")
+EdgeType = TypeVar("EdgeType", bound=Rule)
+
+
+class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     """
     Core directed graph data structure used in Stage and Curriculum.
     """
-    nodes: dict[int, Any] = {}
-    graph: dict[int, list[Rule, int]] = {}
 
-    def _get_node_id(self, node: Any) -> int:
+    nodes: dict[int, NodeTypes] = {}
+    graph: dict[int, list[tuple[EdgeType, int]]] = {}
+
+    def _get_node_id(self, node: NodeTypes) -> int:
         """
         Dictionaries are ordered for Python 3.7+ so this is safe.
         This library requires Python 3.8+.
@@ -258,7 +264,7 @@ class BehaviorGraph(AindBehaviorModel):
             new_id = max(len(self.nodes), max(self.nodes.keys()) + 1)
         return new_id
 
-    def add_node(self, node: Any) -> None:
+    def add_node(self, node: NodeTypes) -> None:
         """
         Adds a floating node to the behavior graph.
         """
@@ -273,7 +279,7 @@ class BehaviorGraph(AindBehaviorModel):
             self.nodes[p_id] = node
             self.graph[p_id] = []
 
-    def remove_node(self, node: Any) -> None:
+    def remove_node(self, node: NodeTypes) -> None:
         """
         Removes node and all associated incoming/outgoing
         transition rules from the stage graph.
@@ -304,9 +310,9 @@ class BehaviorGraph(AindBehaviorModel):
 
     def add_transition(
         self,
-        start_node: Any,
-        dest_node: Any,
-        rule: Rule,
+        start_node: NodeTypes,
+        dest_node: NodeTypes,
+        rule: EdgeType,
     ) -> None:
         """
         Add transition between two nodes:
@@ -340,9 +346,9 @@ class BehaviorGraph(AindBehaviorModel):
 
     def remove_node_transition(
         self,
-        start_node: Any,
-        dest_node: Any,
-        rule: Rule,
+        start_node: NodeTypes,
+        dest_node: NodeTypes,
+        rule: EdgeType,
         remove_start_node: bool = False,
         remove_dest_node: bool = False,
     ) -> None:
@@ -377,15 +383,15 @@ class BehaviorGraph(AindBehaviorModel):
         # Remove transition
         self.graph[start_id].remove((rule, dest_id))
 
-    def see_nodes(self) -> list[Any]:
+    def see_nodes(self) -> list[NodeTypes]:
         """
         See nodes of behavior graph.
         """
         return list(self.nodes.values())
 
     def see_node_transitions(
-        self, node: Any
-    ) -> list[tuple[Any, Any]]:
+        self, node: NodeTypes
+    ) -> list[tuple[EdgeType, NodeTypes]]:
         """
         See transitions of node in behavior graph.
         """
@@ -395,16 +401,15 @@ class BehaviorGraph(AindBehaviorModel):
         ), f"Node {node} is not in behavior graph."
         node_id = self._get_node_id(node)
         node_list = self.graph[node_id]
-        node_list = [
-            (rule, self.nodes[p_id]) for (rule, p_id) in node_list
-        ]
+        node_list = [(rule, self.nodes[p_id]) for (rule, p_id) in node_list]
 
         return node_list
 
     def set_transition_priority(
-        self, node: Any,
-        node_transitions: list[tuple[Any, Any]]
-        ) -> None:
+        self,
+        node: NodeTypes,
+        node_transitions: list[tuple[EdgeType, NodeTypes]],
+    ) -> None:
         """
         Change order of node transitions listed under a node.
         Highest priority is ordered in node_transition from left -> right.
@@ -412,57 +417,73 @@ class BehaviorGraph(AindBehaviorModel):
 
         input_transitions = []
         for rule, n in node_transitions:
-            assert n in self.nodes.values(), \
-                f"Node {n} is not a node inside the behavior graph."
+            assert (
+                n in self.nodes.values()
+            ), f"Node {n} is not a node inside the behavior graph."
             input_transitions.append(rule, self._get_node_id(n))
 
-        assert set(input_transitions) == set(self.graph[node]), \
-            f"Elements of input node transitions {node_transitions} does not
-              match the elements under this node: {self.see_node_transitions(node)}.
+        assert set(input_transitions) == set(
+            self.graph[node]
+        ), f"Elements of input node transitions {node_transitions} does not \
+              match the elements under this node: {self.see_node_transitions(node)}. \
               Please call 'see_node_transitions()' for a precise list of elements."
 
         self.graph[node] = input_transitions
 
     def export_diagram(self, img_path: str):
-        template_string = \
-        """
-        digraph G {
-            rankdir=LR; // Arrange nodes from left to right
+        template_string = """
+            digraph G {
+                rankdir=LR; // Arrange nodes from left to right
 
-            // Define nodes with increased font visibility
-            node [shape=box, style=filled, fontname=Arial, fontsize=12, fillcolor=lightblue, color=black];
+                // Define nodes with increased font visibility
+                node [shape=box, style=filled, fontname=Arial, fontsize=12,
+                fillcolor=lightblue, color=black];
 
-            // Define nodes
-            {% for node in nodes %}
-            {{ node }};
-            {% endfor %}
+                // Define nodes
+                {% for node in nodes %}
+                {{ node }};
+                {% endfor %}
 
-            // Define edges with labels and increased visibility
-            edge [fontname=Arial, fontsize=10, color=black];
-            {% for edge in edges %}
-            {{ edge }};
-            {% endfor %}
-        }
-        """
+                // Define edges with labels and increased visibility
+                edge [fontname=Arial, fontsize=10, color=black];
+                {% for edge in edges %}
+                {{ edge }};
+                {% endfor %}
+            }
+            """
 
         template = Template(template_string)
-        nodes = [f'{node_id} [label="Node {node.__name__}"]' for node_id, node in self.nodes.items()]
+
+        nodes = []
+        if isinstance(list(self.nodes.values())[0], Policy):
+            nodes = [
+                f'{node_id} [label="{node.rule.__name__}"]'
+                for node_id, node in self.nodes.items()
+            ]
+        else:  # node is an instance of Stage
+            nodes = [
+                f'{node_id} [label="{node.name}"]'
+                for node_id, node in self.nodes.items()
+            ]
+
         edges = []
         for start_id, edge_list in self.graph.items():
-            for i, (rule, dest_id) in enumerate(edge_list):
-                edge_str = f'{start_id} -> {dest_id} [label="({i}) {rule.__name__}", minlen=2]'
+            for i, (edge, dest_id) in enumerate(edge_list):
+
+                # Edges must be StageTransition or PolicyTransition
+                edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", \
+                    minlen=2]'
                 edges.append(edge_str)
 
         dot_script = template.render(nodes=nodes, edges=edges)
 
         # Execute dot script in subprocess
-        dot_command = ['dot', '-Tpng', '-o', img_path]
+        dot_command = ["dot", "-Tpng", "-o", img_path]
         dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
         dot_process.communicate(input=dot_script.encode())
 
 
 class Stage(AindBehaviorModel, Generic[TTask]):
-
     """
     Instance of a Task.
     Task Parameters may change according to rules defined in BehaviorGraph.
@@ -473,10 +494,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
-
-    # Nodes are type Policy[TTask]
-    # Edges are type PolicyTransition[TTask]
-    graph: BehaviorGraph = BehaviorGraph()
+    graph: BehaviorGraph[Policy[TTask], PolicyTransition[TTask]] = (
+        BehaviorGraph[Policy[TTask], PolicyTransition[TTask]]()
+    )
+    start_policies: list[Policy[TTask]] = []
 
     def __eq__(self, __value: object) -> bool:
         """
@@ -499,6 +520,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         of changing transition priority.
         """
         self.graph.remove_node(policy)
+
+        # Also remove reference to policy in start_policies if applicable.
+        if policy in self.start_policies:
+            self.start_policies.remove(policy)
 
     def add_policy_transition(
         self,
@@ -534,11 +559,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: Removed nodes and transitions has the side effect
         of changing transition priority.
         """
-        self.graph.remove_node_transition(start_policy,
-                                          dest_policy,
-                                          rule,
-                                          remove_start_policy,
-                                          remove_dest_policy)
+        self.graph.remove_node_transition(
+            start_policy,
+            dest_policy,
+            rule,
+            remove_start_policy,
+            remove_dest_policy,
+        )
 
     def see_policies(self) -> list[Policy[TTask]]:
         """
@@ -557,8 +584,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     def set_policy_transition_priority(
         self,
         policy: Policy[TTask],
-        policy_transitions: list[tuple[PolicyTransition[TTask], Policy[TTask]]]
-        ) -> None:
+        policy_transitions: list[
+            tuple[PolicyTransition[TTask], Policy[TTask]]
+        ],
+    ) -> None:
         """
         Change the order of policy transitions listed under a policy.
         To use, call see_policy_transitions() and order the transitions
@@ -566,6 +595,17 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
 
         self.graph.set_transition_priority(policy, policy_transitions)
+
+    def set_start_policies(
+        self, start_policies: Policy[TTask] | list[Policy[TTask]]
+    ):
+        """
+        Sets stage's start policies to start policies provided.
+        Input overwrites existing start policies.
+        """
+        if isinstance(start_policies, Policy):
+            start_policies = [start_policies]
+        self.start_policies = start_policies
 
     def get_task_parameters(self) -> TaskParameters[TTask]:
         """
@@ -583,6 +623,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     def export_diagram(self, image_path: str):
         """
         Export visual representation of graph to inspect correctness.
+        Please include the image extension (.png) in the image path.
         """
         self.graph.export_diagram(image_path)
 
@@ -641,11 +682,14 @@ class Curriculum(AindBehaviorModel):
     """
 
     pkg_location: str = ""
-    name: str = Field(..., description="Curriculum name")
-
-    # Nodes are type Stage
-    # Edges are type StageTransition
-    graph: BehaviorGraph = BehaviorGraph()
+    name: str = (
+        "Please subclass, rename, and define \
+                 a BehaviorGraph with your own Stage objs \
+                 Ex: BehaviorGraph[Union[StageA, StageB, Graduated]]"
+    )
+    graph: BehaviorGraph[Stage[TTask], StageTransition[TTask]] = BehaviorGraph[
+        Stage[TTask], StageTransition[TTask]
+    ]()
 
     def model_post_init(self, __context: Any) -> None:
         """
@@ -654,13 +698,13 @@ class Curriculum(AindBehaviorModel):
         super().model_post_init(__context)
         self.pkg_location = self.__module__ + "." + type(self).__name__
 
-    def add_stage(self, stage: Stage) -> None:
+    def add_stage(self, stage: Stage[TTask]) -> None:
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
         self.graph.add_node(stage)
 
-    def remove_stage(self, stage: Stage) -> None:
+    def remove_stage(self, stage: Stage[TTask]) -> None:
         """
         Removes stage and all associated incoming/outgoing
         transition rules from the curriculum graph.
@@ -671,9 +715,9 @@ class Curriculum(AindBehaviorModel):
 
     def add_stage_transition(
         self,
-        start_stage: Stage,
-        dest_stage: Stage,
-        rule: StageTransition,
+        start_stage: Stage[TTask],
+        dest_stage: Stage[TTask],
+        rule: StageTransition[TTask],
     ) -> None:
         """
         Add stage transition between two stages:
@@ -687,6 +731,7 @@ class Curriculum(AindBehaviorModel):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
+
         self.graph.add_transition(start_stage, dest_stage, rule)
 
     def remove_stage_transition(
@@ -703,21 +748,23 @@ class Curriculum(AindBehaviorModel):
         NOTE: Removed nodes and transitions has the side effect
         of changing transition priority.
         """
-        self.graph.remove_node_transition(start_stage,
-                                          dest_stage,
-                                          rule,
-                                          remove_start_stage,
-                                          remove_dest_stage)
+        self.graph.remove_node_transition(
+            start_stage,
+            dest_stage,
+            rule,
+            remove_start_stage,
+            remove_dest_stage,
+        )
 
-    def see_stages(self) -> list[Stage]:
+    def see_stages(self) -> list[Stage[TTask]]:
         """
         See stages of curriculum graph.
         """
         return self.graph.see_nodes()
 
     def see_stage_transitions(
-        self, stage: Stage
-    ) -> list[tuple[StageTransition, Stage]]:
+        self, stage: Stage[TTask]
+    ) -> list[tuple[StageTransition[TTask], Stage[TTask]]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -725,9 +772,9 @@ class Curriculum(AindBehaviorModel):
 
     def set_stage_transition_priority(
         self,
-        stage: Stage,
-        stage_transitions: list[tuple[StageTransition, Stage]]
-        ) -> None:
+        stage: Stage[TTask],
+        stage_transitions: list[tuple[StageTransition[TTask], Stage[TTask]]],
+    ) -> None:
         """
         Change the order of stage transitions listed under a stage.
         To use, call see_stage_transitions() and order the transitions
@@ -736,8 +783,15 @@ class Curriculum(AindBehaviorModel):
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
-    def export_diagram(self, image_path: str):
+    def export_diagram(self, output_directory: str):
         """
         Export visual representation of graph to inspect correctness.
         """
-        self.graph.export_diagram(image_path)
+
+        curriculum_path = Path(output_directory) / f"{self.name}.png"
+        stage_dir = Path(output_directory) / "stages"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        self.graph.export_diagram(curriculum_path)
+        for s in self.see_stages():
+            s.export_diagram(str(stage_dir / f"{s.name}.png"))

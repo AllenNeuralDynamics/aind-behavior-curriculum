@@ -1,137 +1,161 @@
 {
     "pkg_location": "__main__.MyCurriculum",
     "name": "My Curriculum",
-    "stages": {
-        "0": {
-            "name": "Stage A",
-            "task": {
-                "name": "Task A",
-                "description": "",
-                "version": "0.0.1",
-                "task_parameters": {
-                    "field_a": 0
-                }
-            },
-            "policies": {
-                "0": {
-                    "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
-                },
-                "1": {
-                    "rule": "__main__.stageA_policyA_rule"
-                },
-                "2": {
-                    "rule": "__main__.stageA_policyB_rule"
-                }
-            },
-            "graph": {
-                "0": [
-                    [
-                        {
-                            "rule": "__main__.t1_10_rule"
-                        },
-                        1
-                    ],
-                    [
-                        {
-                            "rule": "__main__.t1_5_rule"
-                        },
-                        1
-                    ]
-                ],
-                "1": [
-                    [
-                        {
-                            "rule": "__main__.t1_10_rule"
-                        },
-                        2
-                    ]
-                ]
-            }
-        },
-        "1": {
-            "name": "GRADUATED STAGE",
-            "task": {
-                "name": "Empty Task",
-                "description": "",
-                "version": "0.0.0",
-                "task_parameters": {}
-            },
-            "policies": {
-                "0": {
-                    "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
-                }
-            },
-            "graph": {}
-        },
-        "2": {
-            "name": "Stage B",
-            "task": {
-                "name": "Task B",
-                "description": "",
-                "version": "0.0.1",
-                "task_parameters": {
-                    "field_b": 0.0
-                }
-            },
-            "policies": {
-                "0": {
-                    "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
-                },
-                "1": {
-                    "rule": "__main__.stageB_policyB_rule"
-                },
-                "2": {
-                    "rule": "__main__.stageB_policyA_rule"
-                }
-            },
-            "graph": {
-                "0": [
-                    [
-                        {
-                            "rule": "__main__.t3_10_rule"
-                        },
-                        1
-                    ],
-                    [
-                        {
-                            "rule": "__main__.t3_5_rule"
-                        },
-                        2
-                    ]
-                ],
-                "2": [
-                    [
-                        {
-                            "rule": "__main__.t3_10_rule"
-                        },
-                        1
-                    ]
-                ]
-            }
-        }
-    },
     "graph": {
-        "0": [
-            [
-                {
-                    "rule": "__main__.t2_10_rule"
+        "nodes": {
+            "0": {
+                "name": "Stage A",
+                "task": {
+                    "name": "Task A",
+                    "description": "",
+                    "version": "0.0.1",
+                    "task_parameters": {
+                        "field_a": 0
+                    }
                 },
-                1
+                "graph": {
+                    "nodes": {
+                        "0": {
+                            "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                        },
+                        "1": {
+                            "rule": "__main__.stageA_policyB_rule"
+                        },
+                        "2": {
+                            "rule": "__main__.stageA_policyA_rule"
+                        }
+                    },
+                    "graph": {
+                        "0": [
+                            [
+                                {
+                                    "rule": "__main__.t1_10_rule"
+                                },
+                                1
+                            ],
+                            [
+                                {
+                                    "rule": "__main__.t1_5_rule"
+                                },
+                                2
+                            ]
+                        ],
+                        "1": [],
+                        "2": [
+                            [
+                                {
+                                    "rule": "__main__.t1_10_rule"
+                                },
+                                1
+                            ]
+                        ]
+                    }
+                },
+                "start_policies": [
+                    {
+                        "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                    }
+                ]
+            },
+            "1": {
+                "name": "GRADUATED STAGE",
+                "task": {
+                    "name": "Empty Task",
+                    "description": "",
+                    "version": "0.0.0",
+                    "task_parameters": {}
+                },
+                "graph": {
+                    "nodes": {
+                        "0": {
+                            "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                        }
+                    },
+                    "graph": {
+                        "0": []
+                    }
+                },
+                "start_policies": []
+            },
+            "2": {
+                "name": "Stage B",
+                "task": {
+                    "name": "Task B",
+                    "description": "",
+                    "version": "0.0.1",
+                    "task_parameters": {
+                        "field_b": 0.0
+                    }
+                },
+                "graph": {
+                    "nodes": {
+                        "0": {
+                            "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                        },
+                        "1": {
+                            "rule": "__main__.stageB_policyB_rule"
+                        },
+                        "2": {
+                            "rule": "__main__.stageB_policyA_rule"
+                        }
+                    },
+                    "graph": {
+                        "0": [
+                            [
+                                {
+                                    "rule": "__main__.t3_10_rule"
+                                },
+                                1
+                            ],
+                            [
+                                {
+                                    "rule": "__main__.t3_5_rule"
+                                },
+                                2
+                            ]
+                        ],
+                        "1": [],
+                        "2": [
+                            [
+                                {
+                                    "rule": "__main__.t3_10_rule"
+                                },
+                                1
+                            ]
+                        ]
+                    }
+                },
+                "start_policies": [
+                    {
+                        "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+                    }
+                ]
+            }
+        },
+        "graph": {
+            "0": [
+                [
+                    {
+                        "rule": "__main__.t2_10_rule"
+                    },
+                    1
+                ],
+                [
+                    {
+                        "rule": "__main__.t2_5_rule"
+                    },
+                    2
+                ]
             ],
-            [
-                {
-                    "rule": "__main__.t2_5_rule"
-                },
-                2
+            "1": [],
+            "2": [
+                [
+                    {
+                        "rule": "__main__.t2_10_rule"
+                    },
+                    1
+                ]
             ]
-        ],
-        "2": [
-            [
-                {
-                    "rule": "__main__.t2_10_rule"
-                },
-                1
-            ]
-        ]
+        }
     }
 }

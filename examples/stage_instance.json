@@ -8,39 +8,47 @@
             "field_a": 0
         }
     },
-    "policies": {
-        "0": {
-            "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+    "graph": {
+        "nodes": {
+            "0": {
+                "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+            },
+            "1": {
+                "rule": "__main__.stageA_policyB_rule"
+            },
+            "2": {
+                "rule": "__main__.stageA_policyA_rule"
+            }
         },
-        "1": {
-            "rule": "__main__.stageA_policyA_rule"
-        },
-        "2": {
-            "rule": "__main__.stageA_policyB_rule"
+        "graph": {
+            "0": [
+                [
+                    {
+                        "rule": "__main__.t1_10_rule"
+                    },
+                    1
+                ],
+                [
+                    {
+                        "rule": "__main__.t1_5_rule"
+                    },
+                    2
+                ]
+            ],
+            "1": [],
+            "2": [
+                [
+                    {
+                        "rule": "__main__.t1_10_rule"
+                    },
+                    1
+                ]
+            ]
         }
     },
-    "graph": {
-        "0": [
-            [
-                {
-                    "rule": "__main__.t1_10_rule"
-                },
-                1
-            ],
-            [
-                {
-                    "rule": "__main__.t1_5_rule"
-                },
-                1
-            ]
-        ],
-        "1": [
-            [
-                {
-                    "rule": "__main__.t1_10_rule"
-                },
-                2
-            ]
-        ]
-    }
+    "start_policies": [
+        {
+            "rule": "aind_behavior_curriculum.curriculum_utils.init_stage_rule"
+        }
+    ]
 }

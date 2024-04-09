@@ -9,8 +9,7 @@ import example_project as ex
 from aind_behavior_curriculum import (
     Curriculum,
     Metrics,
-    Policy,
-    Stage,
+    SubjectHistory,
     Trainer,
 )
 
@@ -18,7 +17,7 @@ from aind_behavior_curriculum import (
 # NOTE: Trainer's concerte implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
-MICE_STAGE_HISTORY: dict[int, list[tuple[Stage, Policy]]] = defaultdict(list)
+MICE_STAGE_HISTORY: dict[int, SubjectHistory] = defaultdict(SubjectHistory)
 MICE_METRICS: dict[int, Metrics] = {
     0: ex.ExampleMetrics(),
     1: ex.ExampleMetrics(),
@@ -36,7 +35,7 @@ class ExampleTrainer(Trainer):
 
     def load_data(
         self, subject_id: int
-    ) -> tuple[Curriculum, list[tuple[Stage, Policy]], Metrics]:
+    ) -> tuple[Curriculum, SubjectHistory, Metrics]:
         """
         Read from proxy database.
         """
@@ -50,7 +49,7 @@ class ExampleTrainer(Trainer):
         self,
         subject_id: int,
         curriculum: Curriculum,
-        history: list[tuple[Stage, Policy]],
+        history: SubjectHistory,
     ) -> None:
         """
         Add to proxy database.
@@ -63,9 +62,7 @@ class ExampleTrainer(Trainer):
         Testing utility, clears the database for the next unit test.
         """
         MICE_CURRICULUMS: dict[int, Curriculum] = {}
-        MICE_STAGE_HISTORY: dict[int, list[tuple[Stage, Policy]]] = (
-            defaultdict(list)
-        )
+        MICE_STAGE_HISTORY: dict[int, SubjectHistory] = defaultdict(list)
         MICE_METRICS: dict[int, Metrics] = {
             0: ex.ExampleMetrics(),
             1: ex.ExampleMetrics(),
