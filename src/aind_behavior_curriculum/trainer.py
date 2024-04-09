@@ -133,6 +133,32 @@ class Trainer:
             self.write_data(subject_id, curriculum, new_history)
         self.subject_ids.append(subject_id)
 
+    def _get_net_parameter_update(
+        stage_parameters: TaskParameters,
+        stage_policies: list[Policy],
+        curr_metrics: Metrics
+        ) -> TaskParameters:
+        """
+        Aggregates parameter update of input stage_policies
+        given current stage_parameters and current metrics.
+        """
+
+        param_updates: list[TaskParameters] = []
+        for init_policy in stage_policies:
+            updated_params = init_policy.rule(
+                curr_metrics, stage_parameters
+            )
+            param_updates.append(updated_params)
+
+        # Merge Parameter Updates
+        task_parameters_subtype = type(stage_parameters)
+        merged_params = {}
+        for params in param_updates:
+            merged_params = {**merged_params, **dict(params)}
+        updated_params = task_parameters_subtype(merged_params)
+
+        return updated_params
+
     def evaluate_subjects(self):  # noqa: C901
         """
         Calls user-defined functions to automatically update
@@ -173,31 +199,18 @@ class Trainer:
                 # On first true evaluation, update SubjectHistory
                 # and publish back to database.
                 if stage_eval.rule(curr_metrics):
-                    # Collect Task Parameter updates of dest_stage start_policies
-                    param_updates: list[TaskParameters] = []
-                    for init_policy in dest_stage.start_policies:
-                        updated_params = init_policy.rule(
-                            curr_metrics, dest_stage.get_task_parameters()
-                        )
-                        param_updates.append(updated_params)
-
-                    # Merge Parameter Updates
-                    task_parameters_subtype = type(
-                        dest_stage.get_task_parameters()
-                    )
-                    merged_params = {}
-                    for params in param_updates:
-                        merged_params = {**merged_params, **dict(params)}
-                    updated_params = task_parameters_subtype(merged_params)
-
                     # Publish updated stage and start polices
+                    updated_params = self._get_net_parameter_update(
+                        dest_stage.get_task_parameters(),
+                        dest_stage.start_policies,
+                        curr_metrics
+                    )
                     dest_stage = dest_stage.model_copy(deep=True)
                     dest_stage.set_task_parameters(updated_params)
                     subject_history.add_entry(
                         dest_stage, tuple(dest_stage.start_policies)
                     )
                     self.write_data(s_id, curriculum, subject_history)
-
                     advance_stage = True
                     break
 
@@ -207,8 +220,6 @@ class Trainer:
 
                 # Buffer data structures to store result of active policy transitions.
                 dest_policies: list[Policy] = []
-                param_updates: list[TaskParameters] = []
-
                 for active_policy in current_policies:
                     policy_transitions = current_stage.see_policy_transitions(
                         active_policy
@@ -217,27 +228,17 @@ class Trainer:
                         # On first true evaluation, add to buffers
                         # and evaluate next active_policy.
                         if policy_eval.rule(curr_metrics):
-
-                            updated_params = dest_policy.rule(
-                                curr_metrics,
-                                current_stage.get_task_parameters(),
-                            )
                             dest_policies.append(dest_policy)
-                            param_updates.append(updated_params)
                             advance_policy = True
                             break
 
                 if len(dest_policies) != 0:
-                    # Process buffers
-                    # Publish stage combination update and unique dest_polices
-                    task_parameters_subtype = type(
-                        current_stage.get_task_parameters()
+                    # Publish updated stage and unique dest_polices
+                    updated_params = self._get_net_parameter_update(
+                        current_stage.get_task_parameters(),
+                        dest_policies,
+                        curr_metrics
                     )
-                    merged_params = {}
-                    for params in param_updates:
-                        merged_params = {**merged_params, **dict(params)}
-                    updated_params = task_parameters_subtype(merged_params)
-
                     current_stage = current_stage.model_copy(deep=True)
                     current_stage.set_task_parameters(updated_params)
                     subject_history.add_entry(
@@ -266,7 +267,7 @@ class Trainer:
         a, b, c = self.load_data(s_id)
         curriculum: Curriculum = a
         subject_history: SubjectHistory = b
-        curr_metrics: Metrics = c  # noqa: F841
+        curr_metrics: Metrics = c
 
         assert (
             override_stage in curriculum.see_stages()
@@ -279,5 +280,13 @@ class Trainer:
             ), f"override policy {o_policy} not in \
             given override stage {override_stage}."
 
+        # Update Stage parameters according to override policies
+        updated_params = self._get_net_parameter_update(
+            override_stage.get_task_parameters(),
+            override_policies,
+            curr_metrics
+        )
+        override_stage = override_stage.model_copy(deep=True)
+        override_stage.set_task_parameters(updated_params)
         subject_history.add_entry(override_stage, tuple(override_policies))
         self.write_data(s_id, curriculum, subject_history)
