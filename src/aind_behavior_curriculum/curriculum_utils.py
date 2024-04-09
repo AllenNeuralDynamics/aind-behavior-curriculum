@@ -27,6 +27,17 @@ def init_stage_rule(
 INIT_STAGE = Policy(rule=init_stage_rule)
 
 
+def create_empty_stage(s: Stage) -> Stage:
+    """
+    Prepares empty stage with tacit policy initalization.
+    Convenient for initalizing many empty stages.
+    """
+
+    s.add_policy(INIT_STAGE)
+    s.set_start_policies(INIT_STAGE)
+    return s
+
+
 class Graduated(Stage):
     """
     Optional:
@@ -45,6 +56,6 @@ class Graduated(Stage):
         Trivially add placeholder stage
         """
         self.add_policy(INIT_STAGE)
-
+        self.set_start_policies(INIT_STAGE)
 
 GRADUATED = Graduated()
