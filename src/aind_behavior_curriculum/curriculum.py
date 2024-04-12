@@ -9,7 +9,7 @@ import subprocess
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, TypeVar, Union
 
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
@@ -125,7 +125,7 @@ class Rule:
         return value.__module__ + "." + value.__name__
 
 
-class Policy(AindBehaviorModel, Generic[TTask]):
+class Policy(AindBehaviorModel):
     """
     User-defined function that defines
     how current Task parameters change according to metrics.
@@ -182,7 +182,7 @@ class Policy(AindBehaviorModel, Generic[TTask]):
         return r
 
 
-class PolicyTransition(AindBehaviorModel, Generic[TTask]):
+class PolicyTransition(AindBehaviorModel):
     """
     User-defined function that defines
     criteria for transitioning between policies based on metrics.
@@ -231,8 +231,8 @@ class PolicyTransition(AindBehaviorModel, Generic[TTask]):
         return r
 
 
-NodeTypes = TypeVar("NodeTypes")
-EdgeType = TypeVar("EdgeType", bound=Rule)
+NodeTypes = TypeVar("NodeTypes", bound=Union["Policy", "Stage"])
+EdgeType = TypeVar("EdgeType", bound=Union["PolicyTransition", "StageTransition"])
 
 
 class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
@@ -483,6 +483,12 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         dot_process.communicate(input=dot_script.encode())
 
 
+class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
+    pass
+    # Could probably use some custom methods in the future.
+    # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
+
+
 class Stage(AindBehaviorModel, Generic[TTask]):
     """
     Instance of a Task.
@@ -494,10 +500,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
-    graph: BehaviorGraph[Policy[TTask], PolicyTransition[TTask]] = (
-        BehaviorGraph[Policy[TTask], PolicyTransition[TTask]]()
+    graph: PolicyGraph = (
+        PolicyGraph()
     )
-    start_policies: list[Policy[TTask]] = []
+    start_policies: list[Policy] = []
 
     def __eq__(self, __value: object) -> bool:
         """
@@ -506,13 +512,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         return isinstance(__value, self.__class__)
 
-    def add_policy(self, policy: Policy[TTask]) -> None:
+    def add_policy(self, policy: Policy) -> None:
         """
         Adds a floating policy to the Stage adjacency graph.
         """
         self.graph.add_node(policy)
 
-    def remove_policy(self, policy: Policy[TTask]) -> None:
+    def remove_policy(self, policy: Policy) -> None:
         """
         Removes policy and all associated incoming/outgoing
         transition rules from the stage graph.
@@ -527,16 +533,16 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     def add_policy_transition(
         self,
-        start_policy: Policy[TTask],
-        dest_policy: Policy[TTask],
-        rule: PolicyTransition[TTask],
+        start_policy: Policy,
+        dest_policy: Policy,
+        rule: PolicyTransition,
     ) -> None:
         """
         Add policy transition between two policies:
         Policy_A -> Policy_B.
 
         If Policy_A has been added to stage before, this method starts a transition
-            from the exisiting Policy_A.
+            from the existing Policy_A.
         If Policy_B has been added to stage before, this method creates a transition
             into the existing Policy_B.
 
@@ -547,9 +553,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     def remove_policy_transition(
         self,
-        start_policy: Policy[TTask],
-        dest_policy: Policy[TTask],
-        rule: PolicyTransition[TTask],
+        start_policy: Policy,
+        dest_policy: Policy,
+        rule: PolicyTransition,
         remove_start_policy: bool = False,
         remove_dest_policy: bool = False,
     ) -> None:
@@ -567,15 +573,15 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             remove_dest_policy,
         )
 
-    def see_policies(self) -> list[Policy[TTask]]:
+    def see_policies(self) -> list[Policy]:
         """
         See policies of policy graph.
         """
         return self.graph.see_nodes()
 
     def see_policy_transitions(
-        self, policy: Policy[TTask]
-    ) -> list[tuple[PolicyTransition[TTask], Policy[TTask]]]:
+        self, policy: Policy
+    ) -> list[tuple[PolicyTransition, Policy]]:
         """
         See transitions of stage in policy graph.
         """
@@ -583,9 +589,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     def set_policy_transition_priority(
         self,
-        policy: Policy[TTask],
+        policy: Policy,
         policy_transitions: list[
-            tuple[PolicyTransition[TTask], Policy[TTask]]
+            tuple[PolicyTransition, Policy]
         ],
     ) -> None:
         """
@@ -597,7 +603,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         self.graph.set_transition_priority(policy, policy_transitions)
 
     def set_start_policies(
-        self, start_policies: Policy[TTask] | list[Policy[TTask]]
+        self, start_policies: Policy | list[Policy]
     ):
         """
         Sets stage's start policies to start policies provided.
@@ -628,7 +634,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         self.graph.export_diagram(image_path)
 
 
-class StageTransition(AindBehaviorModel, Generic[TTask]):
+class StageTransition(AindBehaviorModel):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
@@ -675,6 +681,12 @@ class StageTransition(AindBehaviorModel, Generic[TTask]):
         return r
 
 
+class StageGraph(BehaviorGraph[Stage, StageTransition]):
+    pass
+    # Could probably use some custom methods in the future.
+    # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
+
+
 class Curriculum(AindBehaviorModel):
     """
     Curriculum manages a StageGraph instance with a read/write API.
@@ -687,9 +699,7 @@ class Curriculum(AindBehaviorModel):
                  a BehaviorGraph with your own Stage objs \
                  Ex: BehaviorGraph[Union[StageA, StageB, Graduated]]"
     )
-    graph: BehaviorGraph[Stage[TTask], StageTransition[TTask]] = BehaviorGraph[
-        Stage[TTask], StageTransition[TTask]
-    ]()
+    graph: StageGraph = StageGraph()
 
     def model_post_init(self, __context: Any) -> None:
         """
@@ -698,13 +708,13 @@ class Curriculum(AindBehaviorModel):
         super().model_post_init(__context)
         self.pkg_location = self.__module__ + "." + type(self).__name__
 
-    def add_stage(self, stage: Stage[TTask]) -> None:
+    def add_stage(self, stage: Stage) -> None:
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
         self.graph.add_node(stage)
 
-    def remove_stage(self, stage: Stage[TTask]) -> None:
+    def remove_stage(self, stage: Stage) -> None:
         """
         Removes stage and all associated incoming/outgoing
         transition rules from the curriculum graph.
@@ -715,9 +725,9 @@ class Curriculum(AindBehaviorModel):
 
     def add_stage_transition(
         self,
-        start_stage: Stage[TTask],
-        dest_stage: Stage[TTask],
-        rule: StageTransition[TTask],
+        start_stage: Stage,
+        dest_stage: Stage,
+        rule: StageTransition,
     ) -> None:
         """
         Add stage transition between two stages:
@@ -736,9 +746,9 @@ class Curriculum(AindBehaviorModel):
 
     def remove_stage_transition(
         self,
-        start_stage: Policy[TTask],
-        dest_stage: Policy[TTask],
-        rule: PolicyTransition[TTask],
+        start_stage: Policy,
+        dest_stage: Policy,
+        rule: PolicyTransition,
         remove_start_stage: bool = False,
         remove_dest_stage: bool = False,
     ) -> None:
@@ -756,15 +766,15 @@ class Curriculum(AindBehaviorModel):
             remove_dest_stage,
         )
 
-    def see_stages(self) -> list[Stage[TTask]]:
+    def see_stages(self) -> list[Stage]:
         """
         See stages of curriculum graph.
         """
         return self.graph.see_nodes()
 
     def see_stage_transitions(
-        self, stage: Stage[TTask]
-    ) -> list[tuple[StageTransition[TTask], Stage[TTask]]]:
+        self, stage: Stage
+    ) -> list[tuple[StageTransition, Stage]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -773,7 +783,7 @@ class Curriculum(AindBehaviorModel):
     def set_stage_transition_priority(
         self,
         stage: Stage[TTask],
-        stage_transitions: list[tuple[StageTransition[TTask], Stage[TTask]]],
+        stage_transitions: list[tuple[StageTransition, Stage]],
     ) -> None:
         """
         Change the order of stage transitions listed under a stage.
