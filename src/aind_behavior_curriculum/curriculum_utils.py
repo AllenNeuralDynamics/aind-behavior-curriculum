@@ -2,7 +2,7 @@
 Useful Placeholders when making Curriculums
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -44,7 +44,7 @@ class Graduated(Stage):
     Use this Stage as the final Stage in a Curriculums's PolicyGraph.
     """
 
-    name: str = Field("GRADUATED STAGE", description="Stage name.")
+    name: Literal["Graduated"] = "Graduated"
     task: Task = Task(
         name="Empty Task",
         version="0.0.0",
