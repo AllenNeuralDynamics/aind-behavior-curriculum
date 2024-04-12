@@ -26,7 +26,7 @@ from aind_behavior_curriculum import (
 TTask = TypeVar("TTask", bound=Task)
 
 
-class Metrics(AindBehaviorModelExtra, Generic[TTask]):
+class Metrics(AindBehaviorModelExtra):
     """
     Abstract Metrics class.
     Subclass with Metric values.
@@ -489,7 +489,7 @@ class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
     # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
 
 
-class Stage(AindBehaviorModel, Generic[TTask]):
+class Stage(AindBehaviorModel):
     """
     Instance of a Task.
     Task Parameters may change according to rules defined in BehaviorGraph.
@@ -497,7 +497,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     """
 
     name: str = Field(..., description="Stage name.")
-    task: TTask = Field(
+    task: Task = Field(
         ..., description="Task in which this stage is based off of."
     )
     graph: PolicyGraph = (
@@ -681,7 +681,10 @@ class StageTransition(AindBehaviorModel):
         return r
 
 
-class StageGraph(BehaviorGraph[Stage, StageTransition]):
+TStage = TypeVar("TStage", bound="Stage")
+
+
+class StageGraph(BehaviorGraph[TStage, StageTransition], Generic[TStage]):
     pass
     # Could probably use some custom methods in the future.
     # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
@@ -699,7 +702,7 @@ class Curriculum(AindBehaviorModel):
                  a BehaviorGraph with your own Stage objs \
                  Ex: BehaviorGraph[Union[StageA, StageB, Graduated]]"
     )
-    graph: StageGraph = StageGraph()
+    graph: StageGraph = Field(default=StageGraph(), validate_default=True)
 
     def model_post_init(self, __context: Any) -> None:
         """

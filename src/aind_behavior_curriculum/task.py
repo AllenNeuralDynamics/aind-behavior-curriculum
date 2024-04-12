@@ -48,7 +48,7 @@ ModifiableAttr = partial(Field, allow_modification=True)
 TTask = TypeVar("TTask", bound="Task")
 
 
-class TaskParameters(abc.AindBehaviorModelExtra, Generic[TTask]):
+class TaskParameters(abc.AindBehaviorModelExtra):
     """
     Set of parameters associated with a subject task.
     Subclass with Task Parameters.
@@ -68,6 +68,6 @@ class Task(abc.AindBehaviorModel):
         default="", description="Description of the task."
     )
     version: str = abc.__version__
-    task_parameters: TaskParameters[TTask] = Field(
+    task_parameters: TaskParameters = Field(
         ..., description=TaskParameters.__doc__.strip(), validate_default=True
     )
