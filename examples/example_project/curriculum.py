@@ -154,18 +154,26 @@ t2_10 = StageTransition(rule=t2_10_rule)
 
 
 # --- CURRICULUM ---
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeVar, Type
 from pydantic import RootModel, Discriminator
 
 
 Tasks = Annotated[Union[TaskA, TaskB, Graduated], Field(discriminator="name")]
+Tasks = TypeVar('Tasks', bound=Annotated[Union[TaskA, TaskB, Graduated], Field(discriminator="name")])
 
+def model_x_discriminator(v):
+    print(v)
+    return "A"
+
+
+Tasks = Annotated[Union[TaskA, TaskB, Graduated], Discriminator("name")]
+Tasks = Union[tuple(Task.__subclasses__())]
 
 from aind_behavior_curriculum import StageGraph
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())
+    graph: StageGraph[Tasks] = Field(default=StageGraph())
 
 
 def construct_curriculum() -> MyCurriculum:
