@@ -167,7 +167,7 @@ def model_x_discriminator(v):
 
 
 Tasks = Annotated[Union[TaskA, TaskB, Graduated], Discriminator("name")]
-Tasks = Union[tuple(Task.__subclasses__())]
+#Tasks = Union[tuple(Task.__subclasses__())]
 
 from aind_behavior_curriculum import StageGraph
 
