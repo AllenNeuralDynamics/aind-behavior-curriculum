@@ -489,7 +489,7 @@ class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
     # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
 
 
-class Stage(AindBehaviorModel):
+class Stage(AindBehaviorModel, Generic[TTask]):
     """
     Instance of a Task.
     Task Parameters may change according to rules defined in BehaviorGraph.
@@ -497,7 +497,7 @@ class Stage(AindBehaviorModel):
     """
 
     name: str = Field(..., description="Stage name.")
-    task: Task = Field(
+    task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
     graph: PolicyGraph = (
@@ -582,7 +582,7 @@ class Stage(AindBehaviorModel):
     def see_policy_transitions(
         self, policy: Policy
     ) -> List[Tuple[PolicyTransition, Policy]]:
-        """
+        """TTask
         See transitions of stage in policy graph.
         """
         return self.graph.see_node_transitions(policy)
@@ -613,13 +613,13 @@ class Stage(AindBehaviorModel):
             start_policies = [start_policies]
         self.start_policies = start_policies
 
-    def get_task_parameters(self) -> TaskParameters[TTask]:
+    def get_task_parameters(self) -> TaskParameters:
         """
         See current task parameters of Task.
         """
         return self.task.task_parameters
 
-    def set_task_parameters(self, task_params: TaskParameters[TTask]) -> None:
+    def set_task_parameters(self, task_params: TaskParameters) -> None:
         """
         Set task with new set of task parameters.
         Task revalidates TaskParameters on assignment.
@@ -681,10 +681,8 @@ class StageTransition(AindBehaviorModel):
         return r
 
 
-TStage = TypeVar("TStage", bound=Stage)
 
-
-class StageGraph(BehaviorGraph[TStage, StageTransition], Generic[TStage]):
+class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
     pass
     # Could probably use some custom methods in the future.
     # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
