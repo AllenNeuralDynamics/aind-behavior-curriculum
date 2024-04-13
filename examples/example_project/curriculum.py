@@ -160,20 +160,29 @@ t2_10 = StageTransition(rule=t2_10_rule)
 
 
 # --- CURRICULUM ---
-Curriculum_Stages = Union[StageA, StageB, Graduated]
+from typing import Annotated
+from pydantic import RootModel
 
+#class Curriculum_Stages(RootModel):
+#    root: Annotated[Union[StageA, StageB, Graduated], Field(discriminator="name")]
+
+Curriculum_Stages = Annotated[Union[StageA, StageB, Graduated], Field(discriminator="name")]
+
+
+from aind_behavior_curriculum import StageGraph
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: BehaviorGraph[Curriculum_Stages, StageTransition] = BehaviorGraph[
-        Curriculum_Stages, StageTransition
-    ]()
+    graph: StageGraph[Curriculum_Stages] = Field(default=StageGraph())
 
 
 def construct_curriculum() -> MyCurriculum:
     """
     Useful for testing.
     """
+
+    with open("examples/example_project/schema.json", "w") as f:
+        f.write(json.dumps(MyCurriculum.model_json_schema(), indent=4))
 
     # Init Stages
     taskA = TaskA(task_parameters=TaskAParameters())
@@ -213,5 +222,9 @@ if __name__ == "__main__":
         json_dict = ex_curr.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
-
-    ex_curr.export_diagram(output_directory="examples/my_curr_diagram/")
+    
+    with open("examples/curr_instance.json", "r") as f:
+        ex_curr = MyCurriculum.model_validate_json(f.read())
+        print(ex_curr)
+    
+    #ex_curr.export_diagram(output_directory="examples/my_curr_diagram/")
