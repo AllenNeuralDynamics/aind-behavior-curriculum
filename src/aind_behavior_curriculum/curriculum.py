@@ -9,7 +9,7 @@ import subprocess
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar, Union
+from typing import Any, Callable, Generic, TypeVar, Union, List, Tuple, Dict
 
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
@@ -231,8 +231,8 @@ class PolicyTransition(AindBehaviorModel):
         return r
 
 
-NodeTypes = TypeVar("NodeTypes", bound=Union["Policy", "Stage"])
-EdgeType = TypeVar("EdgeType", bound=Union["PolicyTransition", "StageTransition"])
+NodeTypes = TypeVar("NodeTypes")
+EdgeType = TypeVar("EdgeType")
 
 
 class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
@@ -240,8 +240,8 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     Core directed graph data structure used in Stage and Curriculum.
     """
 
-    nodes: dict[int, NodeTypes] = {}
-    graph: dict[int, list[tuple[EdgeType, int]]] = {}
+    nodes: Dict[int, NodeTypes] = Field({}, validate_default=True)
+    graph: Dict[int, List[Tuple[EdgeType, int]]] = Field({}, validate_default=True)
 
     def _get_node_id(self, node: NodeTypes) -> int:
         """
@@ -383,7 +383,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         # Remove transition
         self.graph[start_id].remove((rule, dest_id))
 
-    def see_nodes(self) -> list[NodeTypes]:
+    def see_nodes(self) -> List[NodeTypes]:
         """
         See nodes of behavior graph.
         """
@@ -391,7 +391,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
     def see_node_transitions(
         self, node: NodeTypes
-    ) -> list[tuple[EdgeType, NodeTypes]]:
+    ) -> List[Tuple[EdgeType, NodeTypes]]:
         """
         See transitions of node in behavior graph.
         """
@@ -408,7 +408,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     def set_transition_priority(
         self,
         node: NodeTypes,
-        node_transitions: list[tuple[EdgeType, NodeTypes]],
+        node_transitions: List[Tuple[EdgeType, NodeTypes]],
     ) -> None:
         """
         Change order of node transitions listed under a node.
@@ -455,7 +455,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         template = Template(template_string)
 
         nodes = []
-        if isinstance(list(self.nodes.values())[0], Policy):
+        if isinstance(List(self.nodes.values())[0], Policy):
             nodes = [
                 f'{node_id} [label="{node.rule.__name__}"]'
                 for node_id, node in self.nodes.items()
@@ -503,7 +503,7 @@ class Stage(AindBehaviorModel):
     graph: PolicyGraph = (
         PolicyGraph()
     )
-    start_policies: list[Policy] = []
+    start_policies: List[Policy] = []
 
     def __eq__(self, __value: object) -> bool:
         """
@@ -573,7 +573,7 @@ class Stage(AindBehaviorModel):
             remove_dest_policy,
         )
 
-    def see_policies(self) -> list[Policy]:
+    def see_policies(self) -> List[Policy]:
         """
         See policies of policy graph.
         """
@@ -581,7 +581,7 @@ class Stage(AindBehaviorModel):
 
     def see_policy_transitions(
         self, policy: Policy
-    ) -> list[tuple[PolicyTransition, Policy]]:
+    ) -> List[Tuple[PolicyTransition, Policy]]:
         """
         See transitions of stage in policy graph.
         """
@@ -590,8 +590,8 @@ class Stage(AindBehaviorModel):
     def set_policy_transition_priority(
         self,
         policy: Policy,
-        policy_transitions: list[
-            tuple[PolicyTransition, Policy]
+        policy_transitions: List[
+            Tuple[PolicyTransition, Policy]
         ],
     ) -> None:
         """
@@ -603,7 +603,7 @@ class Stage(AindBehaviorModel):
         self.graph.set_transition_priority(policy, policy_transitions)
 
     def set_start_policies(
-        self, start_policies: Policy | list[Policy]
+        self, start_policies: Policy | List[Policy]
     ):
         """
         Sets stage's start policies to start policies provided.
@@ -681,7 +681,7 @@ class StageTransition(AindBehaviorModel):
         return r
 
 
-TStage = TypeVar("TStage", bound="Stage")
+TStage = TypeVar("TStage", bound=Stage)
 
 
 class StageGraph(BehaviorGraph[TStage, StageTransition], Generic[TStage]):
@@ -769,7 +769,7 @@ class Curriculum(AindBehaviorModel):
             remove_dest_stage,
         )
 
-    def see_stages(self) -> list[Stage]:
+    def see_stages(self) -> List[Stage]:
         """
         See stages of curriculum graph.
         """
@@ -777,7 +777,7 @@ class Curriculum(AindBehaviorModel):
 
     def see_stage_transitions(
         self, stage: Stage
-    ) -> list[tuple[StageTransition, Stage]]:
+    ) -> List[Tuple[StageTransition, Stage]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -786,7 +786,7 @@ class Curriculum(AindBehaviorModel):
     def set_stage_transition_priority(
         self,
         stage: Stage[TTask],
-        stage_transitions: list[tuple[StageTransition, Stage]],
+        stage_transitions: List[Tuple[StageTransition, Stage]],
     ) -> None:
         """
         Change the order of stage transitions listed under a stage.
