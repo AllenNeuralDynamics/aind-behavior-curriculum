@@ -8,7 +8,6 @@ from typing import Literal, Union
 from pydantic import Field
 
 from aind_behavior_curriculum import (
-    GRADUATED,
     INIT_STAGE,
     BehaviorGraph,
     Curriculum,
@@ -26,13 +25,13 @@ from aind_behavior_curriculum import (
 
 # --- TASKS ---
 class TaskAParameters(TaskParameters):
-    field_a: int = ModifiableAttr(default=0)
+    field_a: int = ModifiableAttr(default=0, validate_default=True)
 
 
 class TaskA(Task):
     name: Literal["Task A"] = "Task A"
     task_parameters: TaskAParameters = Field(
-        ..., description="Fill w/ Parameter Defaults"
+        ..., description="Fill w/ Parameter Defaults", validate_default=True
     )
 
 
@@ -46,7 +45,11 @@ class TaskB(Task):
         ..., description="Fill w/ Parameter Defaults"
     )
 
-
+class Graduated(Task):
+    name: Literal["Graduated"] = "Graduated"
+    task_parameters: TaskParameters = Field(
+        default=TaskParameters(), description="Fill w/ Parameter Defaults"
+    )
 # --- METRICS ---
 class ExampleMetrics(Metrics):
     """
@@ -60,15 +63,6 @@ class ExampleMetrics(Metrics):
 
 
 # --- STAGES ---
-class StageA(Stage):
-    name: Literal["Stage A"] = "Stage A"
-    task: TaskA = Field(..., description="Fill with Task Instance")
-
-
-class StageB(Stage):
-    name: Literal["Stage B"] = "Stage B"
-    task: TaskB = Field(..., description="Fill with Task Instance")
-
 
 # --- POLICIES ---
 def stageA_policyA_rule(
@@ -160,20 +154,18 @@ t2_10 = StageTransition(rule=t2_10_rule)
 
 
 # --- CURRICULUM ---
-from typing import Annotated
-from pydantic import RootModel
+from typing import Annotated, Any
+from pydantic import RootModel, Discriminator
 
-#class Curriculum_Stages(RootModel):
-#    root: Annotated[Union[StageA, StageB, Graduated], Field(discriminator="name")]
 
-Curriculum_Stages = Annotated[Union[StageA, StageB, Graduated], Field(discriminator="name")]
+Tasks = Annotated[Union[TaskA, TaskB, Graduated], Field(discriminator="name")]
 
 
 from aind_behavior_curriculum import StageGraph
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Curriculum_Stages] = Field(default=StageGraph())
+    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())
 
 
 def construct_curriculum() -> MyCurriculum:
@@ -187,9 +179,10 @@ def construct_curriculum() -> MyCurriculum:
     # Init Stages
     taskA = TaskA(task_parameters=TaskAParameters())
     taskB = TaskB(task_parameters=TaskBParameters())
-    stageA = StageA(task=taskA)
-    stageB = StageB(task=taskB)
-
+    stageA = Stage(name="StageA", task=taskA)
+    stageB = Stage(name="StageB", task=taskB)
+    GRADUATED = Stage(name='GRADUATED', task=Graduated())
+    
     stageA.add_policy_transition(INIT_STAGE, stageA_policyB, t1_10)
     stageA.add_policy_transition(INIT_STAGE, stageA_policyA, t1_5)
     stageA.add_policy_transition(stageA_policyA, stageA_policyB, t1_10)
