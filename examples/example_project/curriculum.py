@@ -9,7 +9,7 @@ from pydantic import Field
 
 from aind_behavior_curriculum import (
     INIT_STAGE,
-    BehaviorGraph,
+    StageGraph,
     Curriculum,
     Graduated,
     Metrics,
@@ -45,11 +45,14 @@ class TaskB(Task):
         ..., description="Fill w/ Parameter Defaults"
     )
 
+
 class Graduated(Task):
     name: Literal["Graduated"] = "Graduated"
     task_parameters: TaskParameters = Field(
         default=TaskParameters(), description="Fill w/ Parameter Defaults"
     )
+
+
 # --- METRICS ---
 class ExampleMetrics(Metrics):
     """
@@ -63,6 +66,7 @@ class ExampleMetrics(Metrics):
 
 
 # --- STAGES ---
+
 
 # --- POLICIES ---
 def stageA_policyA_rule(
@@ -157,19 +161,20 @@ t2_10 = StageTransition(rule=t2_10_rule)
 from typing import Annotated, Any, TypeVar, Type
 from pydantic import RootModel, Discriminator
 
-
-Tasks = Annotated[Union[TaskA, TaskB, Graduated], Field(discriminator="name")]
-Tasks = TypeVar('Tasks', bound=Annotated[Union[TaskA, TaskB, Graduated], Field(discriminator="name")])
-
-def model_x_discriminator(v):
-    print(v)
-    return "A"
+# Important note: StagetGraph is generic on Task NOT Stage. I understand how this is a bit confusing,
+# but it also simplifies the logic of the curriculum quite a lot since stages can be seen as simple
+# containers for Task. And StageGraph as a simple container of Stages.
 
 
-Tasks = Annotated[Union[TaskA, TaskB, Graduated], Discriminator("name")]
-#Tasks = Union[tuple(Task.__subclasses__())]
+# Tasks = Annotated[Union[TaskA, TaskB, Graduated], Field(discriminator="name")] # works but it is manual
+Tasks = Annotated[
+    Union[tuple(Task.__subclasses__())], Field(discriminator="name")
+]  # works and "automatic" (-ish...)
 
-from aind_behavior_curriculum import StageGraph
+# class Tasks(RootModel):
+#    root = Annotated[Union[tuple(Task.__subclasses__())], Field(discriminator="name")]
+# This one fails, there is a unvalidated default somewhere I think... This would be the ideal solution
+
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
@@ -189,8 +194,8 @@ def construct_curriculum() -> MyCurriculum:
     taskB = TaskB(task_parameters=TaskBParameters())
     stageA = Stage(name="StageA", task=taskA)
     stageB = Stage(name="StageB", task=taskB)
-    GRADUATED = Stage(name='GRADUATED', task=Graduated())
-    
+    GRADUATED = Stage(name="GRADUATED", task=Graduated())
+
     stageA.add_policy_transition(INIT_STAGE, stageA_policyB, t1_10)
     stageA.add_policy_transition(INIT_STAGE, stageA_policyA, t1_5)
     stageA.add_policy_transition(stageA_policyA, stageA_policyB, t1_10)
@@ -223,9 +228,9 @@ if __name__ == "__main__":
         json_dict = ex_curr.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
-    
+
     with open("examples/curr_instance.json", "r") as f:
         ex_curr = MyCurriculum.model_validate_json(f.read())
         print(ex_curr)
-    
-    #ex_curr.export_diagram(output_directory="examples/my_curr_diagram/")
+
+    # ex_curr.export_diagram(output_directory="examples/my_curr_diagram/")
