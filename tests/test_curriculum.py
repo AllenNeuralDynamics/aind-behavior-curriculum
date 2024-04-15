@@ -14,12 +14,12 @@ class CurriculumTests(unittest.TestCase):
 
     def test_round_trip_empty_stage(self):
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
-        stageA = ex.StageA(task=taskA)
+        stageA = Stage(name="StageA", task=taskA)
 
         # Serialize from Child
         instance_json = stageA.model_dump_json()
         # Deserialize from Child
-        recovered = ex.StageA.model_validate_json(instance_json)
+        recovered = Stage.model_validate_json(instance_json)
         self.assertTrue(stageA == recovered)
 
         # Serialize from Child
@@ -29,12 +29,13 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
-        instance_prime = ex.StageA.model_validate_json(parent_json)
+        instance_prime = Stage.model_validate_json(parent_json)
         self.assertTrue(stageA == instance_prime)
 
     def test_round_trip_stage(self):
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
-        stageA = ex.StageA(task=taskA)
+        stageA = Stage(name="StageA", task=taskA)
+
         stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyB, ex.t1_10)
         stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyA, ex.t1_5)
         stageA.add_policy_transition(
@@ -44,7 +45,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Child
         instance_json = stageA.model_dump_json()
         # Deserialize from Child
-        recovered = ex.StageA.model_validate_json(instance_json)
+        recovered = Stage.model_validate_json(instance_json)
         self.assertTrue(stageA == recovered)
 
         # Serialize from Child
@@ -54,7 +55,7 @@ class CurriculumTests(unittest.TestCase):
         # Serialize from Parent
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
-        instance_prime = ex.StageA.model_validate_json(parent_json)
+        instance_prime = Stage.model_validate_json(parent_json)
         self.assertTrue(stageA == instance_prime)
 
     def test_round_trip_empty_curriculum(self):
@@ -120,7 +121,7 @@ class CurriculumTests(unittest.TestCase):
         instance_prime = ex.MyCurriculum.model_validate_json(parent_json)
         self.assertTrue(ex_curr == instance_prime)
         self.assertTrue(stage_0 == instance_prime.see_stages()[0])
-
+    
 
 if __name__ == "__main__":
     unittest.main()
