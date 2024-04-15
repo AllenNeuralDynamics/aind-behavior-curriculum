@@ -12,8 +12,8 @@ from aind_behavior_curriculum import (
     Policy,
     Stage,
     TaskParameters,
+    validate_curriculum
 )
-
 
 class SubjectHistory(AindBehaviorModel):
     """
@@ -101,11 +101,7 @@ class Trainer:
         registration defaults to the Stage.start_policies.
         """
 
-        for s in curriculum.see_stages():
-            assert (
-                len(s.start_policies) > 0
-            ), f"Stage {s} in Curriculum does not have start_policies. \
-                  Please define start_polices for all Curriculum stages."
+        curriculum = validate_curriculum(curriculum)
 
         assert (
             start_stage in curriculum.see_stages()

@@ -2,7 +2,7 @@
 Useful Placeholders when making Curriculums
 """
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import Field
 
@@ -38,24 +38,12 @@ def create_empty_stage(s: Stage) -> Stage:
     return s
 
 
-class Graduated(Stage):
-    """
-    Optional:
-    Use this Stage as the final Stage in a Curriculums's PolicyGraph.
-    """
-
+class Graduated(Task):
     name: Literal["Graduated"] = "Graduated"
-    task: Task = Task(
-        name="Empty Task",
-        version="0.0.0",
-        task_parameters=TaskParameters(),
+    task_parameters: TaskParameters = Field(
+        default=TaskParameters(), description="Fill w/ Parameter Defaults"
     )
 
-    def model_post_init(self, __context: Any) -> None:
-        """
-        Trivially add placeholder stage
-        """
-        self.add_policy(INIT_STAGE)
-        self.set_start_policies(INIT_STAGE)
-
-GRADUATED = Graduated()
+GRADUATED = create_empty_stage(
+    Stage(name='GRADUATED', task=Graduated())
+)

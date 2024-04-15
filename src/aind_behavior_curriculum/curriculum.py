@@ -9,7 +9,7 @@ import subprocess
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar, Union, List, Tuple, Dict
+from typing import Any, Callable, Generic, TypeVar, List, Tuple, Dict
 
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
@@ -435,6 +435,9 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
             digraph G {
                 rankdir=LR; // Arrange nodes from left to right
 
+                labelloc="t";
+                label={{ title }};
+
                 // Define nodes with increased font visibility
                 node [shape=box, style=filled, fontname=Arial, fontsize=12,
                 fillcolor=lightblue, color=black];
@@ -444,18 +447,24 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
                 {{ node }};
                 {% endfor %}
 
-                // Define edges with labels and increased visibility
-                edge [fontname=Arial, fontsize=10, color=black];
-                {% for edge in edges %}
-                {{ edge }};
-                {% endfor %}
+                // Box
+                subgraph cluster_linked_list {
+                    style="solid";
+                    color="black";
+                    label="";
+                    {% for edge in edges %}
+                    {{ edge }};
+                    {% endfor %}
+                }
             }
             """
 
         template = Template(template_string)
 
+        title = '"' + str(Path(img_path).stem) + '"'
+
         nodes = []
-        if isinstance(List(self.nodes.values())[0], Policy):
+        if isinstance(list(self.nodes.values())[0], Policy):
             nodes = [
                 f'{node_id} [label="{node.rule.__name__}"]'
                 for node_id, node in self.nodes.items()
@@ -469,13 +478,18 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         edges = []
         for start_id, edge_list in self.graph.items():
             for i, (edge, dest_id) in enumerate(edge_list):
+                # Use 1-indexing for labels
+                i = i + 1
 
                 # Edges must be StageTransition or PolicyTransition
                 edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", \
                     minlen=2]'
                 edges.append(edge_str)
 
-        dot_script = template.render(nodes=nodes, edges=edges)
+        # Append an extra invisible edge to render a box around empty stage
+        edges.append(f'0 -> 0 [style=invis]')
+
+        dot_script = template.render(title=title, nodes=nodes, edges=edges)
 
         # Execute dot script in subprocess
         dot_command = ["dot", "-Tpng", "-o", img_path]
@@ -508,9 +522,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     def __eq__(self, __value: object) -> bool:
         """
         Custom equality method.
-        Two instances of the same subclass type are considered equal.
+        Two Stage instances are only distinguished by name.
         """
-        return isinstance(__value, self.__class__)
+        return self.name == __value.name
 
     def add_policy(self, policy: Policy) -> None:
         """
@@ -631,6 +645,8 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         Export visual representation of graph to inspect correctness.
         Please include the image extension (.png) in the image path.
         """
+
+        validate_stage(self)
         self.graph.export_diagram(image_path)
 
 
@@ -679,7 +695,6 @@ class StageTransition(AindBehaviorModel):
                 "Invalid signature." f"{StageTransition.validate_rule.__doc__}"
             )
         return r
-
 
 
 class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
@@ -799,6 +814,8 @@ class Curriculum(AindBehaviorModel):
         Export visual representation of graph to inspect correctness.
         """
 
+        validate_curriculum(self)
+
         curriculum_path = Path(output_directory) / f"{self.name}.png"
         stage_dir = Path(output_directory) / "stages"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -806,3 +823,36 @@ class Curriculum(AindBehaviorModel):
         self.graph.export_diagram(curriculum_path)
         for s in self.see_stages():
             s.export_diagram(str(stage_dir / f"{s.name}.png"))
+
+
+def validate_stage(s: Stage) -> Stage:
+    """
+    Check if stage is non-empty and specifies start policies.
+    """
+
+    assert (
+        len(s.see_policies()) > 0
+    ), f"""Stage {s.name} in Curriculum does not have policies.
+        Please add at least one policy to all Curriculum stages
+        with Stage.add_policy(...).
+        If you would like an empty Stage, you can use
+        curriculum_utils.create_empty_stage(...)."""
+
+    assert (
+        len(s.start_policies) > 0
+    ), f"""Stage {s} in Curriculum does not have start_policies.
+        Please define start_polices for all Curriculum stages
+        with Stage.set_start_policies(...)."""
+
+    return s
+
+
+def validate_curriculum(curr: Curriculum) -> Curriculum:
+    """
+    Validate curriculum stages. (Add other stuff if needed in the future)
+    """
+
+    for s in curr.see_stages():
+        validate_stage(s)
+
+    return curr
