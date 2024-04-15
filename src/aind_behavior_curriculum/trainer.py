@@ -116,7 +116,7 @@ class Trainer:
                 assert (
                     s_policy in start_stage.see_policies()
                 ), f"Provided start_policy {s_policy} not in \
-                    provided start_stage {start_stage}."
+                    provided start_stage {start_stage.name}."
 
         new_history = SubjectHistory()
         if start_policies is None:
@@ -267,14 +267,14 @@ class Trainer:
 
         assert (
             override_stage in curriculum.see_stages()
-        ), f"override stage {override_stage} not in \
+        ), f"override stage {override_stage.name} not in \
             curriculum stages for subject id {s_id}."
 
         for o_policy in override_policies:
             assert (
                 o_policy in override_stage.see_policies()
             ), f"override policy {o_policy} not in \
-            given override stage {override_stage}."
+            given override stage {override_stage.name}."
 
         # Update Stage parameters according to override policies
         updated_params = self._get_net_parameter_update(
