@@ -106,8 +106,8 @@ class Rule:
             split = value.rsplit(".", 1)
             assert (
                 len(split) > 0
-            ), f"Invalid rule value while attempting to deserialize callable. \
-                Got {value}, expected string in the format '<module>.Rule'"
+            ), (f"Invalid rule value while attempting to deserialize callable. "
+                f"Got {value}, expected string in the format '<module>.Rule'")
 
             module = import_module(split[0])
             obj = getattr(module, split[1])
@@ -370,8 +370,8 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         start_id = self._get_node_id(start_node)
         dest_id = self._get_node_id(dest_node)
         assert (rule, dest_id) in self.graph[start_id], (
-            f"Node {start_node} does not transition"
-            + f"into Node {dest_node} with Rule {rule}."
+            (f"Node {start_node} does not transition "
+            f"into Node {dest_node} with Rule {rule}.")
         )
 
         # Optionally remove nodes
@@ -424,9 +424,9 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
         assert set(input_transitions) == set(
             self.graph[node]
-        ), f"Elements of input node transitions {node_transitions} does not \
-              match the elements under this node: {self.see_node_transitions(node)}. \
-              Please call 'see_node_transitions()' for a precise list of elements."
+        ), (f"Elements of input node transitions {node_transitions} does not "
+            f"match the elements under this node: {self.see_node_transitions(node)}. "
+            "Please call 'see_node_transitions()' for a precise list of elements.")
 
         self.graph[node] = input_transitions
 
@@ -631,6 +631,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         See current task parameters of Task.
         """
+        
         return self.task.task_parameters
 
     def set_task_parameters(self, task_params: TaskParameters) -> None:
@@ -832,17 +833,17 @@ def validate_stage(s: Stage) -> Stage:
 
     assert (
         len(s.see_policies()) > 0
-    ), f"""Stage {s.name} in Curriculum does not have policies.
-        Please add at least one policy to all Curriculum stages
-        with Stage.add_policy(...).
-        If you would like an empty Stage, you can use
-        curriculum_utils.create_empty_stage(...)."""
+    ), (f"Stage {s.name} in Curriculum does not have policies. "
+        "Please add at least one policy to all Curriculum stages "
+        "with Stage.add_policy(...). "
+        "If you would like an empty Stage, you can use "
+        "curriculum_utils.create_empty_stage(...)")
 
     assert (
         len(s.start_policies) > 0
-    ), f"""Stage {s} in Curriculum does not have start_policies.
-        Please define start_polices for all Curriculum stages
-        with Stage.set_start_policies(...)."""
+    ), (f"Stage {s.name} in Curriculum does not have start_policies. "
+        "Please define start_polices for all Curriculum stages "
+        "with Stage.set_start_policies(...)""")
 
     return s
 

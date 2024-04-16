@@ -6,8 +6,13 @@ import unittest
 
 import example_project as ex
 
-from aind_behavior_curriculum import GRADUATED, INIT_STAGE
-
+from aind_behavior_curriculum import (
+    create_empty_stage,
+    INIT_STAGE,
+    GRADUATED,
+    Stage,
+    SubjectHistory
+)
 
 class TrainerTests(unittest.TestCase):
 
@@ -20,10 +25,8 @@ class TrainerTests(unittest.TestCase):
         # Create Stage-only curriculum
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
-        stageA = ex.StageA(task=taskA)
-        stageB = ex.StageB(task=taskB)
-        stageA.add_policy(INIT_STAGE)
-        stageB.add_policy(INIT_STAGE)
+        stageA = create_empty_stage(Stage(name='StageA', task=taskA))
+        stageB = create_empty_stage(Stage(name='StageB', task=taskB))
 
         curr = ex.MyCurriculum(name="My Curriculum")
         curr.add_stage_transition(stageA, GRADUATED, ex.t2_10)
@@ -51,27 +54,39 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         # Validate mouse histories
-        M0 = [
-            (stageA, INIT_STAGE),
-            (stageA, INIT_STAGE),
-            (stageB, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-        ]
-        M1 = [
-            (stageA, INIT_STAGE),
-            (stageB, INIT_STAGE),
-            (stageB, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-        ]
-        M2 = [
-            (stageA, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-        ]
-        self.assertTrue(ex.MICE_STAGE_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_STAGE_HISTORY[1] == M1)
-        self.assertTrue(ex.MICE_STAGE_HISTORY[2] == M2)
+        M0 = SubjectHistory(
+            stage_history=[stageA,
+                           stageA,
+                           stageB,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,)])
+
+        M1 = SubjectHistory(
+            stage_history=[stageA,
+                           stageB,
+                           stageB,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,)])
+
+        M2 = SubjectHistory(
+            stage_history=[stageA,
+                           GRADUATED,
+                           GRADUATED,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,)])
+
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[2] == M2)
 
         # Reset database
         tr.clear_database()
@@ -85,12 +100,13 @@ class TrainerTests(unittest.TestCase):
 
         # Create single-stage curriculum
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
-        stageA = ex.StageA(task=taskA)
+        stageA = Stage(name='StageA', task=taskA)
         stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyB, ex.t1_10)
         stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyA, ex.t1_5)
         stageA.add_policy_transition(
             ex.stageA_policyA, ex.stageA_policyB, ex.t1_10
         )
+        stageA.set_start_policies(INIT_STAGE)
 
         stageAA = stageA.model_copy(deep=True)
         stageAA.set_task_parameters(
@@ -128,28 +144,39 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         # Validate mouse histories
-        M0 = [
-            (stageA, INIT_STAGE),
-            (stageA, INIT_STAGE),
-            (stageAA, ex.stageA_policyA),
-            (stageAAA, ex.stageA_policyB),
-        ]
-        M1 = [
-            (stageA, INIT_STAGE),
-            (stageAA, ex.stageA_policyA),
-            (stageAA, ex.stageA_policyA),
-            (stageAAA, ex.stageA_policyB),
-        ]
-        M2 = [
-            (stageA, INIT_STAGE),
-            (stageAAA, ex.stageA_policyB),
-            (stageAAA, ex.stageA_policyB),
-            (stageAAA, ex.stageA_policyB),
-        ]
+        M0 = SubjectHistory(
+            stage_history=[stageA,
+                           stageA,
+                           stageAA,
+                           stageAAA],
+            policy_history=[(INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (ex.stageA_policyA,),
+                            (ex.stageA_policyB,)])
 
-        self.assertTrue(ex.MICE_STAGE_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_STAGE_HISTORY[1] == M1)
-        self.assertTrue(ex.MICE_STAGE_HISTORY[2] == M2)
+        M1 = SubjectHistory(
+            stage_history=[stageA,
+                           stageAA,
+                           stageAA,
+                           stageAAA],
+            policy_history=[(INIT_STAGE,),
+                            (ex.stageA_policyA,),
+                            (ex.stageA_policyA,),
+                            (ex.stageA_policyB,)])
+
+        M2 = SubjectHistory(
+            stage_history=[stageA,
+                           stageAAA,
+                           stageAAA,
+                           stageAAA],
+            policy_history=[(INIT_STAGE,),
+                            (ex.stageA_policyB,),
+                            (ex.stageA_policyB,),
+                            (ex.stageA_policyB,)])
+
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[2] == M2)
 
         # Reset database
         tr.clear_database()
@@ -160,10 +187,11 @@ class TrainerTests(unittest.TestCase):
         are recorded correctly in database.
         """
         curr = ex.construct_curriculum()
-        # Careful, stages are not ordered and not intended to be accessed in this way.
-        # Need to access stages like this for testing purposes.
-        stageA = curr.stages[0]
-        stageB = curr.stages[2]
+
+        # See stages is ordered arbitrarily
+        # StageA and StageB picked out from observation
+        stageA = curr.see_stages()[0]
+        stageB = curr.see_stages()[2]
 
         stageAA = stageA.model_copy(deep=True)
         stageAA.set_task_parameters(
@@ -210,31 +238,45 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         # Validate mouse histories
-        M0 = [
-            (stageA, INIT_STAGE),
-            (stageAA, ex.stageA_policyA),
-            (stageB, INIT_STAGE),
-            (stageBB, ex.stageB_policyA),
-            (GRADUATED, INIT_STAGE),
-        ]
-        M1 = [
-            (stageA, INIT_STAGE),
-            (stageAAA, ex.stageA_policyB),
-            (stageB, INIT_STAGE),
-            (stageBBB, ex.stageB_policyB),
-            (GRADUATED, INIT_STAGE),
-        ]
-        M2 = [
-            (stageA, INIT_STAGE),
-            (stageAAA, ex.stageA_policyB),
-            (GRADUATED, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-            (GRADUATED, INIT_STAGE),
-        ]
+        M0 = SubjectHistory(
+            stage_history=[stageA,
+                           stageAA,
+                           stageB,
+                           stageBB,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (ex.stageA_policyA,),
+                            (INIT_STAGE,),
+                            (ex.stageB_policyA,),
+                            (INIT_STAGE,)])
 
-        self.assertTrue(ex.MICE_STAGE_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_STAGE_HISTORY[1] == M1)
-        self.assertTrue(ex.MICE_STAGE_HISTORY[2] == M2)
+        M1 = SubjectHistory(
+            stage_history=[stageA,
+                           stageAAA,
+                           stageB,
+                           stageBBB,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (ex.stageA_policyB,),
+                            (INIT_STAGE,),
+                            (ex.stageB_policyB,),
+                            (INIT_STAGE,)])
+
+        M2 = SubjectHistory(
+            stage_history=[stageA,
+                           stageAAA,
+                           GRADUATED,
+                           GRADUATED,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (ex.stageA_policyB,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,),
+                            (INIT_STAGE,)])
+
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[2] == M2)
 
         # Reset database
         tr.clear_database()
@@ -246,10 +288,11 @@ class TrainerTests(unittest.TestCase):
         """
 
         curr = ex.construct_curriculum()
-        # Careful, stages are not ordered and not intended to be accessed in this way.
-        # Need to access stages like this for testing purposes.
-        stageA = curr.stages[0]
-        stageB = curr.stages[2]
+
+        # See stages is ordered arbitrarily
+        # StageA and StageB picked out from observation
+        stageA = curr.see_stages()[0]
+        stageB = curr.see_stages()[2]
 
         stageAA = stageA.model_copy(deep=True)
         stageAA.set_task_parameters(
@@ -273,26 +316,30 @@ class TrainerTests(unittest.TestCase):
 
         # Override API
         tr.override_subject_status(
-            0, override_stage=stageBB, override_policy=ex.stageB_policyA
+            0, override_stage=stageBB, override_policies=ex.stageB_policyA
         )
         tr.override_subject_status(
-            0, override_stage=stageAAA, override_policy=ex.stageA_policyB
+            0, override_stage=stageAAA, override_policies=ex.stageA_policyB
         )
         tr.override_subject_status(
-            0, override_stage=GRADUATED, override_policy=INIT_STAGE
+            0, override_stage=GRADUATED, override_policies=INIT_STAGE
         )
 
         # Validate mouse history
-        M0 = [
-            (stageA, INIT_STAGE),
-            (stageBB, ex.stageB_policyA),
-            (stageAAA, ex.stageA_policyB),
-            (GRADUATED, INIT_STAGE),
-        ]
-        self.assertTrue(ex.MICE_STAGE_HISTORY[0] == M0)
+        M0 = SubjectHistory(
+            stage_history=[stageA,
+                           stageBB,
+                           stageAAA,
+                           GRADUATED],
+            policy_history=[(INIT_STAGE,),
+                            (ex.stageB_policyA,),
+                            (ex.stageA_policyB,),
+                            (INIT_STAGE,)])
+        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
 
         # Reset database
         tr.clear_database()
+
 
 
 if __name__ == "__main__":

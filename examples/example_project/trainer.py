@@ -17,7 +17,7 @@ from aind_behavior_curriculum import (
 # NOTE: Trainer's concerte implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
-MICE_STAGE_HISTORY: dict[int, SubjectHistory] = defaultdict(SubjectHistory)
+MICE_SUBJECT_HISTORY: dict[int, SubjectHistory] = defaultdict(SubjectHistory)
 MICE_METRICS: dict[int, Metrics] = {
     0: ex.ExampleMetrics(),
     1: ex.ExampleMetrics(),
@@ -41,7 +41,7 @@ class ExampleTrainer(Trainer):
         """
         return (
             MICE_CURRICULUMS[subject_id],
-            MICE_STAGE_HISTORY[subject_id],
+            MICE_SUBJECT_HISTORY[subject_id],
             MICE_METRICS[subject_id],
         )
 
@@ -55,14 +55,14 @@ class ExampleTrainer(Trainer):
         Add to proxy database.
         """
         MICE_CURRICULUMS[subject_id] = curriculum
-        MICE_STAGE_HISTORY[subject_id] = history
+        MICE_SUBJECT_HISTORY[subject_id] = history
 
     def clear_database(self) -> None:
         """
         Testing utility, clears the database for the next unit test.
         """
         MICE_CURRICULUMS: dict[int, Curriculum] = {}
-        MICE_STAGE_HISTORY: dict[int, SubjectHistory] = defaultdict(list)
+        MICE_SUBJECT_HISTORY: dict[int, SubjectHistory] = defaultdict(list)
         MICE_METRICS: dict[int, Metrics] = {
             0: ex.ExampleMetrics(),
             1: ex.ExampleMetrics(),

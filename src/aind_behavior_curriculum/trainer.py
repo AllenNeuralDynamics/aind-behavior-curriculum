@@ -3,7 +3,9 @@ Core Trainer primitive.
 """
 
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, List
+
+from pydantic import Field
 
 from aind_behavior_curriculum import (
     AindBehaviorModel,
@@ -21,8 +23,8 @@ class SubjectHistory(AindBehaviorModel):
     Pydantic model for de/serialization.
     """
 
-    stage_history: list[Stage]
-    policy_history: list[tuple[Policy]]
+    stage_history: list[Stage] = Field([], validate_default=True)
+    policy_history: list[tuple[Policy]] = Field([], validate_default=True)
 
     def add_entry(self, stage: Stage, policies: tuple[Policy]) -> None:
         """
@@ -93,7 +95,7 @@ class Trainer:
         subject_id: int,
         curriculum: Curriculum,
         start_stage: Stage,
-        start_policies: Optional[list[Policy]] = None,
+        start_policies: Optional[Policy | list[Policy]] = None,
     ):
         """
         Adds subject into the Trainer system.
@@ -111,12 +113,16 @@ class Trainer:
             subject_id not in self.subject_ids
         ), f"Subject_id {subject_id} is already registered."
 
+
         if not (start_policies is None):
+            if isinstance(start_policies, Policy):
+                start_policies = [start_policies]
+
             for s_policy in start_policies:
                 assert (
                     s_policy in start_stage.see_policies()
-                ), f"Provided start_policy {s_policy} not in \
-                    provided start_stage {start_stage.name}."
+                ), (f"Provided start_policy {s_policy} not in "
+                    f"provided start_stage {start_stage.name}.")
 
         new_history = SubjectHistory()
         if start_policies is None:
@@ -130,9 +136,10 @@ class Trainer:
         self.subject_ids.append(subject_id)
 
     def _get_net_parameter_update(
+        self,
         stage_parameters: TaskParameters,
         stage_policies: list[Policy],
-        curr_metrics: Metrics
+        curr_metrics: Metrics,
         ) -> TaskParameters:
         """
         Aggregates parameter update of input stage_policies
@@ -151,9 +158,25 @@ class Trainer:
         merged_params = {}
         for params in param_updates:
             merged_params = {**merged_params, **dict(params)}
-        updated_params = task_parameters_subtype(merged_params)
+        updated_params = task_parameters_subtype(**merged_params)
 
         return updated_params
+
+    def _get_unique_policies(
+        self,
+        policies: List[Policy]
+        ) -> List[Policy]:
+        """
+        set(policies) is not hashable, although Policy
+        only contains a function, which is hashable.
+        This utility filters on policy functions and
+        reassembles the Policy objects.
+        """
+
+        filtered_funcs = list(set(p.rule for p in policies))
+        output = [Policy(rule=f) for f in filtered_funcs]
+
+        return output
 
     def evaluate_subjects(self):  # noqa: C901
         """
@@ -238,7 +261,7 @@ class Trainer:
                     current_stage = current_stage.model_copy(deep=True)
                     current_stage.set_task_parameters(updated_params)
                     subject_history.add_entry(
-                        current_stage, tuple(set(dest_policies))
+                        current_stage, tuple(self._get_unique_policies(dest_policies))
                     )
                     self.write_data(s_id, curriculum, subject_history)
 
@@ -249,7 +272,10 @@ class Trainer:
                 self.write_data(s_id, curriculum, subject_history)
 
     def override_subject_status(
-        self, s_id: int, override_stage: Stage, override_policies: list[Policy]
+        self,
+        s_id: int,
+        override_stage: Stage,
+        override_policies: Policy | list[Policy]
     ):
         """
         Override subject (stage, policies) independent of evaluation.
@@ -267,14 +293,16 @@ class Trainer:
 
         assert (
             override_stage in curriculum.see_stages()
-        ), f"override stage {override_stage.name} not in \
-            curriculum stages for subject id {s_id}."
+        ), (f"override stage {override_stage.name} not in "
+            f"curriculum stages for subject id {s_id}.")
 
+        if isinstance(override_policies, Policy):
+            override_policies = [override_policies]
         for o_policy in override_policies:
             assert (
                 o_policy in override_stage.see_policies()
-            ), f"override policy {o_policy} not in \
-            given override stage {override_stage.name}."
+            ), (f"override policy {o_policy} not in "
+            f"given override stage {override_stage.name}.")
 
         # Update Stage parameters according to override policies
         updated_params = self._get_net_parameter_update(
