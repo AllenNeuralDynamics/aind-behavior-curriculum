@@ -162,8 +162,8 @@ def construct_curriculum() -> MyCurriculum:
     Useful for testing.
     """
 
-    # with open("examples/example_project/schema.json", "w") as f:
-    #     f.write(json.dumps(MyCurriculum.model_json_schema(), indent=4))
+    with open("examples/example_project/jsons/schema.json", "w") as f:
+        f.write(json.dumps(MyCurriculum.model_json_schema(), indent=4))
 
     # Init Stages
     taskA = TaskA(task_parameters=TaskAParameters())
@@ -193,19 +193,19 @@ def construct_curriculum() -> MyCurriculum:
 if __name__ == "__main__":
     ex_curr = construct_curriculum()
 
-    # with open("examples/stage_instance.json", "w") as f:
+    # with open("examples/example_project/jsons/stage_instance.json", "w") as f:
     #     stageA = ex_curr.see_stages()[0]
     #     json_dict = stageA.model_dump()
     #     json_string = json.dumps(json_dict, indent=4)
     #     f.write(json_string)
 
-    # with open("examples/curr_instance.json", "w") as f:
+    # with open("examples/example_project/jsons/curr_instance.json", "w") as f:
     #     json_dict = ex_curr.model_dump()
     #     json_string = json.dumps(json_dict, indent=4)
     #     f.write(json_string)
 
-    # with open("examples/curr_instance.json", "r") as f:
+    # with open("examples/example_project/jsons/curr_instance.json", "r") as f:
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    ex_curr.export_diagram(output_directory="examples/my_curr_diagram/")
+    ex_curr.export_diagram(output_directory="examples/example_project/my_curr_diagram/")

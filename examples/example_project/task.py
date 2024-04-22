@@ -65,19 +65,19 @@ if __name__ == "__main__":
     print(ex_task)
 
     # Export/Serialize Task Schema:
-    with open("examples/task_schema.json", "w") as f:
+    with open("examples/example_project/jsons/task_schema.json", "w") as f:
         json_dict = ExampleTask.model_json_schema()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
 
     # Export/Serialize Instance:
-    with open("examples/task_instance.json", "w") as f:
+    with open("examples/example_project/jsons/task_instance.json", "w") as f:
         json_dict = ex_task.model_dump()
         json_string = json.dumps(json_dict, indent=4)
         f.write(json_string)
 
     # Import/De-serialize Instance:
-    with open("examples/task_instance.json", "r") as f:
+    with open("examples/example_project/jsons/task_instance.json", "r") as f:
         json_data = f.read()
     task_instance = ExampleTask.model_validate_json(json_data)
     print(task_instance)
