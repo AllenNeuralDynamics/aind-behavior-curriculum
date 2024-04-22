@@ -631,7 +631,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         See current task parameters of Task.
         """
-        
+
         return self.task.task_parameters
 
     def set_task_parameters(self, task_params: TaskParameters) -> None:
@@ -852,6 +852,9 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
     """
     Validate curriculum stages. (Add other stuff if needed in the future)
     """
+
+    assert len(curr.see_stages()) != 0, \
+        "Curriculum is empty! Please add stages."
 
     for s in curr.see_stages():
         validate_stage(s)
