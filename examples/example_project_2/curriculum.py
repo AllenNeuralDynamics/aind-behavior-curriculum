@@ -203,9 +203,6 @@ if __name__ == "__main__":
     # ex_curr = construct_policy_triangle_curriculum()
     ex_curr = construct_stage_triangle_curriculum()
 
-    # ^ These are looking great.
-
-
     # with open("examples/example_project/jsons/stage_instance.json", "w") as f:
     #     stageA = ex_curr.see_stages()[0]
     #     json_dict = stageA.model_dump()

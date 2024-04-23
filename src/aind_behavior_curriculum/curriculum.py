@@ -290,22 +290,19 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
             node in self.nodes.values()
         ), f"Node {node} is not in the graph to be removed."
 
-        # Resolve policy id
+        # Resolve node id
         p_id = self._get_node_id(node)
 
-        # Remove policy from policy list
+        # Remove node from node list
         del self.nodes[p_id]
 
-        # Remove policy from stage graph
-        for start_id in self.graph:
-            if start_id == p_id:
-                # Remove outgoing transitions
-                del self.graph[p_id]
-                continue
+        # Remove node from graph keys
+        del self.graph[p_id]
 
+        # Remove node from graph value lists
+        for start_id in self.graph:
             for rule, dest_id in self.graph[start_id]:
                 if dest_id == p_id:
-                    # Remove incoming transitions
                     self.graph[start_id].remove((rule, dest_id))
 
     def add_transition(
@@ -420,15 +417,10 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
             assert (
                 n in self.nodes.values()
             ), f"Node {n} is not a node inside the behavior graph."
-            input_transitions.append(rule, self._get_node_id(n))
+            input_transitions.append((rule, self._get_node_id(n)))
 
-        assert set(input_transitions) == set(
-            self.graph[node]
-        ), (f"Elements of input node transitions {node_transitions} does not "
-            f"match the elements under this node: {self.see_node_transitions(node)}. "
-            "Please call 'see_node_transitions()' for a precise list of elements.")
-
-        self.graph[node] = input_transitions
+        n_id = self._get_node_id(node)
+        self.graph[n_id] = input_transitions
 
     def export_diagram(self, img_path: str):
         template_string = """
@@ -545,6 +537,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         if policy in self.start_policies:
             self.start_policies.remove(policy)
 
+            if len(self.start_policies) == 0:
+                warnings.warn(f'Stage {self.name} start_policies is empty.')
+
     def add_policy_transition(
         self,
         start_policy: Policy,
@@ -613,6 +608,14 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         To use, call see_policy_transitions() and order the transitions
         in the desired priority from left -> right.
         """
+
+        policy_transitions_list = list((t, p.rule) for (t, p) in policy_transitions)
+        current_list = list((t, p.rule) for (t, p) in self.see_policy_transitions(policy))
+
+        assert set(policy_transitions_list) == set(current_list), \
+            (f"Elements of input node transitions {policy_transitions} does not "
+            f"match the elements under this node: {self.see_policy_transitions(policy)}. "
+            "Please call 'see_policy_transitions()' for a precise list of elements.")
 
         self.graph.set_transition_priority(policy, policy_transitions)
 
@@ -807,6 +810,14 @@ class Curriculum(AindBehaviorModel):
         To use, call see_stage_transitions() and order the transitions
         in the desired priority from left -> right.
         """
+
+        stage_transitions_list = list((t, s.name) for (t, s) in stage_transitions)
+        current_list = list((t, s.name) for (t, s) in self.see_stage_transitions(stage))
+
+        assert set(stage_transitions_list) == set(current_list), \
+            (f"Elements of input node transitions {stage_transitions} does not "
+            f"match the elements under this node: {self.see_stage_transitions(stage)}. "
+            "Please call 'see_stage_transitions()' for a precise list of elements.")
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
