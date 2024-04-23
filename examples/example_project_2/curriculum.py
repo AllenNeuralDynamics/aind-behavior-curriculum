@@ -10,6 +10,7 @@ from pydantic import Field
 from aind_behavior_curriculum import (
     create_empty_stage,
     Curriculum,
+    get_task_types,
     Metrics,
     ModifiableAttr,
     Policy,
@@ -117,9 +118,11 @@ m2_stage_transition = StageTransition(rule=m2_rule)
 
 
 # --- CURRICULUM ---
+Tasks = get_task_types()
+
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[DummyTask] = Field(default=StageGraph())
+    graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
 
 def construct_track_curriculum() -> MyCurriculum:
     dummy_task = DummyTask(task_parameters=DummyParameters())

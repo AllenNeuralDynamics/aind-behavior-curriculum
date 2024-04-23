@@ -104,12 +104,12 @@
             "title": "PolicyTransition",
             "type": "object"
         },
-        "StageGraph_Annotated_Union_TaskA__TaskB__Graduated___Discriminator__": {
+        "StageGraph_Annotated_Union_Graduated__TaskA__TaskB___FieldInfo_annotation_NoneType__required_True__discriminator__name____": {
             "additionalProperties": false,
             "properties": {
                 "nodes": {
                     "additionalProperties": {
-                        "$ref": "#/$defs/Stage_Annotated_Union_TaskA__TaskB__Graduated___Discriminator__"
+                        "$ref": "#/$defs/Stage_Annotated_Union_Graduated__TaskA__TaskB___FieldInfo_annotation_NoneType__required_True__discriminator__name____"
                     },
                     "default": {},
                     "title": "Nodes",
@@ -137,7 +137,7 @@
                     "type": "object"
                 }
             },
-            "title": "StageGraph[Annotated[Union[TaskA, TaskB, Graduated], Discriminator]]",
+            "title": "StageGraph[Annotated[Union[Graduated, TaskA, TaskB], FieldInfo(annotation=NoneType, required=True, discriminator='name')]]",
             "type": "object"
         },
         "StageTransition": {
@@ -156,7 +156,7 @@
             "title": "StageTransition",
             "type": "object"
         },
-        "Stage_Annotated_Union_TaskA__TaskB__Graduated___Discriminator__": {
+        "Stage_Annotated_Union_Graduated__TaskA__TaskB___FieldInfo_annotation_NoneType__required_True__discriminator__name____": {
             "additionalProperties": false,
             "properties": {
                 "name": {
@@ -176,13 +176,13 @@
                     },
                     "oneOf": [
                         {
+                            "$ref": "#/$defs/Graduated"
+                        },
+                        {
                             "$ref": "#/$defs/TaskA"
                         },
                         {
                             "$ref": "#/$defs/TaskB"
-                        },
-                        {
-                            "$ref": "#/$defs/Graduated"
                         }
                     ],
                     "title": "Task"
@@ -211,7 +211,7 @@
                 "name",
                 "task"
             ],
-            "title": "Stage[Annotated[Union[TaskA, TaskB, Graduated], Discriminator]]",
+            "title": "Stage[Annotated[Union[Graduated, TaskA, TaskB], FieldInfo(annotation=NoneType, required=True, discriminator='name')]]",
             "type": "object"
         },
         "TaskA": {
@@ -343,7 +343,7 @@
         "graph": {
             "allOf": [
                 {
-                    "$ref": "#/$defs/StageGraph_Annotated_Union_TaskA__TaskB__Graduated___Discriminator__"
+                    "$ref": "#/$defs/StageGraph_Annotated_Union_Graduated__TaskA__TaskB___FieldInfo_annotation_NoneType__required_True__discriminator__name____"
                 }
             ],
             "default": {

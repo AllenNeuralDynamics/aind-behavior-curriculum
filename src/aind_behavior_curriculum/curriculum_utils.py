@@ -2,7 +2,7 @@
 Useful Placeholders when making Curriculums
 """
 
-from typing import Literal
+from typing import Annotated, Literal, Union
 
 from pydantic import Field
 
@@ -14,6 +14,23 @@ from aind_behavior_curriculum import (
     TaskParameters,
 )
 
+def get_task_types():
+    """
+    Used for Curriculum StageGraph declaration.
+    Ex:
+    Tasks = get_task_types()
+    class MyCurriculum(Curriculum):
+        name: Literal["My Curriculum"] = "My Curriculum"
+        graph: StageGraph[Tasks] = Field(default=StageGraph())
+
+    Explanation:
+    Invokes Task.__subclasses__() in the module in which all Tasks have been defined.
+    """
+
+    Tasks = Annotated[
+        Union[tuple(Task.__subclasses__())], Field(discriminator="name")
+    ]
+    return Tasks
 
 def init_stage_rule(
     metrics: Metrics, task_params: TaskParameters

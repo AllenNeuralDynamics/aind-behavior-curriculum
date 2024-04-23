@@ -3,14 +3,14 @@ Example of Curriculum creation
 """
 
 import json
-from typing import Annotated, Literal, Union
+from typing import Literal
 
-from pydantic import Field, Discriminator
+from pydantic import Field
 
 from aind_behavior_curriculum import (
     INIT_STAGE,
     Curriculum,
-    Graduated,
+    get_task_types,
     GRADUATED,
     Metrics,
     ModifiableAttr,
@@ -150,11 +150,11 @@ t2_10 = StageTransition(rule=t2_10_rule)
 
 
 # --- CURRICULUM ---
-Tasks = Annotated[Union[TaskA, TaskB, Graduated], Discriminator("name")]
+Tasks = get_task_types()
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Tasks] = Field(default=StageGraph())
+    graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
 
 
 def construct_curriculum() -> MyCurriculum:
