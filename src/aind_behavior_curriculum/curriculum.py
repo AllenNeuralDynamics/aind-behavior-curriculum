@@ -490,9 +490,11 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
 
 class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
-    pass
-    # Could probably use some custom methods in the future.
-    # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
+    def __init__(self):
+        """
+        Grab fields of parent
+        """
+        super().__init__()
 
 
 class Stage(AindBehaviorModel, Generic[TTask]):
@@ -702,9 +704,11 @@ class StageTransition(AindBehaviorModel):
 
 
 class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
-    pass
-    # Could probably use some custom methods in the future.
-    # Wrapping the BehaviorGraph super class for now and overloading the type hinting is a good place to start.
+    def __init__(self):
+        """
+        Grab fields of parent
+        """
+        super().__init__()
 
 
 class Curriculum(AindBehaviorModel):
@@ -871,3 +875,139 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
         validate_stage(s)
 
     return curr
+
+
+def make_diagram(curr: Curriculum, png_path: str):
+    """
+    Makes diagram for input Curriculum and
+    writes to output png_path.
+    """
+
+    def make_stage_script(s: Stage) -> str:
+        """
+        Stage to dot script conversion.
+        - Numbers policy transitions on priority
+        - Bounds stage in box
+        """
+
+        template_string = """
+            digraph cluster_{{ stage_id }} {
+                labelloc="t";
+                label={{ stage_name }};
+
+                // Define nodes with increased font visibility
+                node [shape=box, style=filled, fontname=Arial, fontsize=12,
+                fillcolor=lightblue, color=black];
+
+                // Define nodes
+                {% for n in nodes %}
+                {{ n }};
+                {% endfor %}
+
+                // Box
+                subgraph cluster_linked_list {
+                    style="solid";
+                    color="black";
+                    label="";
+                    {% for edge in edges %}
+                    {{ edge }};
+                    {% endfor %}
+                }
+            }
+        """
+        template = Template(template_string)
+        stage_name = s.name
+        nodes = [
+            f'{node_id} [label="{node.rule.__name__}"]'
+            for node_id, node in s.graph.nodes.items()
+        ]
+
+        edges = []
+        for start_id, edge_list in s.graph.graph.items():
+            for i, (edge, dest_id) in enumerate(edge_list):
+                # Use 1-indexing for labels
+                i = i + 1
+
+                # Edges must be StageTransition or PolicyTransition
+                edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", minlen=2]'
+                edges.append(edge_str)
+
+        # Append an extra invisible edge to render a box around empty stage
+        edges.append(f'0 -> 0 [style=invis]')
+
+        stage_dot_script = template.render(stage_id="".join(stage_name.split()),
+                                           stage_name=stage_name,
+                                           nodes=nodes,
+                                           edges=edges)
+
+        return stage_dot_script
+
+    def make_curriculum_script(c: Curriculum) -> str:
+        curr_dot_script = """
+            digraph cluster_curriculum {
+                color="white";
+
+                node [shape=box, style=filled];
+                {% for n in nodes %}
+                {{ n }}
+                {% endfor %}
+
+                subgraph cluster_linked_list {
+                    color="white";
+                    label={{ curr_name }};
+                    fontsize=24;
+
+                    {% for edge in edges %}
+                    {{ edge }};
+                    {% endfor %}
+                }
+            }
+        """
+        template = Template(curr_dot_script)
+
+        # Add curriculum nodes
+        nodes = [
+            f'{node_id} [label="{node.name}"]'
+            for node_id, node in c.graph.nodes.items()
+        ]
+
+        # Add curriculum edges
+        edges = []
+        for start_id, edge_list in c.graph.graph.items():
+            for i, (edge, dest_id) in enumerate(edge_list):
+                # Use 1-indexing for labels
+                i = i + 1
+
+                # Edges must be StageTransition or PolicyTransition
+                edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", minlen=2]'
+                edges.append(edge_str)
+
+        curriculum_dot_script = template.render(curr_name='"' + c.name + '"',
+                                                nodes=nodes,
+                                                edges=edges)
+
+        return curriculum_dot_script
+
+    assert png_path.endswith('.png'), \
+        "Please add .png extension to end of png_path."
+
+    dot_scripts = [make_curriculum_script(curr)]
+    last = []
+    for stage in curr.see_stages():
+        if stage.name == 'GRADUATED':
+            last.append(make_stage_script(stage))
+            continue
+        dot_scripts.append(make_stage_script(stage))
+    dot_scripts = dot_scripts + last
+
+    # Finally concatenate these strings together in this order.
+    final_script = '\n'.join(dot_scripts)
+
+    # Run graphviz export
+    gvpack_command = ['gvpack', '-u']
+    dot_command = ["dot", "-Tpng", "-o", png_path]
+    gvpack_process = subprocess.Popen(gvpack_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
+
+    gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())
+    dot_process.communicate(input=gvpack_output)

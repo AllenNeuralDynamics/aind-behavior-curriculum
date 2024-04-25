@@ -12,6 +12,7 @@ from aind_behavior_curriculum import (
     Curriculum,
     get_task_types,
     GRADUATED,
+    make_diagram,
     Metrics,
     ModifiableAttr,
     Policy,
@@ -208,4 +209,7 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    ex_curr.export_diagram(output_directory="examples/example_project/my_curr_diagram/")
+    # ex_curr.export_diagram(output_directory="examples/example_project/my_curr_diagram/")
+
+    # Testing new diagram visualization...
+    make_diagram(ex_curr, "examples/example_project/my_curr_diagram.png")
