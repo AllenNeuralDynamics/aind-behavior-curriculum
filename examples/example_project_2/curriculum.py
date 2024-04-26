@@ -10,6 +10,7 @@ from pydantic import Field
 from aind_behavior_curriculum import (
     create_empty_stage,
     Curriculum,
+    create_diagram,
     get_task_types,
     Metrics,
     ModifiableAttr,
@@ -201,10 +202,10 @@ def construct_stage_triangle_curriculum() -> MyCurriculum:
     return test_curr
 
 if __name__ == "__main__":
-    # ex_curr = construct_track_curriculum()
+    ex_curr = construct_track_curriculum()
     # ex_curr = construct_tree_curriculum()
     # ex_curr = construct_policy_triangle_curriculum()
-    ex_curr = construct_stage_triangle_curriculum()
+    # ex_curr = construct_stage_triangle_curriculum()
 
     # with open("examples/example_project/jsons/stage_instance.json", "w") as f:
     #     stageA = ex_curr.see_stages()[0]
@@ -221,4 +222,7 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    ex_curr.export_diagram(output_directory="examples/example_project_2/my_curr_diagram/")
+    create_diagram(ex_curr, "examples/example_project_2/diagrams/track_curr_diagram.png")
+    # create_diagram(ex_curr, "examples/example_project_2/diagrams/tree_curr_diagram.png")
+    # create_diagram(ex_curr, "examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
+    # create_diagram(ex_curr, "examples/example_project_2/diagrams/s_triangle_curr_diagram.png")
