@@ -268,16 +268,9 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         """
         Adds a floating node to the behavior graph.
         """
-
-        if node in self.nodes.values():
-            warnings.warn(
-                f"Node {node} has already been added to this graph."
-                "A behavior graph cannot have duplicate nodes."
-            )
-        else:
-            p_id = self._create_node_id()
-            self.nodes[p_id] = node
-            self.graph[p_id] = []
+        p_id = self._create_node_id()
+        self.nodes[p_id] = node
+        self.graph[p_id] = []
 
     def remove_node(self, node: NodeTypes) -> None:
         """
@@ -422,79 +415,9 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         n_id = self._get_node_id(node)
         self.graph[n_id] = input_transitions
 
-    def export_diagram(self, img_path: str):
-        template_string = """
-            digraph G {
-                rankdir=LR; // Arrange nodes from left to right
-
-                labelloc="t";
-                label={{ title }};
-
-                // Define nodes with increased font visibility
-                node [shape=box, style=filled, fontname=Arial, fontsize=12,
-                fillcolor=lightblue, color=black];
-
-                // Define nodes
-                {% for node in nodes %}
-                {{ node }};
-                {% endfor %}
-
-                // Box
-                subgraph cluster_linked_list {
-                    style="solid";
-                    color="black";
-                    label="";
-                    {% for edge in edges %}
-                    {{ edge }};
-                    {% endfor %}
-                }
-            }
-            """
-
-        template = Template(template_string)
-
-        title = '"' + str(Path(img_path).stem) + '"'
-
-        nodes = []
-        if isinstance(list(self.nodes.values())[0], Policy):
-            nodes = [
-                f'{node_id} [label="{node.rule.__name__}"]'
-                for node_id, node in self.nodes.items()
-            ]
-        else:  # node is an instance of Stage
-            nodes = [
-                f'{node_id} [label="{node.name}"]'
-                for node_id, node in self.nodes.items()
-            ]
-
-        edges = []
-        for start_id, edge_list in self.graph.items():
-            for i, (edge, dest_id) in enumerate(edge_list):
-                # Use 1-indexing for labels
-                i = i + 1
-
-                # Edges must be StageTransition or PolicyTransition
-                edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", \
-                    minlen=2]'
-                edges.append(edge_str)
-
-        # Append an extra invisible edge to render a box around empty stage
-        edges.append(f'0 -> 0 [style=invis]')
-
-        dot_script = template.render(title=title, nodes=nodes, edges=edges)
-
-        # Execute dot script in subprocess
-        dot_command = ["dot", "-Tpng", "-o", img_path]
-        dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
-        dot_process.communicate(input=dot_script.encode())
-
 
 class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
-    def __init__(self):
-        """
-        Grab fields of parent
-        """
-        super().__init__()
+    pass
 
 
 class Stage(AindBehaviorModel, Generic[TTask]):
@@ -524,6 +447,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         Adds a floating policy to the Stage adjacency graph.
         """
+        assert not (policy in self.graph.see_nodes()), \
+            (f"Policy {policy.rule.__name__} is a duplicate Policy "
+             f"in Stage {self.name}. Stage cannot have duplicate policies")
+
         self.graph.add_node(policy)
 
     def remove_policy(self, policy: Policy) -> None:
@@ -540,7 +467,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             self.start_policies.remove(policy)
 
             if len(self.start_policies) == 0:
-                warnings.warn(f'Stage {self.name} start_policies is empty.')
+                warnings.warn(f'Stage {self.name}.start_policies is empty.')
 
     def add_policy_transition(
         self,
@@ -611,8 +538,8 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         in the desired priority from left -> right.
         """
 
-        policy_transitions_list = list((t, p.rule) for (t, p) in policy_transitions)
-        current_list = list((t, p.rule) for (t, p) in self.see_policy_transitions(policy))
+        policy_transitions_list = list((t.rule, p.rule) for (t, p) in policy_transitions)
+        current_list = list((t.rule, p.rule) for (t, p) in self.see_policy_transitions(policy))
 
         assert set(policy_transitions_list) == set(current_list), \
             (f"Elements of input node transitions {policy_transitions} does not "
@@ -645,15 +572,6 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         Task revalidates TaskParameters on assignment.
         """
         self.task.task_parameters = task_params
-
-    def export_diagram(self, image_path: str):
-        """
-        Export visual representation of graph to inspect correctness.
-        Please include the image extension (.png) in the image path.
-        """
-
-        validate_stage(self)
-        self.graph.export_diagram(image_path)
 
 
 class StageTransition(AindBehaviorModel):
@@ -704,11 +622,7 @@ class StageTransition(AindBehaviorModel):
 
 
 class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
-    def __init__(self):
-        """
-        Grab fields of parent
-        """
-        super().__init__()
+    pass
 
 
 class Curriculum(AindBehaviorModel):
@@ -736,6 +650,11 @@ class Curriculum(AindBehaviorModel):
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
+        assert not (stage in self.graph.see_nodes()), \
+            (f"Stage {stage.name} is a duplicate stage. "
+              "Curriculum cannot have duplicate stages, "
+              "please change stage name or task.")
+
         self.graph.add_node(stage)
 
     def remove_stage(self, stage: Stage) -> None:
@@ -815,8 +734,8 @@ class Curriculum(AindBehaviorModel):
         in the desired priority from left -> right.
         """
 
-        stage_transitions_list = list((t, s.name) for (t, s) in stage_transitions)
-        current_list = list((t, s.name) for (t, s) in self.see_stage_transitions(stage))
+        stage_transitions_list = list((t.rule, s.name) for (t, s) in stage_transitions)
+        current_list = list((t.rule, s.name) for (t, s) in self.see_stage_transitions(stage))
 
         assert set(stage_transitions_list) == set(current_list), \
             (f"Elements of input node transitions {stage_transitions} does not "
@@ -824,21 +743,6 @@ class Curriculum(AindBehaviorModel):
             "Please call 'see_stage_transitions()' for a precise list of elements.")
 
         self.graph.set_transition_priority(stage, stage_transitions)
-
-    def export_diagram(self, output_directory: str):
-        """
-        Export visual representation of graph to inspect correctness.
-        """
-
-        validate_curriculum(self)
-
-        curriculum_path = Path(output_directory) / f"{self.name}.png"
-        stage_dir = Path(output_directory) / "stages"
-        stage_dir.mkdir(parents=True, exist_ok=True)
-
-        self.graph.export_diagram(curriculum_path)
-        for s in self.see_stages():
-            s.export_diagram(str(stage_dir / f"{s.name}.png"))
 
 
 def validate_stage(s: Stage) -> Stage:
@@ -860,6 +764,16 @@ def validate_stage(s: Stage) -> Stage:
         "Please define start_polices for all Curriculum stages "
         "with Stage.set_start_policies(...)""")
 
+    # Check round trip serialization
+    try:
+        instance_json = s.model_dump_json()
+        curr_subtype = type(s)
+        curr_subtype.model_validate_json(instance_json)
+    except Exception as e:
+        print((f'Pydantic cannot serialize Stage {s.name}, please use '
+               'mypy to verify your types.'))
+        raise
+
     return s
 
 
@@ -874,10 +788,20 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
     for s in curr.see_stages():
         validate_stage(s)
 
+    # Check round trip serialization
+    try:
+        instance_json = curr.model_dump_json()
+        curr_subtype = type(curr)
+        curr_subtype.model_validate_json(instance_json)
+    except Exception as e:
+        print((f'Pydantic cannot serialize Curriculum, please use '
+               'mypy to verify your types.'))
+        raise
+
     return curr
 
 
-def make_diagram(curr: Curriculum, png_path: str):
+def create_diagram(curr: Curriculum, png_path: str):
     """
     Makes diagram for input Curriculum and
     writes to output png_path.
@@ -904,23 +828,23 @@ def make_diagram(curr: Curriculum, png_path: str):
                 {{ n }};
                 {% endfor %}
 
-                // Box
-                subgraph cluster_linked_list {
-                    style="solid";
-                    color="black";
-                    label="";
-                    {% for edge in edges %}
-                    {{ edge }};
-                    {% endfor %}
-                }
+                // Define edges
+                {% for edge in edges %}
+                {{ edge }};
+                {% endfor %}
             }
         """
         template = Template(template_string)
-        stage_name = s.name
-        nodes = [
-            f'{node_id} [label="{node.rule.__name__}"]'
-            for node_id, node in s.graph.nodes.items()
-        ]
+        stage_name = '"' + s.name + '"'
+
+        nodes = []
+        for node_id, node in s.graph.nodes.items():
+            # Add color to start policies
+            if node in s.start_policies:
+                node_str = f'{node_id} [label="{node.rule.__name__}", fillcolor="#FFEA00"]'
+            else:
+                node_str = f'{node_id} [label="{node.rule.__name__}"]'
+            nodes.append(node_str)
 
         edges = []
         for start_id, edge_list in s.graph.graph.items():
@@ -932,10 +856,7 @@ def make_diagram(curr: Curriculum, png_path: str):
                 edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", minlen=2]'
                 edges.append(edge_str)
 
-        # Append an extra invisible edge to render a box around empty stage
-        edges.append(f'0 -> 0 [style=invis]')
-
-        stage_dot_script = template.render(stage_id="".join(stage_name.split()),
+        stage_dot_script = template.render(stage_id="".join(s.name.split()),
                                            stage_name=stage_name,
                                            nodes=nodes,
                                            edges=edges)
@@ -946,21 +867,17 @@ def make_diagram(curr: Curriculum, png_path: str):
         curr_dot_script = """
             digraph cluster_curriculum {
                 color="white";
+                label={{ curr_name }};
+                fontsize=24;
 
                 node [shape=box, style=filled];
                 {% for n in nodes %}
                 {{ n }}
                 {% endfor %}
 
-                subgraph cluster_linked_list {
-                    color="white";
-                    label={{ curr_name }};
-                    fontsize=24;
-
-                    {% for edge in edges %}
-                    {{ edge }};
-                    {% endfor %}
-                }
+                {% for edge in edges %}
+                {{ edge }};
+                {% endfor %}
             }
         """
         template = Template(curr_dot_script)
@@ -990,6 +907,7 @@ def make_diagram(curr: Curriculum, png_path: str):
 
     assert png_path.endswith('.png'), \
         "Please add .png extension to end of png_path."
+    curr = validate_curriculum(curr)
 
     dot_scripts = [make_curriculum_script(curr)]
     last = []
@@ -1006,7 +924,7 @@ def make_diagram(curr: Curriculum, png_path: str):
     # Run graphviz export
     gvpack_command = ['gvpack', '-u']
     dot_command = ["dot", "-Tpng", "-o", png_path]
-    gvpack_process = subprocess.Popen(gvpack_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    gvpack_process = subprocess.Popen(gvpack_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
 
     gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())
