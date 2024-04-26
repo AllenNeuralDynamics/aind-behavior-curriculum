@@ -8,8 +8,7 @@ import inspect
 import subprocess
 import warnings
 from importlib import import_module
-from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar, List, Tuple, Dict
+from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar
 
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
@@ -104,10 +103,10 @@ class Rule:
             return value
         else:
             split = value.rsplit(".", 1)
-            assert (
-                len(split) > 0
-            ), (f"Invalid rule value while attempting to deserialize callable. "
-                f"Got {value}, expected string in the format '<module>.Rule'")
+            assert len(split) > 0, (
+                f"Invalid rule value while attempting to deserialize callable. "
+                f"Got {value}, expected string in the format '<module>.Rule'"
+            )
 
             module = import_module(split[0])
             obj = getattr(module, split[1])
@@ -241,7 +240,9 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     """
 
     nodes: Dict[int, NodeTypes] = Field({}, validate_default=True)
-    graph: Dict[int, List[Tuple[EdgeType, int]]] = Field({}, validate_default=True)
+    graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(
+        {}, validate_default=True
+    )
 
     def _get_node_id(self, node: NodeTypes) -> int:
         """
@@ -360,8 +361,8 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         start_id = self._get_node_id(start_node)
         dest_id = self._get_node_id(dest_node)
         assert (rule, dest_id) in self.graph[start_id], (
-            (f"Node {start_node} does not transition "
-            f"into Node {dest_node} with Rule {rule}.")
+            f"Node {start_node} does not transition "
+            f"into Node {dest_node} with Rule {rule}."
         )
 
         # Optionally remove nodes
@@ -417,6 +418,10 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
 
 class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
+    """
+    Graph for Stage.
+    """
+
     pass
 
 
@@ -431,9 +436,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
-    graph: PolicyGraph = (
-        PolicyGraph()
-    )
+    graph: PolicyGraph = PolicyGraph()
     start_policies: List[Policy] = []
 
     def __eq__(self, __value: object) -> bool:
@@ -447,9 +450,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         Adds a floating policy to the Stage adjacency graph.
         """
-        assert not (policy in self.graph.see_nodes()), \
-            (f"Policy {policy.rule.__name__} is a duplicate Policy "
-             f"in Stage {self.name}. Stage cannot have duplicate policies")
+        assert not (policy in self.graph.see_nodes()), (
+            f"Policy {policy.rule.__name__} is a duplicate Policy "
+            f"in Stage {self.name}. Stage cannot have duplicate policies"
+        )
 
         self.graph.add_node(policy)
 
@@ -467,7 +471,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             self.start_policies.remove(policy)
 
             if len(self.start_policies) == 0:
-                warnings.warn(f'Stage {self.name}.start_policies is empty.')
+                warnings.warn(f"Stage {self.name}.start_policies is empty.")
 
     def add_policy_transition(
         self,
@@ -528,9 +532,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     def set_policy_transition_priority(
         self,
         policy: Policy,
-        policy_transitions: List[
-            Tuple[PolicyTransition, Policy]
-        ],
+        policy_transitions: List[Tuple[PolicyTransition, Policy]],
     ) -> None:
         """
         Change the order of policy transitions listed under a policy.
@@ -538,19 +540,22 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         in the desired priority from left -> right.
         """
 
-        policy_transitions_list = list((t.rule, p.rule) for (t, p) in policy_transitions)
-        current_list = list((t.rule, p.rule) for (t, p) in self.see_policy_transitions(policy))
+        policy_transitions_list = list(
+            (t.rule, p.rule) for (t, p) in policy_transitions
+        )
+        current_list = list(
+            (t.rule, p.rule) for (t, p) in self.see_policy_transitions(policy)
+        )
 
-        assert set(policy_transitions_list) == set(current_list), \
-            (f"Elements of input node transitions {policy_transitions} does not "
-            f"match the elements under this node: {self.see_policy_transitions(policy)}. "
-            "Please call 'see_policy_transitions()' for a precise list of elements.")
+        assert set(policy_transitions_list) == set(current_list), (
+            f"Elements of input node transitions {policy_transitions} does not "
+            f"match the elements under this node: {self.see_policy_transitions(policy)}."
+            " Please call 'see_policy_transitions()' for a precise list of elements."
+        )
 
         self.graph.set_transition_priority(policy, policy_transitions)
 
-    def set_start_policies(
-        self, start_policies: Policy | List[Policy]
-    ):
+    def set_start_policies(self, start_policies: Policy | List[Policy]):
         """
         Sets stage's start policies to start policies provided.
         Input overwrites existing start policies.
@@ -622,6 +627,10 @@ class StageTransition(AindBehaviorModel):
 
 
 class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
+    """
+    Graph for Curriculum.
+    """
+
     pass
 
 
@@ -650,10 +659,11 @@ class Curriculum(AindBehaviorModel):
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
-        assert not (stage in self.graph.see_nodes()), \
-            (f"Stage {stage.name} is a duplicate stage. "
-              "Curriculum cannot have duplicate stages, "
-              "please change stage name or task.")
+        assert not (stage in self.graph.see_nodes()), (
+            f"Stage {stage.name} is a duplicate stage. "
+            "Curriculum cannot have duplicate stages, "
+            "please change stage name or task."
+        )
 
         self.graph.add_node(stage)
 
@@ -734,13 +744,18 @@ class Curriculum(AindBehaviorModel):
         in the desired priority from left -> right.
         """
 
-        stage_transitions_list = list((t.rule, s.name) for (t, s) in stage_transitions)
-        current_list = list((t.rule, s.name) for (t, s) in self.see_stage_transitions(stage))
+        stage_transitions_list = list(
+            (t.rule, s.name) for (t, s) in stage_transitions
+        )
+        current_list = list(
+            (t.rule, s.name) for (t, s) in self.see_stage_transitions(stage)
+        )
 
-        assert set(stage_transitions_list) == set(current_list), \
-            (f"Elements of input node transitions {stage_transitions} does not "
+        assert set(stage_transitions_list) == set(current_list), (
+            f"Elements of input node transitions {stage_transitions} does not "
             f"match the elements under this node: {self.see_stage_transitions(stage)}. "
-            "Please call 'see_stage_transitions()' for a precise list of elements.")
+            "Please call 'see_stage_transitions()' for a precise list of elements."
+        )
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
@@ -750,28 +765,33 @@ def validate_stage(s: Stage) -> Stage:
     Check if stage is non-empty and specifies start policies.
     """
 
-    assert (
-        len(s.see_policies()) > 0
-    ), (f"Stage {s.name} in Curriculum does not have policies. "
+    assert len(s.see_policies()) > 0, (
+        f"Stage {s.name} in Curriculum does not have policies. "
         "Please add at least one policy to all Curriculum stages "
         "with Stage.add_policy(...). "
         "If you would like an empty Stage, you can use "
-        "curriculum_utils.create_empty_stage(...)")
+        "curriculum_utils.create_empty_stage(...)"
+    )
 
-    assert (
-        len(s.start_policies) > 0
-    ), (f"Stage {s.name} in Curriculum does not have start_policies. "
+    assert len(s.start_policies) > 0, (
+        f"Stage {s.name} in Curriculum does not have start_policies. "
         "Please define start_polices for all Curriculum stages "
-        "with Stage.set_start_policies(...)""")
+        "with Stage.set_start_policies(...)"
+        ""
+    )
 
     # Check round trip serialization
     try:
         instance_json = s.model_dump_json()
         curr_subtype = type(s)
         curr_subtype.model_validate_json(instance_json)
-    except Exception as e:
-        print((f'Pydantic cannot serialize Stage {s.name}, please use '
-               'mypy to verify your types.'))
+    except Exception:
+        print(
+            (
+                f"Pydantic cannot serialize Stage {s.name}, please use "
+                "mypy to verify your types."
+            )
+        )
         raise
 
     return s
@@ -782,8 +802,9 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
     Validate curriculum stages. (Add other stuff if needed in the future)
     """
 
-    assert len(curr.see_stages()) != 0, \
-        "Curriculum is empty! Please add stages."
+    assert (
+        len(curr.see_stages()) != 0
+    ), "Curriculum is empty! Please add stages."
 
     for s in curr.see_stages():
         validate_stage(s)
@@ -793,15 +814,19 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
         instance_json = curr.model_dump_json()
         curr_subtype = type(curr)
         curr_subtype.model_validate_json(instance_json)
-    except Exception as e:
-        print((f'Pydantic cannot serialize Curriculum, please use '
-               'mypy to verify your types.'))
+    except Exception:
+        print(
+            (
+                "Pydantic cannot serialize Curriculum, please use "
+                "mypy to verify your types."
+            )
+        )
         raise
 
     return curr
 
 
-def create_diagram(curr: Curriculum, png_path: str):
+def create_diagram(curr: Curriculum, png_path: str):  # noqa: C901
     """
     Makes diagram for input Curriculum and
     writes to output png_path.
@@ -810,8 +835,6 @@ def create_diagram(curr: Curriculum, png_path: str):
     def make_stage_script(s: Stage) -> str:
         """
         Stage to dot script conversion.
-        - Numbers policy transitions on priority
-        - Bounds stage in box
         """
 
         template_string = """
@@ -841,7 +864,10 @@ def create_diagram(curr: Curriculum, png_path: str):
         for node_id, node in s.graph.nodes.items():
             # Add color to start policies
             if node in s.start_policies:
-                node_str = f'{node_id} [label="{node.rule.__name__}", fillcolor="#FFEA00"]'
+                node_str = (
+                    f'{node_id} [label="{node.rule.__name__}",'
+                    'fillcolor="#FFEA00"]'
+                )
             else:
                 node_str = f'{node_id} [label="{node.rule.__name__}"]'
             nodes.append(node_str)
@@ -853,17 +879,26 @@ def create_diagram(curr: Curriculum, png_path: str):
                 i = i + 1
 
                 # Edges must be StageTransition or PolicyTransition
-                edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", minlen=2]'
+                edge_str = (
+                    f'{start_id} -> {dest_id} [label="({i}) '
+                    f'{edge.rule.__name__}", minlen=2]'
+                )
                 edges.append(edge_str)
 
-        stage_dot_script = template.render(stage_id="".join(s.name.split()),
-                                           stage_name=stage_name,
-                                           nodes=nodes,
-                                           edges=edges)
+        stage_dot_script = template.render(
+            stage_id="".join(s.name.split()),
+            stage_name=stage_name,
+            nodes=nodes,
+            edges=edges,
+        )
 
         return stage_dot_script
 
     def make_curriculum_script(c: Curriculum) -> str:
+        """
+        Curriculum to dot script conversion.
+        """
+
         curr_dot_script = """
             digraph cluster_curriculum {
                 color="white";
@@ -896,35 +931,44 @@ def create_diagram(curr: Curriculum, png_path: str):
                 i = i + 1
 
                 # Edges must be StageTransition or PolicyTransition
-                edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.rule.__name__}", minlen=2]'
+                edge_str = (
+                    f'{start_id} -> {dest_id} [label="({i}) '
+                    f'{edge.rule.__name__}", minlen=2]'
+                )
                 edges.append(edge_str)
 
-        curriculum_dot_script = template.render(curr_name='"' + c.name + '"',
-                                                nodes=nodes,
-                                                edges=edges)
+        curriculum_dot_script = template.render(
+            curr_name='"' + c.name + '"', nodes=nodes, edges=edges
+        )
 
         return curriculum_dot_script
 
-    assert png_path.endswith('.png'), \
-        "Please add .png extension to end of png_path."
+    assert png_path.endswith(
+        ".png"
+    ), "Please add .png extension to end of png_path."
     curr = validate_curriculum(curr)
 
     dot_scripts = [make_curriculum_script(curr)]
     last = []
     for stage in curr.see_stages():
-        if stage.name == 'GRADUATED':
+        if stage.name == "GRADUATED":
             last.append(make_stage_script(stage))
             continue
         dot_scripts.append(make_stage_script(stage))
     dot_scripts = dot_scripts + last
 
     # Finally concatenate these strings together in this order.
-    final_script = '\n'.join(dot_scripts)
+    final_script = "\n".join(dot_scripts)
 
     # Run graphviz export
-    gvpack_command = ['gvpack', '-u']
+    gvpack_command = ["gvpack", "-u"]
     dot_command = ["dot", "-Tpng", "-o", png_path]
-    gvpack_process = subprocess.Popen(gvpack_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    gvpack_process = subprocess.Popen(
+        gvpack_command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
     dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
 
     gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())

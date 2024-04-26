@@ -1,9 +1,10 @@
 """
 Core Trainer primitive.
 """
-from collections.abc import Iterable
+
 from abc import abstractmethod
-from typing import Optional, List
+from collections.abc import Iterable
+from typing import List, Optional
 
 from pydantic import Field
 
@@ -14,11 +15,12 @@ from aind_behavior_curriculum import (
     Policy,
     Stage,
     TaskParameters,
-    validate_curriculum
+    validate_curriculum,
 )
 
 Stage_Entry = Stage | None
 Policy_Entry = tuple[Policy, ...] | None
+
 
 class SubjectHistory(AindBehaviorModel):
     """
@@ -31,9 +33,7 @@ class SubjectHistory(AindBehaviorModel):
     stage_history: list[Stage_Entry] = Field([], validate_default=True)
     policy_history: list[Policy_Entry] = Field([], validate_default=True)
 
-    def add_entry(self,
-                  stage: Stage_Entry,
-                  policies: Policy_Entry) -> None:
+    def add_entry(self, stage: Stage_Entry, policies: Policy_Entry) -> None:
         """
         Add to stage and policy history synchronously.
         """
@@ -107,7 +107,7 @@ class Trainer:
         stage_parameters: TaskParameters,
         stage_policies: Iterable[Policy],
         curr_metrics: Metrics,
-        ) -> TaskParameters:
+    ) -> TaskParameters:
         """
         Aggregates parameter update of input stage_policies
         given current stage_parameters and current metrics.
@@ -115,16 +115,11 @@ class Trainer:
 
         updated_params = stage_parameters
         for p in stage_policies:
-            updated_params = p.rule(
-                curr_metrics, updated_params
-            )
+            updated_params = p.rule(curr_metrics, updated_params)
 
         return updated_params
 
-    def _get_unique_policies(
-        self,
-        policies: List[Policy]
-        ) -> List[Policy]:
+    def _get_unique_policies(self, policies: List[Policy]) -> List[Policy]:
         """
         set(policies) is not hashable, although Policy
         only contains a function, which is hashable.
@@ -144,7 +139,8 @@ class Trainer:
         subject_history: SubjectHistory,
         stage: Stage_Entry,
         stage_parameters: TaskParameters | None,
-        stage_policies: Policy_Entry):
+        stage_policies: Policy_Entry,
+    ) -> None:
         """
         Updates subject history, which involves many steps.
         Stage parameters and policies are expected to be part
@@ -153,9 +149,9 @@ class Trainer:
         If any of {stage, stage_parameters, stage_policies} are None,
         all of the elements are expected to be None.
         """
-        if not (stage is None or \
-                stage_parameters is None or \
-                stage_policies is None):
+        if not (
+            stage is None or stage_parameters is None or stage_policies is None
+        ):
             stage = stage.model_copy(deep=True)
             stage.set_task_parameters(stage_parameters)
 
@@ -190,28 +186,30 @@ class Trainer:
         elif isinstance(start_policies, Policy):
             start_policies = [start_policies]
         for s_policy in start_policies:
-            assert (
-                s_policy in start_stage.see_policies()
-            ), (f"Provided start_policy {s_policy} not in "
-                f"provided start_stage {start_stage.name}.")
+            assert s_policy in start_stage.see_policies(), (
+                f"Provided start_policy {s_policy} not in "
+                f"provided start_stage {start_stage.name}."
+            )
         start_policies = tuple(start_policies)
 
         initial_params = self._get_net_parameter_update(
             start_stage.get_task_parameters(),
             start_policies,
-            curr_metrics=Metrics()  # Metrics is empty on regsitration.
+            curr_metrics=Metrics(),  # Metrics is empty on regsitration.
         )
-        self._update_subject_history(subject_id,
-                                     curriculum,
-                                     SubjectHistory(),  # Brand New History.
-                                     start_stage,
-                                     initial_params,
-                                     start_policies)
+        self._update_subject_history(
+            subject_id,
+            curriculum,
+            SubjectHistory(),  # Brand New History.
+            start_stage,
+            initial_params,
+            start_policies,
+        )
 
         # Add to trainer's local list!
         self.subject_ids.append(subject_id)
 
-    def evaluate_subjects(self) -> None:
+    def evaluate_subjects(self) -> None:  # noqa: C901
         """
         Calls user-defined functions to automatically update
         subject stage along curriculum.
@@ -248,12 +246,9 @@ class Trainer:
 
             # 0) Subject Ejected
             if current_stage is None or current_policies is None:
-                self._update_subject_history(s_id,
-                                             curriculum,
-                                             subject_history,
-                                             None,
-                                             None,
-                                             None)
+                self._update_subject_history(
+                    s_id, curriculum, subject_history, None, None, None
+                )
                 break  # Head to next subject
 
             # 1) Stage Transition
@@ -267,14 +262,16 @@ class Trainer:
                     updated_params = self._get_net_parameter_update(
                         dest_stage.get_task_parameters(),
                         dest_stage.start_policies,
-                        curr_metrics
+                        curr_metrics,
                     )
-                    self._update_subject_history(s_id,
-                                                 curriculum,
-                                                 subject_history,
-                                                 dest_stage,
-                                                 updated_params,
-                                                 tuple(dest_stage.start_policies))
+                    self._update_subject_history(
+                        s_id,
+                        curriculum,
+                        subject_history,
+                        dest_stage,
+                        updated_params,
+                        tuple(dest_stage.start_policies),
+                    )
                     advance_stage = True
                     break  # Finish stage transition, onto next subject
 
@@ -300,32 +297,36 @@ class Trainer:
                     updated_params = self._get_net_parameter_update(
                         current_stage.get_task_parameters(),
                         dest_policies,
-                        curr_metrics
+                        curr_metrics,
                     )
 
                     dest_policies = self._get_unique_policies(dest_policies)
-                    self._update_subject_history(s_id,
-                                                 curriculum,
-                                                 subject_history,
-                                                 current_stage,
-                                                 updated_params,
-                                                 tuple(dest_policies))
+                    self._update_subject_history(
+                        s_id,
+                        curriculum,
+                        subject_history,
+                        current_stage,
+                        updated_params,
+                        tuple(dest_policies),
+                    )
 
             # 3) No Transition
             if not (advance_stage or advance_policy):
-                self._update_subject_history(s_id,
-                                             curriculum,
-                                             subject_history,
-                                             current_stage,
-                                             current_stage.get_task_parameters(),
-                                             current_policies)
+                self._update_subject_history(
+                    s_id,
+                    curriculum,
+                    subject_history,
+                    current_stage,
+                    current_stage.get_task_parameters(),
+                    current_policies,
+                )
 
     def override_subject_status(
         self,
         s_id: int,
         override_stage: Stage,
-        override_policies: Policy | list[Policy]
-    ):
+        override_policies: Policy | list[Policy],
+    ) -> None:
         """
         Override subject (stage, policies) independent of evaluation.
         Stage and Policy objects may be accessed by calling
@@ -342,33 +343,35 @@ class Trainer:
         subject_history: SubjectHistory = b
         curr_metrics: Metrics = c
 
-        assert (
-            override_stage in curriculum.see_stages()
-        ), (f"override stage {override_stage.name} not in "
-            f"curriculum stages for subject id {s_id}.")
+        assert override_stage in curriculum.see_stages(), (
+            f"override stage {override_stage.name} not in "
+            f"curriculum stages for subject id {s_id}."
+        )
 
         if isinstance(override_policies, Policy):
             override_policies = [override_policies]
         for o_policy in override_policies:
-            assert (
-                o_policy in override_stage.see_policies()
-            ), (f"override policy {o_policy} not in "
-            f"given override stage {override_stage.name}.")
+            assert o_policy in override_stage.see_policies(), (
+                f"override policy {o_policy} not in "
+                f"given override stage {override_stage.name}."
+            )
 
         # Update Stage parameters according to override policies
         updated_params = self._get_net_parameter_update(
             override_stage.get_task_parameters(),
             override_policies,
-            curr_metrics
+            curr_metrics,
         )
-        self._update_subject_history(s_id,
-                                     curriculum,
-                                     subject_history,
-                                     override_stage,
-                                     updated_params,
-                                     tuple(override_policies))
+        self._update_subject_history(
+            s_id,
+            curriculum,
+            subject_history,
+            override_stage,
+            updated_params,
+            tuple(override_policies),
+        )
 
-    def eject_subject(self, s_id: int):
+    def eject_subject(self, s_id: int) -> None:
         """
         Send mouse off curriculum.
         Only way to get mouse back into system is
@@ -378,11 +381,13 @@ class Trainer:
         a, b, c = self.load_data(s_id)
         curriculum: Curriculum = a
         subject_history: SubjectHistory = b
-        curr_metrics: Metrics = c
+        curr_metrics: Metrics = c  # noqa: F841
 
-        self._update_subject_history(s_id,
-                                     curriculum,
-                                     subject_history,
-                                     stage=None,
-                                     stage_parameters=None,
-                                     stage_policies=None)
+        self._update_subject_history(
+            s_id,
+            curriculum,
+            subject_history,
+            stage=None,
+            stage_parameters=None,
+            stage_policies=None,
+        )

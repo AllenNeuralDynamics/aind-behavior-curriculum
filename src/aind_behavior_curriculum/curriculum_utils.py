@@ -14,6 +14,7 @@ from aind_behavior_curriculum import (
     TaskParameters,
 )
 
+
 def get_task_types():
     """
     Used for Curriculum StageGraph declaration.
@@ -31,6 +32,7 @@ def get_task_types():
         Union[tuple(Task.__subclasses__())], Field(discriminator="name")
     ]
     return Tasks
+
 
 def init_stage_rule(
     metrics: Metrics, task_params: TaskParameters
@@ -56,11 +58,14 @@ def create_empty_stage(s: Stage) -> Stage:
 
 
 class Graduated(Task):
+    """
+    Utility Final Task.
+    """
+
     name: Literal["Graduated"] = "Graduated"
     task_parameters: TaskParameters = Field(
         default=TaskParameters(), description="Fill w/ Parameter Defaults"
     )
 
-GRADUATED = create_empty_stage(
-    Stage(name='GRADUATED', task=Graduated())
-)
+
+GRADUATED = create_empty_stage(Stage(name="GRADUATED", task=Graduated()))

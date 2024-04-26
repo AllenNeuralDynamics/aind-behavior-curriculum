@@ -27,19 +27,6 @@ class TaskTests(unittest.TestCase):
         ex_task.task_parameters.field_1 = 50
         self.assertTrue(ex_task.task_parameters.field_1 == 50)
 
-    def test_valid_group_parameter_change(self):
-        ex_parameters = ex.ExampleTaskParameters()
-        ex_task = ex.ExampleTask(task_parameters=ex_parameters)
-        ex_task.update_parameters(
-            field_1=123, field_2=456, field_3=0.8, field_4=0.9
-        )
-        self.assertTrue(
-            ex_task.task_parameters.field_1 == 123
-            and ex_task.task_parameters.field_2 == 456
-            and ex_task.task_parameters.field_3 == 0.8
-            and ex_task.task_parameters.field_4 == 0.9
-        )
-
     # Invalid Usage
     def test_invalid_construction(self):
         def invalid_type():

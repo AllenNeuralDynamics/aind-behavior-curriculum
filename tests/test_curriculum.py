@@ -147,21 +147,39 @@ class CurriculumTests(unittest.TestCase):
         stageA.add_policy(ex2.policy_1)
         stageA.set_start_policies(ex2.policy_1)
 
-        stageA.add_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
-        stageA.add_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
+        stageA.add_policy_transition(
+            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
+        )
+        stageA.add_policy_transition(
+            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
+        )
 
-        stageA.add_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
-        stageA.add_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
+        stageA.add_policy_transition(
+            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
+        )
+        stageA.add_policy_transition(
+            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
+        )
 
-        self.assertTrue(stageA.see_policies() == \
-                        [ex2.policy_1, ex2.policy_2,
-                         ex2.policy_3, ex2.policy_4])
-        self.assertTrue(stageA.see_policy_transitions(ex2.policy_1) == \
-                        [(ex2.m1_policy_transition, ex2.policy_2), (ex2.m1_policy_transition, ex2.policy_3)])
-        self.assertTrue(stageA.see_policy_transitions(ex2.policy_2) == \
-                        [(ex2.m1_policy_transition, ex2.policy_4)])
-        self.assertTrue(stageA.see_policy_transitions(ex2.policy_3) == \
-                        [(ex2.m1_policy_transition, ex2.policy_4)])
+        self.assertTrue(
+            stageA.see_policies()
+            == [ex2.policy_1, ex2.policy_2, ex2.policy_3, ex2.policy_4]
+        )
+        self.assertTrue(
+            stageA.see_policy_transitions(ex2.policy_1)
+            == [
+                (ex2.m1_policy_transition, ex2.policy_2),
+                (ex2.m1_policy_transition, ex2.policy_3),
+            ]
+        )
+        self.assertTrue(
+            stageA.see_policy_transitions(ex2.policy_2)
+            == [(ex2.m1_policy_transition, ex2.policy_4)]
+        )
+        self.assertTrue(
+            stageA.see_policy_transitions(ex2.policy_3)
+            == [(ex2.m1_policy_transition, ex2.policy_4)]
+        )
         self.assertTrue(stageA.see_policy_transitions(ex2.policy_4) == [])
 
     def test_add_stage_and_stage_transitions(self):
@@ -194,14 +212,24 @@ class CurriculumTests(unittest.TestCase):
         ex_curr.add_stage_transition(stageB, stageD, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageC, stageD, ex2.m1_stage_transition)
 
-        self.assertTrue(ex_curr.see_stages() == \
-                        [stageA, stageB, stageC, stageD])
-        self.assertTrue(ex_curr.see_stage_transitions(stageA) == \
-                        [(ex2.m1_stage_transition, stageB), (ex2.m1_stage_transition, stageC)])
-        self.assertTrue(ex_curr.see_stage_transitions(stageB) == \
-                        [(ex2.m1_stage_transition, stageD)])
-        self.assertTrue(ex_curr.see_stage_transitions(stageC) == \
-                        [(ex2.m1_stage_transition, stageD)])
+        self.assertTrue(
+            ex_curr.see_stages() == [stageA, stageB, stageC, stageD]
+        )
+        self.assertTrue(
+            ex_curr.see_stage_transitions(stageA)
+            == [
+                (ex2.m1_stage_transition, stageB),
+                (ex2.m1_stage_transition, stageC),
+            ]
+        )
+        self.assertTrue(
+            ex_curr.see_stage_transitions(stageB)
+            == [(ex2.m1_stage_transition, stageD)]
+        )
+        self.assertTrue(
+            ex_curr.see_stage_transitions(stageC)
+            == [(ex2.m1_stage_transition, stageD)]
+        )
         self.assertTrue(ex_curr.see_stage_transitions(stageD) == [])
 
     def test_reorder_policy_transitions(self):
@@ -224,17 +252,29 @@ class CurriculumTests(unittest.TestCase):
         stageA.add_policy(ex2.policy_1)
         stageA.set_start_policies(ex2.policy_1)
 
-        stageA.add_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
-        stageA.add_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
+        stageA.add_policy_transition(
+            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
+        )
+        stageA.add_policy_transition(
+            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
+        )
 
-        stageA.add_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
-        stageA.add_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
+        stageA.add_policy_transition(
+            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
+        )
+        stageA.add_policy_transition(
+            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
+        )
 
-        new_priority = [(ex2.m1_policy_transition, ex2.policy_3), (ex2.m1_policy_transition, ex2.policy_2)]
+        new_priority = [
+            (ex2.m1_policy_transition, ex2.policy_3),
+            (ex2.m1_policy_transition, ex2.policy_2),
+        ]
         stageA.set_policy_transition_priority(ex2.policy_1, new_priority)
 
-        self.assertTrue(stageA.see_policy_transitions(ex2.policy_1) == \
-                        new_priority)
+        self.assertTrue(
+            stageA.see_policy_transitions(ex2.policy_1) == new_priority
+        )
 
     def test_remove_policies_and_policy_transitions(self):
         """
@@ -257,11 +297,19 @@ class CurriculumTests(unittest.TestCase):
         stageA.add_policy(ex2.policy_1)
         stageA.set_start_policies(ex2.policy_1)
 
-        stageA.add_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
-        stageA.add_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
+        stageA.add_policy_transition(
+            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
+        )
+        stageA.add_policy_transition(
+            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
+        )
 
-        stageA.add_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
-        stageA.add_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
+        stageA.add_policy_transition(
+            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
+        )
+        stageA.add_policy_transition(
+            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
+        )
 
         stageA1 = stageA.model_copy(deep=True)
         stageA2 = stageA.model_copy(deep=True)
@@ -269,21 +317,33 @@ class CurriculumTests(unittest.TestCase):
         stageA4 = stageA.model_copy(deep=True)
 
         stageA1.remove_policy(ex2.policy_1)
-        self.assertTrue(stageA1.see_policies() == \
-                        [ex2.policy_2, ex2.policy_3, ex2.policy_4])
+        self.assertTrue(
+            stageA1.see_policies()
+            == [ex2.policy_2, ex2.policy_3, ex2.policy_4]
+        )
 
         stageA2.remove_policy(ex2.policy_4)
         self.assertTrue(stageA2.see_policy_transitions(ex2.policy_2) == [])
         self.assertTrue(stageA2.see_policy_transitions(ex2.policy_3) == [])
 
         stageA3.remove_policy(ex2.policy_2)
-        self.assertTrue(stageA3.see_policy_transitions(ex2.policy_1) == \
-                        [(ex2.m1_policy_transition, ex2.policy_3)])
+        self.assertTrue(
+            stageA3.see_policy_transitions(ex2.policy_1)
+            == [(ex2.m1_policy_transition, ex2.policy_3)]
+        )
 
-        stageA4.remove_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
-        stageA4.remove_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
-        stageA4.remove_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
-        stageA4.remove_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
+        stageA4.remove_policy_transition(
+            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
+        )
+        stageA4.remove_policy_transition(
+            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
+        )
+        stageA4.remove_policy_transition(
+            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
+        )
+        stageA4.remove_policy_transition(
+            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
+        )
         self.assertTrue(stageA4.see_policy_transitions(ex2.policy_1) == [])
         self.assertTrue(stageA4.see_policy_transitions(ex2.policy_2) == [])
         self.assertTrue(stageA4.see_policy_transitions(ex2.policy_3) == [])
@@ -323,21 +383,30 @@ class CurriculumTests(unittest.TestCase):
         ex_curr4 = ex_curr.model_copy(deep=True)
 
         ex_curr1.remove_stage(stageA)
-        self.assertTrue(ex_curr1.see_stages() == \
-                        [stageB, stageC, stageD])
+        self.assertTrue(ex_curr1.see_stages() == [stageB, stageC, stageD])
 
         ex_curr2.remove_stage(stageD)
         self.assertTrue(ex_curr2.see_stage_transitions(stageB) == [])
         self.assertTrue(ex_curr2.see_stage_transitions(stageC) == [])
 
         ex_curr3.remove_stage(stageB)
-        self.assertTrue(ex_curr3.see_stage_transitions(stageA) == \
-                        [(ex2.m1_stage_transition, stageC)])
+        self.assertTrue(
+            ex_curr3.see_stage_transitions(stageA)
+            == [(ex2.m1_stage_transition, stageC)]
+        )
 
-        ex_curr4.remove_stage_transition(stageA, stageB, ex2.m1_stage_transition)
-        ex_curr4.remove_stage_transition(stageA, stageC, ex2.m1_stage_transition)
-        ex_curr4.remove_stage_transition(stageB, stageD, ex2.m1_stage_transition)
-        ex_curr4.remove_stage_transition(stageC, stageD, ex2.m1_stage_transition)
+        ex_curr4.remove_stage_transition(
+            stageA, stageB, ex2.m1_stage_transition
+        )
+        ex_curr4.remove_stage_transition(
+            stageA, stageC, ex2.m1_stage_transition
+        )
+        ex_curr4.remove_stage_transition(
+            stageB, stageD, ex2.m1_stage_transition
+        )
+        ex_curr4.remove_stage_transition(
+            stageC, stageD, ex2.m1_stage_transition
+        )
         self.assertTrue(ex_curr4.see_stage_transitions(stageA) == [])
         self.assertTrue(ex_curr4.see_stage_transitions(stageB) == [])
         self.assertTrue(ex_curr4.see_stage_transitions(stageC) == [])
@@ -371,11 +440,13 @@ class CurriculumTests(unittest.TestCase):
         ex_curr.add_stage_transition(stageB, stageD, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageC, stageD, ex2.m1_stage_transition)
 
-        new_priority = [(ex2.m1_stage_transition, stageC), (ex2.m1_stage_transition, stageB)]
+        new_priority = [
+            (ex2.m1_stage_transition, stageC),
+            (ex2.m1_stage_transition, stageB),
+        ]
         ex_curr.set_stage_transition_priority(stageA, new_priority)
 
-        self.assertTrue(ex_curr.see_stage_transitions(stageA) == \
-                        new_priority)
+        self.assertTrue(ex_curr.see_stage_transitions(stageA) == new_priority)
 
 
 if __name__ == "__main__":

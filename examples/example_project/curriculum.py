@@ -8,11 +8,9 @@ from typing import Literal
 from pydantic import Field
 
 from aind_behavior_curriculum import (
+    GRADUATED,
     INIT_STAGE,
     Curriculum,
-    get_task_types,
-    GRADUATED,
-    create_diagram,
     Metrics,
     ModifiableAttr,
     Policy,
@@ -22,6 +20,8 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
+    create_diagram,
+    get_task_types,
 )
 
 
@@ -46,7 +46,6 @@ class TaskB(Task):
     task_parameters: TaskBParameters = Field(
         ..., description="Fill w/ Parameter Defaults"
     )
-
 
 
 # --- METRICS ---
@@ -153,6 +152,7 @@ t2_10 = StageTransition(rule=t2_10_rule)
 # --- CURRICULUM ---
 Tasks = get_task_types()
 
+
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
     graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
@@ -209,4 +209,6 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    create_diagram(ex_curr, "examples/example_project/diagrams/my_curr_diagram.png")
+    create_diagram(
+        ex_curr, "examples/example_project/diagrams/my_curr_diagram.png"
+    )

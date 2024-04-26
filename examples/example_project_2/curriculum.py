@@ -8,10 +8,7 @@ from typing import Literal
 from pydantic import Field
 
 from aind_behavior_curriculum import (
-    create_empty_stage,
     Curriculum,
-    create_diagram,
-    get_task_types,
     Metrics,
     ModifiableAttr,
     Policy,
@@ -21,6 +18,9 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
+    create_diagram,
+    create_empty_stage,
+    get_task_types,
 )
 
 
@@ -29,11 +29,13 @@ class DummyParameters(TaskParameters):
     field_1: int = ModifiableAttr(default=0, validate_default=True)
     field_2: int = ModifiableAttr(default=0, validate_default=True)
 
+
 class DummyTask(Task):
     name: Literal["DummyTask"] = "DummyTask"
     task_parameters: DummyParameters = Field(
         ..., description="Fill w/ Parameter Defaults", validate_default=True
     )
+
 
 # --- METRICS ---
 class ExampleMetrics(Metrics):
@@ -56,7 +58,9 @@ def policy_1_rule(
     task_params.field_1 += 5
     return task_params
 
+
 policy_1 = Policy(rule=policy_1_rule)
+
 
 def policy_2_rule(
     metrics: ExampleMetrics, task_params: DummyParameters
@@ -65,7 +69,9 @@ def policy_2_rule(
     task_params.field_1 += 5
     return task_params
 
+
 policy_2 = Policy(rule=policy_2_rule)
+
 
 def policy_3_rule(
     metrics: ExampleMetrics, task_params: DummyParameters
@@ -74,7 +80,9 @@ def policy_3_rule(
     task_params.field_1 += 5
     return task_params
 
+
 policy_3 = Policy(rule=policy_3_rule)
+
 
 def policy_4_rule(
     metrics: ExampleMetrics, task_params: DummyParameters
@@ -83,7 +91,9 @@ def policy_4_rule(
     task_params.field_2 += 5
     return task_params
 
+
 policy_4 = Policy(rule=policy_4_rule)
+
 
 def policy_5_rule(
     metrics: ExampleMetrics, task_params: DummyParameters
@@ -92,7 +102,9 @@ def policy_5_rule(
     task_params.field_2 += 5
     return task_params
 
+
 policy_5 = Policy(rule=policy_5_rule)
+
 
 def policy_6_rule(
     metrics: ExampleMetrics, task_params: DummyParameters
@@ -101,6 +113,7 @@ def policy_6_rule(
     task_params.field_2 += 5
     return task_params
 
+
 policy_6 = Policy(rule=policy_6_rule)
 
 
@@ -108,11 +121,14 @@ policy_6 = Policy(rule=policy_6_rule)
 def m1_rule(metrics: ExampleMetrics) -> bool:
     return metrics.m1 > 0
 
+
 m1_policy_transition = PolicyTransition(rule=m1_rule)
 m1_stage_transition = StageTransition(rule=m1_rule)
 
+
 def m2_rule(metrics: ExampleMetrics) -> bool:
     return metrics.m2 > 0
+
 
 m2_policy_transition = PolicyTransition(rule=m2_rule)
 m2_stage_transition = StageTransition(rule=m2_rule)
@@ -121,9 +137,11 @@ m2_stage_transition = StageTransition(rule=m2_rule)
 # --- CURRICULUM ---
 Tasks = get_task_types()
 
+
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
     graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
+
 
 def construct_track_curriculum() -> MyCurriculum:
     dummy_task = DummyTask(task_parameters=DummyParameters())
@@ -139,6 +157,7 @@ def construct_track_curriculum() -> MyCurriculum:
     test_curr.add_stage(test_stage)
 
     return test_curr
+
 
 def construct_tree_curriculum() -> MyCurriculum:
     dummy_task = DummyTask(task_parameters=DummyParameters())
@@ -156,6 +175,7 @@ def construct_tree_curriculum() -> MyCurriculum:
     test_curr.add_stage(test_stage)
 
     return test_curr
+
 
 def construct_policy_triangle_curriculum() -> MyCurriculum:
     dummy_task = DummyTask(task_parameters=DummyParameters())
@@ -178,28 +198,39 @@ def construct_policy_triangle_curriculum() -> MyCurriculum:
 
     return test_curr
 
+
 def construct_stage_triangle_curriculum() -> MyCurriculum:
     dummy_task = DummyTask(task_parameters=DummyParameters())
 
-    test_stage_1 = create_empty_stage(
-        Stage(name="Stage 1", task=dummy_task))
-    test_stage_2 = create_empty_stage(
-        Stage(name="Stage 2", task=dummy_task))
-    test_stage_3 = create_empty_stage(
-        Stage(name="Stage 3", task=dummy_task))
+    test_stage_1 = create_empty_stage(Stage(name="Stage 1", task=dummy_task))
+    test_stage_2 = create_empty_stage(Stage(name="Stage 2", task=dummy_task))
+    test_stage_3 = create_empty_stage(Stage(name="Stage 3", task=dummy_task))
 
     test_curr = MyCurriculum(name="My Curriculum")
     # Counter-clockwise, higher priority
-    test_curr.add_stage_transition(test_stage_1, test_stage_2, m1_stage_transition)
-    test_curr.add_stage_transition(test_stage_2, test_stage_3, m1_stage_transition)
-    test_curr.add_stage_transition(test_stage_3, test_stage_1, m1_stage_transition)
+    test_curr.add_stage_transition(
+        test_stage_1, test_stage_2, m1_stage_transition
+    )
+    test_curr.add_stage_transition(
+        test_stage_2, test_stage_3, m1_stage_transition
+    )
+    test_curr.add_stage_transition(
+        test_stage_3, test_stage_1, m1_stage_transition
+    )
 
     # Clockwise
-    test_curr.add_stage_transition(test_stage_1, test_stage_3, m2_stage_transition)
-    test_curr.add_stage_transition(test_stage_3, test_stage_2, m2_stage_transition)
-    test_curr.add_stage_transition(test_stage_2, test_stage_1, m2_stage_transition)
+    test_curr.add_stage_transition(
+        test_stage_1, test_stage_3, m2_stage_transition
+    )
+    test_curr.add_stage_transition(
+        test_stage_3, test_stage_2, m2_stage_transition
+    )
+    test_curr.add_stage_transition(
+        test_stage_2, test_stage_1, m2_stage_transition
+    )
 
     return test_curr
+
 
 if __name__ == "__main__":
     ex_curr = construct_track_curriculum()
@@ -222,7 +253,9 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    create_diagram(ex_curr, "examples/example_project_2/diagrams/track_curr_diagram.png")
+    create_diagram(
+        ex_curr, "examples/example_project_2/diagrams/track_curr_diagram.png"
+    )
     # create_diagram(ex_curr, "examples/example_project_2/diagrams/tree_curr_diagram.png")
     # create_diagram(ex_curr, "examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
     # create_diagram(ex_curr, "examples/example_project_2/diagrams/s_triangle_curr_diagram.png")
