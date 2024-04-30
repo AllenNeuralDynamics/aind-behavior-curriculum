@@ -10,6 +10,9 @@ import warnings
 from importlib import import_module
 from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar
 
+import boto3
+from botocore.exceptions import ClientError
+import json
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
@@ -827,7 +830,7 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
     return curr
 
 
-def export_diagram(curr: Curriculum, png_path: str):  # noqa: C901
+def export_diagram(curr: Curriculum, png_path: str) -> None:  # noqa: C901
     """
     Makes diagram for input Curriculum and
     writes to output png_path.
@@ -976,12 +979,20 @@ def export_diagram(curr: Curriculum, png_path: str):  # noqa: C901
     dot_process.communicate(input=gvpack_output)
 
 
-def export_json(curr: Curriculum, export_path: str):
+def export_json(curr: Curriculum, json_path: str) -> None:
     """
     Export curriculum json to export path
     """
 
-    pass
+    assert json_path.endswith(
+        ".json"
+    ), "Please add .json extension to end of json_path."
+    curr = validate_curriculum(curr)
+
+    with open(json_path, "w") as f:
+        json_dict = curr.model_dump()
+        json_string = json.dumps(json_dict, indent=4)
+        f.write(json_string)
 
 
 def export_curriculum(curr: Curriculum, export_dir: str) -> None:
@@ -993,13 +1004,52 @@ def export_curriculum(curr: Curriculum, export_dir: str) -> None:
     export_diagram(curr, Path(export_dir) / 'diagram.png')
 
 
+# (This probably breaks)
+# To test after upload to bucket.
 def download_curriculum(
     name: str,
     version: str,
     bucket='aind-behavior-curriculum-prod-o5171v'
 ) -> Curriculum:
     """
-
+    Reconstruct curriculum object from cloud json.
     """
 
-    pass
+    def read_json(bucket_name: str, json_key: Path | str) -> dict:
+        """
+        Reads a json content hosted in S3
+
+        Parameters
+        ---------------
+        bucket_name: str
+            Bucket name
+
+        json_key: PathLike
+            Path where the json is stored in S3
+
+        Returns
+        ---------------
+        dict
+            Dictionary with the json content
+        """
+        s3 = boto3.resource("s3")
+        content_object = s3.Object(bucket_name, json_key)
+
+        try:
+            file_content = content_object.get()["Body"].read().decode("utf-8")
+            json_content = json.loads(file_content)
+        except ClientError as ex:
+            if ex.response["Error"]["Code"] == "NoSuchKey":
+                json_content = {}
+                print(
+                    f"An error occurred when trying to read json file from {json_key}"
+                )
+            else:
+                raise
+
+        return json_content
+
+    json_dict = read_json(bucket, Path('curriculums') / name / version)
+    curr = Curriculum.model_validate_json(json_dict)
+
+    return curr
