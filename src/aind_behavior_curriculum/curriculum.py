@@ -5,19 +5,19 @@ Core Stage and Curriculum Primitives.
 from __future__ import annotations
 
 import inspect
+import json
 import subprocess
 import warnings
 from importlib import import_module
+from pathlib import Path
 from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar
 
 import boto3
 from botocore.exceptions import ClientError
-import json
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
-from pathlib import Path
 
 from aind_behavior_curriculum import (
     AindBehaviorModel,
@@ -1000,16 +1000,14 @@ def export_curriculum(curr: Curriculum, export_dir: str) -> None:
     Export json and diagram into export dir.
     """
 
-    export_json(curr, Path(export_dir) / 'schema.json')
-    export_diagram(curr, Path(export_dir) / 'diagram.png')
+    export_json(curr, Path(export_dir) / "schema.json")
+    export_diagram(curr, Path(export_dir) / "diagram.png")
 
 
 # (This probably breaks)
 # To test after upload to bucket.
 def download_curriculum(
-    name: str,
-    version: str,
-    bucket='aind-behavior-curriculum-prod-o5171v'
+    name: str, version: str, bucket="aind-behavior-curriculum-prod-o5171v"
 ) -> Curriculum:
     """
     Reconstruct curriculum object from cloud json.
@@ -1049,7 +1047,7 @@ def download_curriculum(
 
         return json_content
 
-    json_dict = read_json(bucket, Path('curriculums') / name / version)
+    json_dict = read_json(bucket, Path("curriculums") / name / version)
     curr = Curriculum.model_validate_json(json_dict)
 
     return curr

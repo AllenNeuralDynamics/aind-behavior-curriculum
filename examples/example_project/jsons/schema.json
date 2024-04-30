@@ -2,6 +2,7 @@
     "$defs": {
         "Graduated": {
             "additionalProperties": false,
+            "description": "Utility Final Task.",
             "properties": {
                 "name": {
                     "const": "Graduated",
@@ -54,6 +55,7 @@
         },
         "PolicyGraph": {
             "additionalProperties": false,
+            "description": "Graph for Stage.",
             "properties": {
                 "nodes": {
                     "additionalProperties": {
