@@ -14,6 +14,7 @@ from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
+from pathlib import Path
 
 from aind_behavior_curriculum import (
     AindBehaviorModel,
@@ -826,7 +827,7 @@ def validate_curriculum(curr: Curriculum) -> Curriculum:
     return curr
 
 
-def create_diagram(curr: Curriculum, png_path: str):  # noqa: C901
+def export_diagram(curr: Curriculum, png_path: str):  # noqa: C901
     """
     Makes diagram for input Curriculum and
     writes to output png_path.
@@ -973,3 +974,32 @@ def create_diagram(curr: Curriculum, png_path: str):  # noqa: C901
 
     gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())
     dot_process.communicate(input=gvpack_output)
+
+
+def export_json(curr: Curriculum, export_path: str):
+    """
+    Export curriculum json to export path
+    """
+
+    pass
+
+
+def export_curriculum(curr: Curriculum, export_dir: str) -> None:
+    """
+    Export json and diagram into export dir.
+    """
+
+    export_json(curr, Path(export_dir) / 'schema.json')
+    export_diagram(curr, Path(export_dir) / 'diagram.png')
+
+
+def download_curriculum(
+    name: str,
+    version: str,
+    bucket='aind-behavior-curriculum-prod-o5171v'
+) -> Curriculum:
+    """
+
+    """
+
+    pass

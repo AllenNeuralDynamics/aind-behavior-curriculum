@@ -20,7 +20,7 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    create_diagram,
+    export_diagram,
     get_task_types,
 )
 
@@ -209,6 +209,6 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    create_diagram(
+    export_diagram(
         ex_curr, "examples/example_project/diagrams/my_curr_diagram.png"
     )

@@ -18,8 +18,8 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    create_diagram,
     create_empty_stage,
+    export_diagram,
     get_task_types,
 )
 
@@ -253,9 +253,9 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    create_diagram(
+    export_diagram(
         ex_curr, "examples/example_project_2/diagrams/track_curr_diagram.png"
     )
-    # create_diagram(ex_curr, "examples/example_project_2/diagrams/tree_curr_diagram.png")
-    # create_diagram(ex_curr, "examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
-    # create_diagram(ex_curr, "examples/example_project_2/diagrams/s_triangle_curr_diagram.png")
+    # export_diagram(ex_curr, "examples/example_project_2/diagrams/tree_curr_diagram.png")
+    # export_diagram(ex_curr, "examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
+    # export_diagram(ex_curr, "examples/example_project_2/diagrams/s_triangle_curr_diagram.png")
