@@ -19,7 +19,6 @@ from aind_behavior_curriculum import (
     Task,
     TaskParameters,
     create_empty_stage,
-    export_diagram,
     get_task_types,
 )
 
@@ -253,9 +252,7 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    export_diagram(
-        ex_curr, "examples/example_project_2/diagrams/track_curr_diagram.png"
-    )
-    # export_diagram(ex_curr, "examples/example_project_2/diagrams/tree_curr_diagram.png")
-    # export_diagram(ex_curr, "examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
-    # export_diagram(ex_curr, "examples/example_project_2/diagrams/s_triangle_curr_diagram.png")
+    ex_curr.export_diagram("examples/example_project_2/diagrams/track_curr_diagram.png")
+    # ex_curr.export_diagram("examples/example_project_2/diagrams/tree_curr_diagram.png")
+    # ex_curr.export_diagram("examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
+    # ex_curr.export_diagram("examples/example_project_2/diagrams/s_triangle_curr_diagram.png")

@@ -582,6 +582,42 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         self.task.task_parameters = task_params
 
+    def validate_stage(self) -> Stage:
+        """
+        Check if stage is non-empty and specifies start policies.
+        """
+
+        assert len(self.see_policies()) > 0, (
+            f"Stage {self.name} in Curriculum does not have policies. "
+            "Please add at least one policy to all Curriculum stages "
+            "with Stage.add_policy(...). "
+            "If you would like an empty Stage, you can use "
+            "curriculum_utils.create_empty_stage(...)"
+        )
+
+        assert len(self.start_policies) > 0, (
+            f"Stage {self.name} in Curriculum does not have start_policies. "
+            "Please define start_polices for all Curriculum stages "
+            "with Stage.set_start_policies(...)"
+            ""
+        )
+
+        # Check round trip serialization
+        try:
+            instance_json = self.model_dump_json()
+            curr_subtype = type(self)
+            curr_subtype.model_validate_json(instance_json)
+        except Exception:
+            print(
+                (
+                    f"Pydantic cannot serialize Stage {self.name}, please use "
+                    "mypy to verify your types (check signatures of policy functions, etc.)."
+                )
+            )
+            raise
+
+        return self
+
 
 class StageTransition(AindBehaviorModel):
     """
@@ -647,8 +683,8 @@ class Curriculum(AindBehaviorModel):
     pkg_location: str = ""
     name: str = (
         "Please subclass, rename, and define \
-                 a BehaviorGraph with your own Stage objs \
-                 Ex: BehaviorGraph[Union[StageA, StageB, Graduated]]"
+                 a StageGraph with your own Stage objs \
+                 Ex: StageGraph[Union[StageA, StageB, Graduated]]"
     )
     graph: StageGraph = Field(default=StageGraph(), validate_default=True)
 
@@ -763,291 +799,252 @@ class Curriculum(AindBehaviorModel):
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
-
-def validate_stage(s: Stage) -> Stage:
-    """
-    Check if stage is non-empty and specifies start policies.
-    """
-
-    assert len(s.see_policies()) > 0, (
-        f"Stage {s.name} in Curriculum does not have policies. "
-        "Please add at least one policy to all Curriculum stages "
-        "with Stage.add_policy(...). "
-        "If you would like an empty Stage, you can use "
-        "curriculum_utils.create_empty_stage(...)"
-    )
-
-    assert len(s.start_policies) > 0, (
-        f"Stage {s.name} in Curriculum does not have start_policies. "
-        "Please define start_polices for all Curriculum stages "
-        "with Stage.set_start_policies(...)"
-        ""
-    )
-
-    # Check round trip serialization
-    try:
-        instance_json = s.model_dump_json()
-        curr_subtype = type(s)
-        curr_subtype.model_validate_json(instance_json)
-    except Exception:
-        print(
-            (
-                f"Pydantic cannot serialize Stage {s.name}, please use "
-                "mypy to verify your types."
-            )
-        )
-        raise
-
-    return s
-
-
-def validate_curriculum(curr: Curriculum) -> Curriculum:
-    """
-    Validate curriculum stages. (Add other stuff if needed in the future)
-    """
-
-    assert (
-        len(curr.see_stages()) != 0
-    ), "Curriculum is empty! Please add stages."
-
-    for s in curr.see_stages():
-        validate_stage(s)
-
-    # Check round trip serialization
-    try:
-        instance_json = curr.model_dump_json()
-        curr_subtype = type(curr)
-        curr_subtype.model_validate_json(instance_json)
-    except Exception:
-        print(
-            (
-                "Pydantic cannot serialize Curriculum, please use "
-                "mypy to verify your types."
-            )
-        )
-        raise
-
-    return curr
-
-
-def export_diagram(curr: Curriculum, png_path: str) -> None:  # noqa: C901
-    """
-    Makes diagram for input Curriculum and
-    writes to output png_path.
-    """
-
-    def make_stage_script(s: Stage) -> str:
+    def validate_curriculum(self) -> Curriculum:
         """
-        Stage to dot script conversion.
+        Validate curriculum for export/serialization.
         """
 
-        template_string = """
-            digraph cluster_{{ stage_id }} {
-                labelloc="t";
-                label={{ stage_name }};
+        assert (
+            len(self.see_stages()) != 0
+        ), "Curriculum is empty! Please add stages."
 
-                // Define nodes with increased font visibility
-                node [shape=box, style=filled, fontname=Arial, fontsize=12,
-                fillcolor=lightblue, color=black];
+        for s in self.see_stages():
+            s.validate_stage()
 
-                // Define nodes
-                {% for n in nodes %}
-                {{ n }};
-                {% endfor %}
-
-                // Define edges
-                {% for edge in edges %}
-                {{ edge }};
-                {% endfor %}
-            }
-        """
-        template = Template(template_string)
-        stage_name = '"' + s.name + '"'
-
-        nodes = []
-        for node_id, node in s.graph.nodes.items():
-            # Add color to start policies
-            if node in s.start_policies:
-                node_str = (
-                    f'{node_id} [label="{node.rule.__name__}",'
-                    'fillcolor="#FFEA00"]'
-                )
-            else:
-                node_str = f'{node_id} [label="{node.rule.__name__}"]'
-            nodes.append(node_str)
-
-        edges = []
-        for start_id, edge_list in s.graph.graph.items():
-            for i, (edge, dest_id) in enumerate(edge_list):
-                # Use 1-indexing for labels
-                i = i + 1
-
-                # Edges must be StageTransition or PolicyTransition
-                edge_str = (
-                    f'{start_id} -> {dest_id} [label="({i}) '
-                    f'{edge.rule.__name__}", minlen=2]'
-                )
-                edges.append(edge_str)
-
-        stage_dot_script = template.render(
-            stage_id="".join(s.name.split()),
-            stage_name=stage_name,
-            nodes=nodes,
-            edges=edges,
-        )
-
-        return stage_dot_script
-
-    def make_curriculum_script(c: Curriculum) -> str:
-        """
-        Curriculum to dot script conversion.
-        """
-
-        curr_dot_script = """
-            digraph cluster_curriculum {
-                color="white";
-                label={{ curr_name }};
-                fontsize=24;
-
-                node [shape=box, style=filled];
-                {% for n in nodes %}
-                {{ n }}
-                {% endfor %}
-
-                {% for edge in edges %}
-                {{ edge }};
-                {% endfor %}
-            }
-        """
-        template = Template(curr_dot_script)
-
-        # Add curriculum nodes
-        nodes = [
-            f'{node_id} [label="{node.name}"]'
-            for node_id, node in c.graph.nodes.items()
-        ]
-
-        # Add curriculum edges
-        edges = []
-        for start_id, edge_list in c.graph.graph.items():
-            for i, (edge, dest_id) in enumerate(edge_list):
-                # Use 1-indexing for labels
-                i = i + 1
-
-                # Edges must be StageTransition or PolicyTransition
-                edge_str = (
-                    f'{start_id} -> {dest_id} [label="({i}) '
-                    f'{edge.rule.__name__}", minlen=2]'
-                )
-                edges.append(edge_str)
-
-        curriculum_dot_script = template.render(
-            curr_name='"' + c.name + '"', nodes=nodes, edges=edges
-        )
-
-        return curriculum_dot_script
-
-    assert png_path.endswith(
-        ".png"
-    ), "Please add .png extension to end of png_path."
-    curr = validate_curriculum(curr)
-
-    dot_scripts = [make_curriculum_script(curr)]
-    last = []
-    for stage in curr.see_stages():
-        if stage.name == "GRADUATED":
-            last.append(make_stage_script(stage))
-            continue
-        dot_scripts.append(make_stage_script(stage))
-    dot_scripts = dot_scripts + last
-
-    # Finally concatenate these strings together in this order.
-    final_script = "\n".join(dot_scripts)
-
-    # Run graphviz export
-    gvpack_command = ["gvpack", "-u"]
-    dot_command = ["dot", "-Tpng", "-o", png_path]
-    gvpack_process = subprocess.Popen(
-        gvpack_command,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
-
-    gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())
-    dot_process.communicate(input=gvpack_output)
-
-
-def export_json(curr: Curriculum, json_path: str) -> None:
-    """
-    Export curriculum json to export path
-    """
-
-    assert json_path.endswith(
-        ".json"
-    ), "Please add .json extension to end of json_path."
-    curr = validate_curriculum(curr)
-
-    with open(json_path, "w") as f:
-        json_dict = curr.model_dump()
-        json_string = json.dumps(json_dict, indent=4)
-        f.write(json_string)
-
-
-def export_curriculum(curr: Curriculum, export_dir: str) -> None:
-    """
-    Export json and diagram into export dir.
-    """
-
-    export_json(curr, Path(export_dir) / "schema.json")
-    export_diagram(curr, Path(export_dir) / "diagram.png")
-
-
-# (This probably breaks)
-# To test after upload to bucket.
-def download_curriculum(
-    name: str, version: str, bucket="aind-behavior-curriculum-prod-o5171v"
-) -> Curriculum:
-    """
-    Reconstruct curriculum object from cloud json.
-    """
-
-    def read_json(bucket_name: str, json_key: Path | str) -> dict:
-        """
-        Reads a json content hosted in S3
-
-        Parameters
-        ---------------
-        bucket_name: str
-            Bucket name
-
-        json_key: PathLike
-            Path where the json is stored in S3
-
-        Returns
-        ---------------
-        dict
-            Dictionary with the json content
-        """
-        s3 = boto3.resource("s3")
-        content_object = s3.Object(bucket_name, json_key)
-
+        # Check round trip serialization
         try:
-            file_content = content_object.get()["Body"].read().decode("utf-8")
-            json_content = json.loads(file_content)
-        except ClientError as ex:
-            if ex.response["Error"]["Code"] == "NoSuchKey":
-                json_content = {}
-                print(
-                    f"An error occurred when trying to read json file from {json_key}"
+            instance_json = self.model_dump_json()
+            curr_subtype = type(self)
+            curr_subtype.model_validate_json(instance_json)
+        except Exception:
+            print(
+                (
+                    "Pydantic cannot serialize Curriculum, please use "
+                    "mypy to verify your types (check stage transition signature, etc.)."
                 )
-            else:
-                raise
+            )
+            raise
 
-        return json_content
+        return self
 
-    json_dict = read_json(bucket, Path("curriculums") / name / version)
-    curr = Curriculum.model_validate_json(json_dict)
+    def export_diagram(self, png_path: str) -> None:
+        """
+        Makes diagram for input Curriculum and
+        writes to output png_path.
+        """
 
-    return curr
+        def make_stage_script(s: Stage) -> str:
+            """
+            Stage to dot script conversion.
+            """
+
+            template_string = """
+                digraph cluster_{{ stage_id }} {
+                    labelloc="t";
+                    label={{ stage_name }};
+
+                    // Define nodes with increased font visibility
+                    node [shape=box, style=filled, fontname=Arial, fontsize=12,
+                    fillcolor=lightblue, color=black];
+
+                    // Define nodes
+                    {% for n in nodes %}
+                    {{ n }};
+                    {% endfor %}
+
+                    // Define edges
+                    {% for edge in edges %}
+                    {{ edge }};
+                    {% endfor %}
+                }
+            """
+            template = Template(template_string)
+            stage_name = '"' + s.name + '"'
+
+            nodes = []
+            for node_id, node in s.graph.nodes.items():
+                # Add color to start policies
+                if node in s.start_policies:
+                    node_str = (
+                        f'{node_id} [label="{node.rule.__name__}",'
+                        'fillcolor="#FFEA00"]'
+                    )
+                else:
+                    node_str = f'{node_id} [label="{node.rule.__name__}"]'
+                nodes.append(node_str)
+
+            edges = []
+            for start_id, edge_list in s.graph.graph.items():
+                for i, (edge, dest_id) in enumerate(edge_list):
+                    # Use 1-indexing for labels
+                    i = i + 1
+
+                    # Edges must be StageTransition or PolicyTransition
+                    edge_str = (
+                        f'{start_id} -> {dest_id} [label="({i}) '
+                        f'{edge.rule.__name__}", minlen=2]'
+                    )
+                    edges.append(edge_str)
+
+            stage_dot_script = template.render(
+                stage_id="".join(s.name.split()),
+                stage_name=stage_name,
+                nodes=nodes,
+                edges=edges,
+            )
+
+            return stage_dot_script
+
+        def make_curriculum_script(c: Curriculum) -> str:
+            """
+            Curriculum to dot script conversion.
+            """
+
+            curr_dot_script = """
+                digraph cluster_curriculum {
+                    color="white";
+                    label={{ curr_name }};
+                    fontsize=24;
+
+                    node [shape=box, style=filled];
+                    {% for n in nodes %}
+                    {{ n }}
+                    {% endfor %}
+
+                    {% for edge in edges %}
+                    {{ edge }};
+                    {% endfor %}
+                }
+            """
+            template = Template(curr_dot_script)
+
+            # Add curriculum nodes
+            nodes = [
+                f'{node_id} [label="{node.name}"]'
+                for node_id, node in c.graph.nodes.items()
+            ]
+
+            # Add curriculum edges
+            edges = []
+            for start_id, edge_list in c.graph.graph.items():
+                for i, (edge, dest_id) in enumerate(edge_list):
+                    # Use 1-indexing for labels
+                    i = i + 1
+
+                    # Edges must be StageTransition or PolicyTransition
+                    edge_str = (
+                        f'{start_id} -> {dest_id} [label="({i}) '
+                        f'{edge.rule.__name__}", minlen=2]'
+                    )
+                    edges.append(edge_str)
+
+            curriculum_dot_script = template.render(
+                curr_name='"' + c.name + '"', nodes=nodes, edges=edges
+            )
+
+            return curriculum_dot_script
+
+        assert png_path.endswith(
+            ".png"
+        ), "Please add .png extension to end of png_path."
+        self.validate_curriculum()
+
+        dot_scripts = [make_curriculum_script(self)]
+        last = []
+        for stage in self.see_stages():
+            if stage.name == "GRADUATED":
+                last.append(make_stage_script(stage))
+                continue
+            dot_scripts.append(make_stage_script(stage))
+        dot_scripts = dot_scripts + last
+
+        # Finally concatenate these strings together in this order.
+        final_script = "\n".join(dot_scripts)
+
+        # Run graphviz export
+        gvpack_command = ["gvpack", "-u"]
+        dot_command = ["dot", "-Tpng", "-o", png_path]
+        gvpack_process = subprocess.Popen(
+            gvpack_command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
+
+        gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())
+        dot_process.communicate(input=gvpack_output)
+
+    def export_json(self, json_path: str) -> None:
+        """
+        Export curriculum json to export path
+        """
+
+        assert json_path.endswith(
+            ".json"
+        ), "Please add .json extension to end of json_path."
+        self.validate_curriculum()
+
+        with open(json_path, "w") as f:
+            json_dict = self.model_dump()
+            json_string = json.dumps(json_dict, indent=4)
+            f.write(json_string)
+
+    def export_curriculum(self, export_dir: str) -> None:
+        """
+        Export json and diagram into export dir.
+        """
+
+        self.export_json(Path(export_dir) / "schema.json")
+        self.export_diagram(Path(export_dir) / "diagram.png")
+
+    @classmethod
+    def download_curriculum(
+        cls,
+        name: str,
+        version: str,
+        bucket="aind-behavior-curriculum-prod-o5171v"
+    ) -> Curriculum:
+        """
+        Reconstruct curriculum object from cloud json.
+        """
+
+        def read_json(bucket_name: str, json_key: Path | str) -> dict:
+            """
+            Reads a json content hosted in S3
+
+            Parameters
+            ---------------
+            bucket_name: str
+                Bucket name
+
+            json_key: PathLike
+                Path where the json is stored in S3
+
+            Returns
+            ---------------
+            dict
+                Dictionary with the json content
+            """
+            s3 = boto3.resource("s3")
+            content_object = s3.Object(bucket_name, json_key)
+
+            try:
+                file_content = content_object.get()["Body"].read().decode("utf-8")
+                json_content = json.loads(file_content)
+            except ClientError as ex:
+                if ex.response["Error"]["Code"] == "NoSuchKey":
+                    json_content = {}
+                    print(
+                        f"An error occurred when trying to read json file from {json_key}"
+                    )
+                else:
+                    raise
+
+            return json_content
+
+        json_dict = read_json(bucket, Path("curriculums") / name / version)
+        json_string = json.dumps(json_dict)
+        curr = cls.model_validate_json(json_string)
+
+        return curr

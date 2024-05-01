@@ -4,7 +4,7 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import List, Optional
+from typing import List, Optional, TypeAlias, Tuple
 
 from pydantic import Field
 
@@ -14,12 +14,11 @@ from aind_behavior_curriculum import (
     Metrics,
     Policy,
     Stage,
-    TaskParameters,
-    validate_curriculum,
+    TaskParameters
 )
 
-Stage_Entry = Stage | None
-Policy_Entry = tuple[Policy, ...] | None
+Stage_Entry: TypeAlias = Stage | None
+Policy_Entry: TypeAlias = Tuple[Policy, ...] | None
 
 
 class SubjectHistory(AindBehaviorModel):
@@ -171,7 +170,7 @@ class Trainer:
         registration defaults to the Stage.start_policies.
         """
 
-        curriculum = validate_curriculum(curriculum)
+        curriculum = curriculum.validate_curriculum()
 
         assert (
             start_stage in curriculum.see_stages()

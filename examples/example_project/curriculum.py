@@ -20,7 +20,6 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    export_diagram,
     get_task_types,
 )
 
@@ -152,9 +151,9 @@ t2_10 = StageTransition(rule=t2_10_rule)
 # --- CURRICULUM ---
 Tasks = get_task_types()
 
-
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
+    # graph: StageGraph[Union[TaskA, TaskB, Graduated]] = Field(default=StageGraph())
     graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
 
 
@@ -194,21 +193,19 @@ def construct_curriculum() -> MyCurriculum:
 if __name__ == "__main__":
     ex_curr = construct_curriculum()
 
-    # with open("examples/example_project/jsons/stage_instance.json", "w") as f:
-    #     stageA = ex_curr.see_stages()[0]
-    #     json_dict = stageA.model_dump()
-    #     json_string = json.dumps(json_dict, indent=4)
-    #     f.write(json_string)
+    with open("examples/example_project/jsons/stage_instance.json", "w") as f:
+        stageA = ex_curr.see_stages()[0]
+        json_dict = stageA.model_dump()
+        json_string = json.dumps(json_dict, indent=4)
+        f.write(json_string)
 
-    # with open("examples/example_project/jsons/curr_instance.json", "w") as f:
-    #     json_dict = ex_curr.model_dump()
-    #     json_string = json.dumps(json_dict, indent=4)
-    #     f.write(json_string)
+    with open("examples/example_project/jsons/curr_instance.json", "w") as f:
+        json_dict = ex_curr.model_dump()
+        json_string = json.dumps(json_dict, indent=4)
+        f.write(json_string)
 
     # with open("examples/example_project/jsons/curr_instance.json", "r") as f:
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    export_diagram(
-        ex_curr, "examples/example_project/diagrams/my_curr_diagram.png"
-    )
+    ex_curr.export_diagram("examples/example_project/diagrams/my_curr_diagram.png")
