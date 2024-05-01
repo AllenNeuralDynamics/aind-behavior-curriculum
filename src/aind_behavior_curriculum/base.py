@@ -21,7 +21,7 @@ class AindBehaviorModel(BaseModel):
     """
 
     model_config = ConfigDict(
-        extra="forbid",   # Potentially change to 'ignore'
+        extra="forbid",  # Potentially change to 'ignore'
         validate_assignment=True,
         validate_defaults=True,
         strict=True,

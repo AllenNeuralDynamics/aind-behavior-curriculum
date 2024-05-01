@@ -611,7 +611,8 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             print(
                 (
                     f"Pydantic cannot serialize Stage {self.name}, please use "
-                    "mypy to verify your types (check signatures of policy functions, etc.)."
+                    "mypy to verify your types "
+                    "(check signatures of policy functions, etc.)."
                 )
             )
             raise
@@ -827,7 +828,7 @@ class Curriculum(AindBehaviorModel):
 
         return self
 
-    def export_diagram(self, png_path: str) -> None:
+    def export_diagram(self, png_path: str) -> None:  # noqa: C901
         """
         Makes diagram for input Curriculum and
         writes to output png_path.
@@ -972,7 +973,9 @@ class Curriculum(AindBehaviorModel):
         )
         dot_process = subprocess.Popen(dot_command, stdin=subprocess.PIPE)
 
-        gvpack_output, _ = gvpack_process.communicate(input=final_script.encode())
+        gvpack_output, _ = gvpack_process.communicate(
+            input=final_script.encode()
+        )
         dot_process.communicate(input=gvpack_output)
 
     def export_json(self, json_path: str) -> None:
@@ -1003,7 +1006,7 @@ class Curriculum(AindBehaviorModel):
         cls,
         name: str,
         version: str,
-        bucket="aind-behavior-curriculum-prod-o5171v"
+        bucket="aind-behavior-curriculum-prod-o5171v",
     ) -> Curriculum:
         """
         Reconstruct curriculum object from cloud json.
@@ -1030,7 +1033,9 @@ class Curriculum(AindBehaviorModel):
             content_object = s3.Object(bucket_name, json_key)
 
             try:
-                file_content = content_object.get()["Body"].read().decode("utf-8")
+                file_content = (
+                    content_object.get()["Body"].read().decode("utf-8")
+                )
                 json_content = json.loads(file_content)
             except ClientError as ex:
                 if ex.response["Error"]["Code"] == "NoSuchKey":

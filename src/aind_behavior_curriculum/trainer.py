@@ -4,7 +4,7 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import List, Optional, TypeAlias, Tuple
+from typing import List, Optional, Tuple, TypeAlias
 
 from pydantic import Field
 
@@ -14,7 +14,7 @@ from aind_behavior_curriculum import (
     Metrics,
     Policy,
     Stage,
-    TaskParameters
+    TaskParameters,
 )
 
 Stage_Entry: TypeAlias = Stage | None

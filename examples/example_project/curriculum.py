@@ -151,6 +151,7 @@ t2_10 = StageTransition(rule=t2_10_rule)
 # --- CURRICULUM ---
 Tasks = get_task_types()
 
+
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
     # graph: StageGraph[Union[TaskA, TaskB, Graduated]] = Field(default=StageGraph())
@@ -208,4 +209,6 @@ if __name__ == "__main__":
     #     ex_curr = MyCurriculum.model_validate_json(f.read())
     #     print(ex_curr)
 
-    ex_curr.export_diagram("examples/example_project/diagrams/my_curr_diagram.png")
+    ex_curr.export_diagram(
+        "examples/example_project/diagrams/my_curr_diagram.png"
+    )

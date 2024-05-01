@@ -12,9 +12,9 @@ from pydantic_core import core_schema
 from semver import Version
 
 from aind_behavior_curriculum import (
-    AindBehaviorModelExtra,
     AindBehaviorModel,
-    __version__
+    AindBehaviorModelExtra,
+    __version__,
 )
 
 
