@@ -11,7 +11,11 @@ from pydantic import Field
 from pydantic_core import core_schema
 from semver import Version
 
-import aind_behavior_curriculum as abc
+from aind_behavior_curriculum import (
+    AindBehaviorModelExtra,
+    AindBehaviorModel,
+    __version__
+)
 
 
 class SemVerAnnotation(str):
@@ -48,7 +52,7 @@ ModifiableAttr = partial(Field, allow_modification=True)
 TTask = TypeVar("TTask", bound="Task")
 
 
-class TaskParameters(abc.AindBehaviorModelExtra):
+class TaskParameters(AindBehaviorModelExtra):
     """
     Set of parameters associated with a subject task.
     Subclass with Task Parameters.
@@ -57,7 +61,7 @@ class TaskParameters(abc.AindBehaviorModelExtra):
     pass
 
 
-class Task(abc.AindBehaviorModel):
+class Task(AindBehaviorModel):
     """
     Base Task Primitive.
     Holds Task metadata and parameters.
@@ -67,7 +71,7 @@ class Task(abc.AindBehaviorModel):
     description: str = Field(
         default="", description="Description of the task."
     )
-    version: str = abc.__version__
+    version: str = __version__
     task_parameters: TaskParameters = Field(
         ..., description=TaskParameters.__doc__.strip(), validate_default=True
     )
