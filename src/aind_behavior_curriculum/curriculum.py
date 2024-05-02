@@ -245,6 +245,8 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
     nodes: Dict[int, NodeTypes] = Field(default={}, validate_default=True)
     graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(
+        default={}, validate_default=True
+    )
         {}, validate_default=True
     )
 
