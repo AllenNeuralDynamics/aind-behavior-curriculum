@@ -243,7 +243,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     Core directed graph data structure used in Stage and Curriculum.
     """
 
-    nodes: Dict[int, NodeTypes] = Field({}, validate_default=True)
+    nodes: Dict[int, NodeTypes] = Field(default={}, validate_default=True)
     graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(
         {}, validate_default=True
     )
