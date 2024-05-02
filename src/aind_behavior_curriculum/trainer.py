@@ -30,7 +30,7 @@ class SubjectHistory(AindBehaviorModel):
     """
 
     stage_history: list[Stage_Entry] = Field([], validate_default=True)
-    policy_history: list[Policy_Entry] = Field([], validate_default=True)
+    policy_history: list[Policy_Entry] = Field(default=[], validate_default=True)
 
     def add_entry(self, stage: Stage_Entry, policies: Policy_Entry) -> None:
         """
