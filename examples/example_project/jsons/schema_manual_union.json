@@ -1,0 +1,341 @@
+{
+    "$defs": {
+        "Graduated": {
+            "description": "Utility Final Task.",
+            "properties": {
+                "name": {
+                    "const": "Graduated",
+                    "default": "Graduated",
+                    "enum": [
+                        "Graduated"
+                    ],
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "description": "Description of the task.",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "version": {
+                    "default": "0.0.1",
+                    "title": "Version",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/TaskParameters"
+                        }
+                    ],
+                    "default": {},
+                    "description": "Fill w/ Parameter Defaults"
+                }
+            },
+            "title": "Graduated",
+            "type": "object"
+        },
+        "Policy": {
+            "description": "User-defined function that defines\nhow current Task parameters change according to metrics.",
+            "properties": {
+                "rule": {
+                    "description": "Callable with Serialization.",
+                    "title": "Rule",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "rule"
+            ],
+            "title": "Policy",
+            "type": "object"
+        },
+        "PolicyGraph": {
+            "description": "Graph for Stage.",
+            "properties": {
+                "nodes": {
+                    "additionalProperties": {
+                        "$ref": "#/$defs/Policy"
+                    },
+                    "default": {},
+                    "title": "Nodes",
+                    "type": "object"
+                },
+                "graph": {
+                    "additionalProperties": {
+                        "items": {
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "prefixItems": [
+                                {
+                                    "$ref": "#/$defs/PolicyTransition"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ],
+                            "type": "array"
+                        },
+                        "type": "array"
+                    },
+                    "default": {},
+                    "title": "Graph",
+                    "type": "object"
+                }
+            },
+            "title": "PolicyGraph",
+            "type": "object"
+        },
+        "PolicyTransition": {
+            "description": "User-defined function that defines\ncriteria for transitioning between policies based on metrics.",
+            "properties": {
+                "rule": {
+                    "description": "Callable with Serialization.",
+                    "title": "Rule",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "rule"
+            ],
+            "title": "PolicyTransition",
+            "type": "object"
+        },
+        "StageGraph_Union_TaskA__TaskB__Graduated__": {
+            "properties": {
+                "nodes": {
+                    "additionalProperties": {
+                        "$ref": "#/$defs/Stage_Union_TaskA__TaskB__Graduated__"
+                    },
+                    "default": {},
+                    "title": "Nodes",
+                    "type": "object"
+                },
+                "graph": {
+                    "additionalProperties": {
+                        "items": {
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "prefixItems": [
+                                {
+                                    "$ref": "#/$defs/StageTransition"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ],
+                            "type": "array"
+                        },
+                        "type": "array"
+                    },
+                    "default": {},
+                    "title": "Graph",
+                    "type": "object"
+                }
+            },
+            "title": "StageGraph[Union[TaskA, TaskB, Graduated]]",
+            "type": "object"
+        },
+        "StageTransition": {
+            "description": "User-defined function that defines\ncriteria for transitioning stages based on metrics.",
+            "properties": {
+                "rule": {
+                    "description": "Callable with Serialization.",
+                    "title": "Rule",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "rule"
+            ],
+            "title": "StageTransition",
+            "type": "object"
+        },
+        "Stage_Union_TaskA__TaskB__Graduated__": {
+            "properties": {
+                "name": {
+                    "description": "Stage name.",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "task": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/TaskA"
+                        },
+                        {
+                            "$ref": "#/$defs/TaskB"
+                        },
+                        {
+                            "$ref": "#/$defs/Graduated"
+                        }
+                    ],
+                    "description": "Task in which this stage is based off of.",
+                    "title": "Task"
+                },
+                "graph": {
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/PolicyGraph"
+                        }
+                    ],
+                    "default": {
+                        "nodes": {},
+                        "graph": {}
+                    }
+                },
+                "start_policies": {
+                    "default": [],
+                    "items": {
+                        "$ref": "#/$defs/Policy"
+                    },
+                    "title": "Start Policies",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "name",
+                "task"
+            ],
+            "title": "Stage[Union[TaskA, TaskB, Graduated]]",
+            "type": "object"
+        },
+        "TaskA": {
+            "properties": {
+                "name": {
+                    "const": "Task A",
+                    "default": "Task A",
+                    "enum": [
+                        "Task A"
+                    ],
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "description": "Description of the task.",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "version": {
+                    "default": "0.0.1",
+                    "title": "Version",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/TaskAParameters"
+                        }
+                    ],
+                    "description": "Fill w/ Parameter Defaults"
+                }
+            },
+            "required": [
+                "task_parameters"
+            ],
+            "title": "TaskA",
+            "type": "object"
+        },
+        "TaskAParameters": {
+            "additionalProperties": true,
+            "properties": {
+                "field_a": {
+                    "allow_modification": true,
+                    "default": 0,
+                    "title": "Field A",
+                    "type": "integer"
+                }
+            },
+            "title": "TaskAParameters",
+            "type": "object"
+        },
+        "TaskB": {
+            "properties": {
+                "name": {
+                    "const": "Task B",
+                    "default": "Task B",
+                    "enum": [
+                        "Task B"
+                    ],
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "description": "Description of the task.",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "version": {
+                    "default": "0.0.1",
+                    "title": "Version",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/TaskBParameters"
+                        }
+                    ],
+                    "description": "Fill w/ Parameter Defaults"
+                }
+            },
+            "required": [
+                "task_parameters"
+            ],
+            "title": "TaskB",
+            "type": "object"
+        },
+        "TaskBParameters": {
+            "additionalProperties": true,
+            "properties": {
+                "field_b": {
+                    "allow_modification": true,
+                    "default": 0.0,
+                    "title": "Field B",
+                    "type": "number"
+                }
+            },
+            "title": "TaskBParameters",
+            "type": "object"
+        },
+        "TaskParameters": {
+            "additionalProperties": true,
+            "description": "Set of parameters associated with a subject task.\nSubclass with Task Parameters.",
+            "properties": {},
+            "title": "TaskParameters",
+            "type": "object"
+        }
+    },
+    "properties": {
+        "pkg_location": {
+            "default": "",
+            "title": "Pkg Location",
+            "type": "string"
+        },
+        "name": {
+            "const": "My Curriculum",
+            "default": "My Curriculum",
+            "enum": [
+                "My Curriculum"
+            ],
+            "title": "Name",
+            "type": "string"
+        },
+        "graph": {
+            "allOf": [
+                {
+                    "$ref": "#/$defs/StageGraph_Union_TaskA__TaskB__Graduated__"
+                }
+            ],
+            "default": {
+                "nodes": {},
+                "graph": {}
+            }
+        }
+    },
+    "title": "MyCurriculum",
+    "type": "object"
+}
