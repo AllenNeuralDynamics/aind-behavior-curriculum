@@ -247,8 +247,6 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(
         default={}, validate_default=True
     )
-        {}, validate_default=True
-    )
 
     def _get_node_id(self, node: NodeTypes) -> int:
         """
