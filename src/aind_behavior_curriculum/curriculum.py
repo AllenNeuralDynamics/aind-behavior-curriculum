@@ -998,8 +998,8 @@ class Curriculum(AindBehaviorModel):
         Export json and diagram into export dir.
         """
 
-        self.export_json(Path(export_dir) / "schema.json")
-        self.export_diagram(Path(export_dir) / "diagram.png")
+        self.export_json(str(Path(export_dir) / "schema.json"))
+        self.export_diagram(str(Path(export_dir) / "diagram.png"))
 
     @classmethod
     def download_curriculum(
