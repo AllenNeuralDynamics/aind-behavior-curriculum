@@ -1029,26 +1029,13 @@ class Curriculum(AindBehaviorModel):
             dict
                 Dictionary with the json content
             """
-            s3 = boto3.resource("s3")
-            content_object = s3.Object(bucket_name, json_key)
 
-            try:
-                file_content = (
-                    content_object.get()["Body"].read().decode("utf-8")
-                )
-                json_content = json.loads(file_content)
-            except ClientError as ex:
-                if ex.response["Error"]["Code"] == "NoSuchKey":
-                    json_content = {}
-                    print(
-                        f"An error occurred when trying to read json file from {json_key}"
-                    )
-                else:
-                    raise
+            s3 = boto3.client('s3')
+            response = s3.get_object(Bucket=bucket_name, Key=json_key)
+            json_data = json.loads(response['Body'].read().decode('utf-8'))
+            return json_data
 
-            return json_content
-
-        json_dict = read_json(bucket, Path("curriculums") / name / version)
+        json_dict = read_json(bucket, str(Path("curriculums") / name / version / 'schema.json'))
         json_string = json.dumps(json_dict)
         curr = cls.model_validate_json(json_string)
 
