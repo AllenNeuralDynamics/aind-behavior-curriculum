@@ -1,6 +1,6 @@
 """Init package"""
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 from .base import *  # noqa: F401, F403
 from .task import *  # noqa: F401, F403
