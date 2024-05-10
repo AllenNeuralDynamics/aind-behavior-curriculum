@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar
 
 import boto3
-from botocore.exceptions import ClientError
 from jinja2 import Template
 from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue

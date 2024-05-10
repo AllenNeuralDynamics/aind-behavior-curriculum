@@ -5,96 +5,103 @@
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 ![Interrogate](https://img.shields.io/badge/interrogate-100.0%25-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?logo=codecov)
-![Python](https://img.shields.io/badge/python->=3.7-blue?logo=python)
+![Python](https://img.shields.io/badge/python->=3.11-blue?logo=python)
+
+A core problem in mice training is accurately keeping track of each mouse's training stage and accurately setting the corresponding rig parameters. As the number of behavior studies, research assistants, and mice increase, manual tracking and parameter input is prone to human error. This library provides a flexible framework for defining mice curriculum enabling mouse training to be automated.
+
+## Documentation
+
+### Understanding a Curriculum
+
+A **``Curriculum``** is structured as a graph of training **``Stages``**.
+Each **``Stage``**  is associated with a **``Task``**, which is a set of rig parameters.
+Stages are connected by **``Stage Transitions``**, which are directed edges associated with a trigger condition.
+
+**``Stages``** and **``Stage Transitions``** form the nodes and edges of a **``Curriculum``** graph, respectively.
+With this structure alone, a user can define a basic curriculum with the flexibility of defining skip connections and regressions. For nodes with multiple ongoing edges, edges are labelled by priority, set by the user.
+
+![High-Level Curriculum](./examples/example_project/diagrams/high_level_curr_diagram.png "Title")
+An example curriculum consisting of purely stages and stage transitions. This **``Curriculum``** consists of a skip connection between **``Stage``** 'StageA' and **``Stage``** 'Graduated'. **``Stage Transitions``** are triggered on a parameter 't2' and the skip transition is ordered before the transition going to **``Stage``** StageB.
+
+This library allows the user to include an additional layer of detail.
+Conceptually, a user may want to change the rig parameters associated with a stage, but this set of rig parameters would be unnatural to classify as a new training stage altogether.
+In this situation, the user may add a graph of **``Policies``** and **``Policy Transitions``** within a **``Stage``**.
+A **``Policy``**, changes the task parameters of a **``Stage``**, as described above. A **``Policy Transition``** acts just like a **``Stage Transition``**, and defines transitions between **``Policies``** on a trigger condition. Like **``Stage Transitions``**, **``Policy Transitions``**  can connect any two arbitrary **``Policies``** and are ordered by priority set by the user.
+
+With the existence of **``Policies``**, the core **``Curriculum``** object is actually a hypergraph, a graph inside a graph.
+
+![Full Curriculum](./examples/example_project/diagrams/my_curr_diagram.png "Title")
+An example **``Curriculum``** consisting of **``Stage``** and  **``Policy``** graphs. Left: The high level policy graph. Right: Internal policy graphs.
+
+**``Policies``** are more nuanced than **``Stages``**.
+Yellow **``Policies``** in the example indicate '**Start Policies**'. To initialize the rig parameters of a **``Stage``**, the user must specify which **``Policy/Policies``** in the **``Stage``** policy graph to start with.
+Unlike **``Stages``**, a mouse can occupy multiple active **``Policies``**  within a **``Stage``**. As described later, the **``Trainer``** will record the net combination of rig parameters.
+
+Any hypergraph is supported! Below are some examples of the possibilities. The high-level stage graph are shown to the left and the inidividual policy graphs are shown to the right.
+
+![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title")
+A 'Tree' **``Curriculum``**
+
+![Track Curriculum](./examples/example_project_2/diagrams/track_curr_diagram.png "Title")
+A 'Train Track' **``Curriculum``**
+
+![Policy Triangle Curriculum](./examples/example_project_2/diagrams/p_triangle_curr_diagram.png "Title")
+A 'Policy Triangle' **``Curriculum``**
+
+![Stage Triangle Curriculum](./examples/example_project_2/diagrams/s_triangle_curr_diagram.png "Title")
+A 'Stage Triangle' **``Curriculum``**
+
+### Understanding the Trainer
+
+The **``Trainer``** is responsible for recording where a mouse is in its associated curriculum hypergraph. The **``Trainer``** contains 4 primary functions:
+1) Registration:
+	This is the entry point where the mice enter the system.
+	Here, the user provides the **``Trainer``** with a mouse and associates the mouse with a curriculum, a start stage, and start policies as a starting place for evaluation.
+
+2) Evaluation:
+	For each registered mouse, the **``Trainer``** looks at the mouse's current position in its hypergraph curriculum. The **``Trainer``** collects all the current outgoing transitions and checks which evaluate to True. The **``Trainer``** determines the updated hypergraph position and associated **``Task``** parameters according to the following simple rules:
+	- **``Trainer``** takes the outgoing **``Stage Transition``** with the highest priority. If multiple **``Stage Transitions``** evaluate to True, then the **``Stage Transition``** with the highest priority is chosen. Priority is set by the user.
+	- **``Trainer``** takes the outgoing **``Policy Transition``** with the highest priority. If multiple **``Policy Transitions``** evaluate to True, then the **``Policy Transition``** with the highest priority is chosen. Priority is set by the user.
+	- **``Stage Transitions``** override **``Policy Transitions``**. If a **``Stage Transition``** and **``Policy Transition``** both evaluate to True, the **``Trainer``** jumps directly to the next **``Stage``** .
+	- If no transitions are True, the mouse stays in place.
+	- For multiple active **``Policies``** that evaluate to True, **``Trainer``** sets the current  **``Task``**  parameters to the net combination of incident **``Policies``**.
+
+3) Mouse Override:
+	This allows the user to update a mouse's position manually to any position in its curriculum. Future evaluation occurs from this new position. Due to this feature, it is possible to design a **``Curriculum``** of 'floating stages' and 'floating policies'.
+
+4) Mouse Eject:
+	 This allows the user to remove a mouse from its curriculum entirely. The position of the mouse is recorded as 'None' and stays at 'None' on future evaluation unless the mouse is overrides back onto curriculum.
+
+Every **``Trainer``**  function keeps a record of mouse history in **``SubjectHistory``** which can be referenced or exported for rig automation and further analysis.
 
 
+### Building a Curriculum
 
-## Usage
- - To use this template, click the green `Use this template` button and `Create new repository`.
- - After github initially creates the new repository, please wait an extra minute for the initialization scripts to finish organizing the repo.
- - To enable the automatic semantic version increments: in the repository go to `Settings` and `Collaborators and teams`. Click the green `Add people` button. Add `svc-aindscicomp` as an admin. Modify the file in `.github/workflows/tag_and_publish.yml` and remove the if statement in line 10. The semantic version will now be incremented every time a code is committed into the main branch.
- - To publish to PyPI, enable semantic versioning and uncomment the publish block in `.github/workflows/tag_and_publish.yml`. The code will now be published to PyPI every time the code is committed into the main branch.
- - The `.github/workflows/test_and_lint.yml` file will run automated tests and style checks every time a Pull Request is opened. If the checks are undesired, the `test_and_lint.yml` can be deleted. The strictness of the code coverage level, etc., can be modified by altering the configurations in the `pyproject.toml` file and the `.flake8` file.
+For examples of how to build a **``Curriculum``**, please reference ``examples/example_project`` and ``examples/example_project_2`` within the project files and their associated diagrams, ``examples/example_project/diagrams`` and ``examples/example_project_2/diagrams``.
 
-## Installation
-To use the software, in the root directory, run
-```bash
-pip install -e .
-```
+Tips for building your own **``Curriculum``**:
+- Focus on one graph at a time. Define all the **``Tasks/Stages/Stage Transitions``** associated with the higher level graph, and then move onto defining the **``Policies/Policy Transitions``** associated with each **``Stage``**.
 
-To develop the code, run
-```bash
-pip install -e .[dev]
-```
+- **``Metrics``** contains all the variables that trigger conditions associated with **``Stage Transitions``** and **``Policy Transitions``**. Progressively add to **``Metrics``** as needed.
 
-## Contributing
+- Keep **``Stage Transitions``** and **``Policy Transitions``** simple. A typical transition will only trigger on one metric variable. This makes transitions much easier to name.
 
-### Linters and testing
+-  Validate **``Stage Transition``** and **``Policy Transition``** priority with the ``Curriculum.export_digram(...)`` utility, which labels edges with its rank. Use ``Curriculum.set_stage_transition_priority(...)`` and ``Stage.set_policy_transition_priority(...)`` to reorder priority.
 
-There are several libraries used to run linters, check documentation, and run tests.
 
-- Please test your changes using the **coverage** library, which will run the tests and log a coverage report:
+Common mistakes:
+- Every **``Stage``** needs a set of start policies, see ``Curriculum.set_start_policies(...)``. If a stage with no policies is desired, use ``curriculum_utils.create_empty_stage(...)``. This is a common pattern for the final stage of a **``Curriculum``**, so the library also offers a prebuilt final stage ``curriculum_utils.GRADUATED``.
 
-```bash
-coverage run -m unittest discover && coverage report
-```
+- The callables in **``Policy``** and **``Policy Transition/Stage Transition``** have different input signatures. Please reference ``Policy.validate_rule(...)`` and ``PolicyTransition.validate_rule(...)``/``StageTransition.validate_rule(...)``
 
-- Use **interrogate** to check that modules, methods, etc. have been documented thoroughly:
 
-```bash
-interrogate .
-```
+### Building a Trainer
 
-- Use **flake8** to check that code is up to standards (no unused imports, etc.):
-```bash
-flake8 .
-```
+The 4 primary functions of the **``Trainer``** described above are decoupled from any database. To use the **``Trainer``** in practice, the user must define ``Trainer.load_data(...)`` and ``Trainer.write_data(...)`` which connect to a user's databases for mice curriculum, mice history, and mice metrics. Please see ``examples/example_project/trainer.py`` for an example.
 
-- Use **black** to automatically format the code into PEP standards:
-```bash
-black .
-```
+### Inside Allen Institute of Neural Dynamics
 
-- Use **isort** to automatically sort import statements:
-```bash
-isort .
-```
+Allen Institute of Neural Dynamics offers an internal repository template that automatically uploads the repository's curriculum to a central bucket available here: https://github.com/AllenNeuralDynamics/aind-behavior-curriculum-template
+This way, curriculums can be accessed across rig computers and reused/modified similar to Github commits.
 
-### Pull requests
-
-For internal members, please create a branch. For external members, please fork the repository and open a pull request from the fork. We'll primarily use [Angular](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit) style for commit messages. Roughly, they should follow the pattern:
-```text
-<type>(<scope>): <short summary>
-```
-
-where scope (optional) describes the packages affected by the code changes and type (mandatory) is one of:
-
-- **build**: Changes that affect build tools or external dependencies (example scopes: pyproject.toml, setup.py)
-- **ci**: Changes to our CI configuration files and scripts (examples: .github/workflows/ci.yml)
-- **docs**: Documentation only changes
-- **feat**: A new feature
-- **fix**: A bugfix
-- **perf**: A code change that improves performance
-- **refactor**: A code change that neither fixes a bug nor adds a feature
-- **test**: Adding missing tests or correcting existing tests
-
-### Semantic Release
-
-The table below, from [semantic release](https://github.com/semantic-release/semantic-release), shows which commit message gets you which release type when `semantic-release` runs (using the default configuration):
-
-| Commit message                                                                                                                                                                                   | Release type                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `fix(pencil): stop graphite breaking when too much pressure applied`                                                                                                                             | ~~Patch~~ Fix Release, Default release                                                                          |
-| `feat(pencil): add 'graphiteWidth' option`                                                                                                                                                       | ~~Minor~~ Feature Release                                                                                       |
-| `perf(pencil): remove graphiteWidth option`<br><br>`BREAKING CHANGE: The graphiteWidth option has been removed.`<br>`The default graphite width of 10mm is always used for performance reasons.` | ~~Major~~ Breaking Release <br /> (Note that the `BREAKING CHANGE: ` token must be in the footer of the commit) |
-
-### Documentation
-To generate the rst files source files for documentation, run
-```bash
-sphinx-apidoc -o doc_template/source/ src 
-```
-Then to create the documentation HTML files, run
-```bash
-sphinx-build -b html doc_template/source/ doc_template/build/html
-```
-More info on sphinx installation can be found [here](https://www.sphinx-doc.org/en/master/usage/installation.html).
+As of (5/9/2024), a Metrics database has yet to be defined, therefore a Trainer cannot be defined.
