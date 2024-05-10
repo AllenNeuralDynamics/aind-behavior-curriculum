@@ -55,6 +55,38 @@ jobs:
         message: "ci: update badges [skip actions]"
         add: '["README.md"]'
 
+  # Creates/commits .rst files to Github
+  # which are linked to ReadtheDocs through
+  # organization Github webhook.
+  update_docs:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.SERVICE_TOKEN }}
+      - name: Pull changes
+        run: git pull --rebase
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: |
+          sudo apt install graphviz libgraphviz-dev -y
+          python -m pip install -e .[dev] -e .[docs] --no-cache-dir
+      - name: Generate new rst files
+        run: |
+          sphinx-apidoc -o docs/source/ src
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          default_author: github_actions
+          message: "updates documentation [skip actions]"
+          add: '["*.rst"]'
+
   tag:
     needs: update_badges
     uses: AllenNeuralDynamics/aind-github-actions/.github/workflows/tag.yml@main
