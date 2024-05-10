@@ -9,6 +9,10 @@
 
 A core problem in mice training is accurately keeping track of each mouse's training stage and accurately setting the corresponding rig parameters. As the number of behavior studies, research assistants, and mice increase, manual tracking and parameter input is prone to human error. This library provides a flexible framework for defining mice curriculum enabling mouse training to be automated.
 
+## Installation
+```bash
+pip install aind-behavior-curriculum
+```
 
 ## Documentation
 
