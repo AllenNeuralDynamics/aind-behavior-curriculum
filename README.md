@@ -9,6 +9,7 @@
 
 A core problem in mice training is accurately keeping track of each mouse's training stage and accurately setting the corresponding rig parameters. As the number of behavior studies, research assistants, and mice increase, manual tracking and parameter input is prone to human error. This library provides a flexible framework for defining mice curriculum enabling mouse training to be automated.
 
+
 ## Documentation
 
 ### Understanding a Curriculum
@@ -20,36 +21,54 @@ Stages are connected by **``Stage Transitions``**, which are directed edges asso
 **``Stages``** and **``Stage Transitions``** form the nodes and edges of a **``Curriculum``** graph, respectively.
 With this structure alone, a user can define a basic curriculum with the flexibility of defining skip connections and regressions. For nodes with multiple ongoing edges, edges are labelled by priority, set by the user.
 
-![High-Level Curriculum](./examples/example_project/diagrams/high_level_curr_diagram.png "Title")
-An example curriculum consisting of purely stages and stage transitions. This **``Curriculum``** consists of a skip connection between **``Stage``** 'StageA' and **``Stage``** 'Graduated'. **``Stage Transitions``** are triggered on a parameter 't2' and the skip transition is ordered before the transition going to **``Stage``** StageB.
 
-This library allows the user to include an additional layer of detail.
+| ![High-Level Curriculum](./examples/example_project/diagrams/high_level_curr_diagram.png "Title") | 
+|:--:| 
+|*An example curriculum consisting of purely stages and stage transitions. This **``Curriculum``** consists of a skip connection between **``Stage``** 'StageA' and **``Stage``** 'Graduated'. **``Stage Transitions``** are triggered on a parameter 't2' and the skip transition is ordered before the transition going to **``Stage``** StageB.* |
+
+$~$
+
+This library also supports **``Curriculum``** **hypergraphs**. 
+
 Conceptually, a user may want to change the rig parameters associated with a stage, but this set of rig parameters would be unnatural to classify as a new training stage altogether.
-In this situation, the user may add a graph of **``Policies``** and **``Policy Transitions``** within a **``Stage``**.
+In this situation, the user may define a graph of **``Policies``** and **``Policy Transitions``** within a **``Stage``**.
 A **``Policy``**, changes the task parameters of a **``Stage``**, as described above. A **``Policy Transition``** acts just like a **``Stage Transition``**, and defines transitions between **``Policies``** on a trigger condition. Like **``Stage Transitions``**, **``Policy Transitions``**  can connect any two arbitrary **``Policies``** and are ordered by priority set by the user.
 
-With the existence of **``Policies``**, the core **``Curriculum``** object is actually a hypergraph, a graph inside a graph.
 
-![Full Curriculum](./examples/example_project/diagrams/my_curr_diagram.png "Title")
-An example **``Curriculum``** consisting of **``Stage``** and  **``Policy``** graphs. Left: The high level policy graph. Right: Internal policy graphs.
+| ![Full Curriculum](./examples/example_project/diagrams/my_curr_diagram.png "Title") | 
+|:--:| 
+|*An example **``Curriculum``** consisting of **``Stage``** and  **``Policy``** graphs. Left: The high level policy graph. Right: Internal policy graphs.* |
 
 **``Policies``** are more nuanced than **``Stages``**.
+
 Yellow **``Policies``** in the example indicate '**Start Policies**'. To initialize the rig parameters of a **``Stage``**, the user must specify which **``Policy/Policies``** in the **``Stage``** policy graph to start with.
+
 Unlike **``Stages``**, a mouse can occupy multiple active **``Policies``**  within a **``Stage``**. As described later, the **``Trainer``** will record the net combination of rig parameters.
 
-Any hypergraph is supported! Below are some examples of the possibilities. The high-level stage graph are shown to the left and the inidividual policy graphs are shown to the right.
+$~$
 
-![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title")
-A 'Tree' **``Curriculum``**
+**Any hypergraph is supported!**
 
-![Track Curriculum](./examples/example_project_2/diagrams/track_curr_diagram.png "Title")
-A 'Train Track' **``Curriculum``**
+Here are some examples of the possibilities. The high-level stage graph are shown to the left and the inidividual policy graphs are shown to the right.
 
-![Policy Triangle Curriculum](./examples/example_project_2/diagrams/p_triangle_curr_diagram.png "Title")
-A 'Policy Triangle' **``Curriculum``**
 
-![Stage Triangle Curriculum](./examples/example_project_2/diagrams/s_triangle_curr_diagram.png "Title")
-A 'Stage Triangle' **``Curriculum``**
+| ![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title") | 
+|:--:| 
+|*A 'Tree' **``Curriculum``*** |
+
+| ![Track Curriculum](./examples/example_project_2/diagrams/track_curr_diagram.png "Title") | 
+|:--:| 
+|*A 'Train Track' **``Curriculum``*** |
+
+| ![Policy Triangle Curriculum](./examples/example_project_2/diagrams/p_triangle_curr_diagram.png "Title") | 
+|:--:| 
+|*A 'Policy Triangle' **``Curriculum``*** |
+
+| ![Stage Triangle Curriculum](./examples/example_project_2/diagrams/s_triangle_curr_diagram.png "Title") | 
+|:--:| 
+|*A 'Stage Triangle' **``Curriculum``*** |
+
+$~$
 
 ### Understanding the Trainer
 
@@ -74,6 +93,7 @@ The **``Trainer``** is responsible for recording where a mouse is in its associa
 
 Every **``Trainer``**  function keeps a record of mouse history in **``SubjectHistory``** which can be referenced or exported for rig automation and further analysis.
 
+$~$
 
 ### Building a Curriculum
 
@@ -94,10 +114,13 @@ Common mistakes:
 
 - The callables in **``Policy``** and **``Policy Transition/Stage Transition``** have different input signatures. Please reference ``Policy.validate_rule(...)`` and ``PolicyTransition.validate_rule(...)``/``StageTransition.validate_rule(...)``
 
+$~$
 
 ### Building a Trainer
 
 The 4 primary functions of the **``Trainer``** described above are decoupled from any database. To use the **``Trainer``** in practice, the user must define ``Trainer.load_data(...)`` and ``Trainer.write_data(...)`` which connect to a user's databases for mice curriculum, mice history, and mice metrics. Please see ``examples/example_project/trainer.py`` for an example.
+
+$~$
 
 ### Inside Allen Institute of Neural Dynamics
 
