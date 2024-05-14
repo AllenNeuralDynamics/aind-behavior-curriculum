@@ -27,12 +27,14 @@ connections and regressions. For nodes with multiple ongoing edges,
 edges are labelled by priority, set by the user.
 
 |High-Level Curriculum|
-:: *An example curriculum consisting of purely stages and stage
+
+   *An example curriculum consisting of purely stages and stage
    transitions. This* **Curriculum** *consists of a skip connection
    between* **Stage** *'StageA* and **Stage** *'Graduated'*.
    **Stage Transitions** *are triggered on a parameter 't2' and the
    skip transition is ordered before the transition going to*
    **Stage** *StageB.*
+
 
 :math:`~`
 
@@ -50,9 +52,11 @@ just like a **Stage Transition**, and defines transitions between
 **Policies** and are ordered by priority set by the user.
 
 |Full Curriculum|
-:: *An example* **Curriculum** *consisting of* **Stage** *and*
+   
+   *An example* **Curriculum** *consisting of* **Stage** *and*
    **Policy** *graphs. Left: The high level policy graph. Right:
    Internal policy graphs.*
+
 
 **Policies** are more nuanced than **Stages**.
 
@@ -74,16 +78,20 @@ are shown to the left and the inidividual policy graphs are shown to the
 right.
 
 |Tree Curriculum|
-:: *A 'Tree'* **Curriculum**
+
+   *A 'Tree'* **Curriculum**
 
 |Track Curriculum|
-:: *A 'Track'* **Curriculum**
+
+   *A 'Track'* **Curriculum**
 
 |Policy Triangle Curriculum|
-:: *A 'Policy Triangle'* **Curriculum**
+
+   *A 'Policy Triangle'* **Curriculum**
 
 |Stage Triangle Curriculum|
-:: *A 'Stage Triangle'* **Curriculum**
+
+   *A 'Stage Triangle'* **Curriculum**
 
 :math:`~`
 
