@@ -31,8 +31,12 @@ dev = [
     'flake8',
     'interrogate',
     'isort',
+]
+
+docs = [
     'Sphinx',
-    'furo'
+    'furo',
+    'autodoc_pydantic'
 ]
 
 

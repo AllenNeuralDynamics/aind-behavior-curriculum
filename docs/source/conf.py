@@ -31,6 +31,7 @@ extensions = [
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
+    "sphinxcontrib.autodoc_pydantic",
     "sphinx.ext.napoleon",
 ]
 templates_path = ["_templates"]
@@ -41,6 +42,7 @@ exclude_patterns = []
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_title = "aind-behavior-curriculum"
 html_favicon = "_static/favicon.ico"
 html_theme_options = {
     "light_logo": "light-logo.svg",
