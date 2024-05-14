@@ -26,16 +26,13 @@ user can define a basic curriculum with the flexibility of defining skip
 connections and regressions. For nodes with multiple ongoing edges,
 edges are labelled by priority, set by the user.
 
-+-----------------------------------------------------------------------+
-| |High-Level Curriculum|                                               |
-+=======================================================================+
-| *An example curriculum consisting of purely stages and stage          |
-| transitions. This* **Curriculum** *consists of a skip connection  |
-| between* **Stage** *'StageA* and **Stage** *'Graduated'*.    |
-| **Stage Transitions** *are triggered on a parameter 't2' and the  |
-| skip transition is ordered before the transition going to*            |
-| **Stage** *StageB.*                                               |
-+-----------------------------------------------------------------------+
+|High-Level Curriculum|
+:: *An example curriculum consisting of purely stages and stage
+   transitions. This* **Curriculum** *consists of a skip connection
+   between* **Stage** *'StageA* and **Stage** *'Graduated'*.
+   **Stage Transitions** *are triggered on a parameter 't2' and the
+   skip transition is ordered before the transition going to*
+   **Stage** *StageB.*
 
 :math:`~`
 
@@ -52,13 +49,10 @@ just like a **Stage Transition**, and defines transitions between
 **Policy Transitions** can connect any two arbitrary
 **Policies** and are ordered by priority set by the user.
 
-+-----------------------------------------------------------------------+
-| |Full Curriculum|                                                     |
-+=======================================================================+
-| *An example* **Curriculum** *consisting of* **Stage** *and*   |
-| **Policy** *graphs. Left: The high level policy graph. Right:     |
-| Internal policy graphs.*                                              |
-+-----------------------------------------------------------------------+
+|Full Curriculum|
+:: *An example* **Curriculum** *consisting of* **Stage** *and*
+   **Policy** *graphs. Left: The high level policy graph. Right:
+   Internal policy graphs.*
 
 **Policies** are more nuanced than **Stages**.
 
@@ -79,29 +73,17 @@ Here are some examples of the possibilities. The high-level stage graph
 are shown to the left and the inidividual policy graphs are shown to the
 right.
 
-+-----------------------------------------------------------------------+
-| |Tree Curriculum|                                                     |
-+=======================================================================+
-| *A 'Tree'* **Curriculum**                                         |
-+-----------------------------------------------------------------------+
+|Tree Curriculum|
+:: *A 'Tree'* **Curriculum**
 
-+-----------------------------------------------------------------------+
-| |Track Curriculum|                                                    |
-+=======================================================================+
-| *A 'Train Track'* **Curriculum**                                  |
-+-----------------------------------------------------------------------+
+|Track Curriculum|
+:: *A 'Track'* **Curriculum**
 
-+-----------------------------------------------------------------------+
-| |Policy Triangle Curriculum|                                          |
-+=======================================================================+
-| *A 'Policy Triangle'* **Curriculum**                              |
-+-----------------------------------------------------------------------+
+|Policy Triangle Curriculum|
+:: *A 'Policy Triangle'* **Curriculum**
 
-+-----------------------------------------------------------------------+
-| |Stage Triangle Curriculum|                                           |
-+=======================================================================+
-| *A 'Stage Triangle'* **Curriculum**                               |
-+-----------------------------------------------------------------------+
+|Stage Triangle Curriculum|
+:: *A 'Stage Triangle'* **Curriculum**
 
 :math:`~`
 
@@ -110,7 +92,9 @@ Understanding the Trainer
 
 The **Trainer** is responsible for recording where a mouse is in its
 associated curriculum hypergraph. The **Trainer** contains 4 primary
-functions: 1) Registration: This is the entry point where the mice enter
+functions:
+
+1) Registration: This is the entry point where the mice enter
 the system. Here, the user provides the **Trainer** with a mouse and
 associates the mouse with a curriculum, a start stage, and start
 policies as a starting place for evaluation.
