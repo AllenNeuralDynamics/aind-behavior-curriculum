@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import Field, ValidationInfo, field_validator
 
-from aind_behavior_curriculum import ModifiableAttr, Task, TaskParameters
+from aind_behavior_curriculum import Task, TaskParameters
 
 
 class ExampleTaskParameters(TaskParameters):
@@ -17,8 +17,8 @@ class ExampleTaskParameters(TaskParameters):
 
     # Required: Define type annotations for strict type checks.
     # Make fields immutable with Literal type.
-    field_1: int = ModifiableAttr(default=0, ge=0.0)
-    field_2: int = ModifiableAttr(default=0, ge=0.0)
+    field_1: int = Field(default=0, ge=0.0)
+    field_2: int = Field(default=0, ge=0.0)
     field_3: float = Field(default=0.5, ge=0.0, le=1.0)
     field_4: float = Field(default=0.5, ge=0.0, le=1.0)
     field_5: Literal["Immutable Field"] = "Immutable Field"
@@ -37,9 +37,9 @@ class ExampleTask(Task):
     """
 
     name: Literal["TaskName"] = "TaskName"
-    description: str = ModifiableAttr(default="Ex description of task")
+    description: str = Field(default="Ex description of task")
 
-    task_parameters: ExampleTaskParameters = ModifiableAttr(
+    task_parameters: ExampleTaskParameters = Field(
         ..., description=ExampleTaskParameters.__doc__.strip()
     )
 
@@ -53,15 +53,6 @@ if __name__ == "__main__":
     # Update Task parameters individually
     ex_task.task_parameters.field_1 = 100
     ex_task.task_parameters.field_2 = 200
-    print(ex_task)
-
-    # Or use Task.update_parameters(...)
-    ex_task.update_parameters(
-        field_1=123,
-        field_2=456,
-        field_3=0.8,
-        field_4=0.9,
-    )
     print(ex_task)
 
     # Export/Serialize Task Schema:

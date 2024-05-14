@@ -8,13 +8,17 @@ from typing import List, Optional, Tuple, TypeAlias
 
 from pydantic import Field
 
-from aind_behavior_curriculum import (
+from aind_behavior_curriculum.base import (
     AindBehaviorModel,
+)
+from aind_behavior_curriculum.curriculum import (
     Curriculum,
     Metrics,
     Policy,
     Stage,
-    TaskParameters,
+)
+from aind_behavior_curriculum.task import (
+    TaskParameters
 )
 
 Stage_Entry: TypeAlias = Stage | None

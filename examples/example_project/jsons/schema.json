@@ -19,11 +19,6 @@
                     "title": "Description",
                     "type": "string"
                 },
-                "version": {
-                    "default": "0.0.1",
-                    "title": "Version",
-                    "type": "string"
-                },
                 "task_parameters": {
                     "allOf": [
                         {
@@ -234,11 +229,6 @@
                     "title": "Description",
                     "type": "string"
                 },
-                "version": {
-                    "default": "0.0.1",
-                    "title": "Version",
-                    "type": "string"
-                },
                 "task_parameters": {
                     "allOf": [
                         {
@@ -258,7 +248,6 @@
             "additionalProperties": true,
             "properties": {
                 "field_a": {
-                    "allow_modification": true,
                     "default": 0,
                     "title": "Field A",
                     "type": "integer"
@@ -285,11 +274,6 @@
                     "title": "Description",
                     "type": "string"
                 },
-                "version": {
-                    "default": "0.0.1",
-                    "title": "Version",
-                    "type": "string"
-                },
                 "task_parameters": {
                     "allOf": [
                         {
@@ -309,7 +293,6 @@
             "additionalProperties": true,
             "properties": {
                 "field_b": {
-                    "allow_modification": true,
                     "default": 0.0,
                     "title": "Field B",
                     "type": "number"

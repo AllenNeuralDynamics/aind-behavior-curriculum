@@ -18,11 +18,13 @@ from pydantic import Field, GetJsonSchemaHandler, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
-from aind_behavior_curriculum import (
+from aind_behavior_curriculum.base import (
     AindBehaviorModel,
-    AindBehaviorModelExtra,
+    AindBehaviorModelExtra
+)
+from aind_behavior_curriculum.task import (
     Task,
-    TaskParameters,
+    TaskParameters
 )
 
 TTask = TypeVar("TTask", bound=Task)

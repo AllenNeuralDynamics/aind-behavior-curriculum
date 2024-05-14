@@ -10,7 +10,6 @@ from pydantic import Field
 from aind_behavior_curriculum import (
     Curriculum,
     Metrics,
-    ModifiableAttr,
     Policy,
     PolicyTransition,
     Stage,
@@ -25,8 +24,8 @@ from aind_behavior_curriculum import (
 
 # --- TASKS ---
 class DummyParameters(TaskParameters):
-    field_1: int = ModifiableAttr(default=0, validate_default=True)
-    field_2: int = ModifiableAttr(default=0, validate_default=True)
+    field_1: int = Field(default=0, validate_default=True)
+    field_2: int = Field(default=0, validate_default=True)
 
 
 class DummyTask(Task):
@@ -43,8 +42,8 @@ class ExampleMetrics(Metrics):
     Each theta value is reserved for a test case.
     """
 
-    m1: int = ModifiableAttr(default=0)
-    m2: int = ModifiableAttr(default=0)
+    m1: int = Field(default=0)
+    m2: int = Field(default=0)
 
 
 # --- POLICIES ---

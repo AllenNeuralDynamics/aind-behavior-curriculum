@@ -12,7 +12,6 @@ from aind_behavior_curriculum import (
     INIT_STAGE,
     Curriculum,
     Metrics,
-    ModifiableAttr,
     Policy,
     PolicyTransition,
     Stage,
@@ -26,7 +25,7 @@ from aind_behavior_curriculum import (
 
 # --- TASKS ---
 class TaskAParameters(TaskParameters):
-    field_a: int = ModifiableAttr(default=0, validate_default=True)
+    field_a: int = Field(default=0, validate_default=True)
 
 
 class TaskA(Task):
@@ -37,7 +36,7 @@ class TaskA(Task):
 
 
 class TaskBParameters(TaskParameters):
-    field_b: float = ModifiableAttr(default=0.0)
+    field_b: float = Field(default=0.0)
 
 
 class TaskB(Task):
@@ -54,9 +53,9 @@ class ExampleMetrics(Metrics):
     Each theta value is reserved for a test case.
     """
 
-    theta_1: int = ModifiableAttr(default=0)
-    theta_2: int = ModifiableAttr(default=0)
-    theta_3: int = ModifiableAttr(default=0)
+    theta_1: int = Field(default=0)
+    theta_2: int = Field(default=0)
+    theta_3: int = Field(default=0)
 
 
 # --- POLICIES ---

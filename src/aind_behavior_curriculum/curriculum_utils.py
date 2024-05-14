@@ -6,14 +6,15 @@ from typing import Annotated, Literal, Union
 
 from pydantic import Field
 
-from aind_behavior_curriculum import (
+from aind_behavior_curriculum.curriculum import (
     Metrics,
     Policy,
-    Stage,
-    Task,
-    TaskParameters,
+    Stage
 )
-
+from aind_behavior_curriculum.task import (
+    Task,
+    TaskParameters
+)
 
 def get_task_types():
     """
