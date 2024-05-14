@@ -1,4 +1,4 @@
-Welcome to this repository's documentation!
+Welcome to aind-behavior-curriculum!
 ===========================================
 
 Installation
