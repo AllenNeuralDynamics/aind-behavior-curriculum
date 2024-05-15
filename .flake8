@@ -3,6 +3,7 @@ exclude =
     .git,
     __pycache__,
     build,
-    examples/
+    examples/,
+    src/aind_behavior_curriculum/__init__.py
 max-complexity = 10
 max-line-length = 90

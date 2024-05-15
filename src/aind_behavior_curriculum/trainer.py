@@ -8,18 +8,14 @@ from typing import List, Optional, Tuple, TypeAlias
 
 from pydantic import Field
 
-from aind_behavior_curriculum.base import (
-    AindBehaviorModel,
-)
+from aind_behavior_curriculum.base import AindBehaviorModel
 from aind_behavior_curriculum.curriculum import (
     Curriculum,
     Metrics,
     Policy,
     Stage,
 )
-from aind_behavior_curriculum.task import (
-    TaskParameters
-)
+from aind_behavior_curriculum.task import TaskParameters
 
 Stage_Entry: TypeAlias = Stage | None
 Policy_Entry: TypeAlias = Tuple[Policy, ...] | None
@@ -34,7 +30,9 @@ class SubjectHistory(AindBehaviorModel):
     """
 
     stage_history: list[Stage_Entry] = Field(default=[], validate_default=True)
-    policy_history: list[Policy_Entry] = Field(default=[], validate_default=True)
+    policy_history: list[Policy_Entry] = Field(
+        default=[], validate_default=True
+    )
 
     def add_entry(self, stage: Stage_Entry, policies: Policy_Entry) -> None:
         """
