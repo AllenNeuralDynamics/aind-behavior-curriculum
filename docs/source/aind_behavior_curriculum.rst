@@ -4,14 +4,6 @@ aind\_behavior\_curriculum package
 Submodules
 ----------
 
-aind\_behavior\_curriculum.base module
---------------------------------------
-
-.. automodule:: aind_behavior_curriculum.base
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 aind\_behavior\_curriculum.curriculum module
 --------------------------------------------
 
@@ -19,6 +11,7 @@ aind\_behavior\_curriculum.curriculum module
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 aind\_behavior\_curriculum.curriculum\_utils module
 ---------------------------------------------------

@@ -32,10 +32,13 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
     "sphinxcontrib.autodoc_pydantic",
+    # "autoapi.extension",
     "sphinx.ext.napoleon",
 ]
 templates_path = ["_templates"]
 exclude_patterns = []
+
+# autoapi_dirs = ['../../src']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
