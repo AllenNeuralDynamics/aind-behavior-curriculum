@@ -20,12 +20,9 @@ from pydantic_core import core_schema
 
 from aind_behavior_curriculum.base import (
     AindBehaviorModel,
-    AindBehaviorModelExtra
+    AindBehaviorModelExtra,
 )
-from aind_behavior_curriculum.task import (
-    Task,
-    TaskParameters
-)
+from aind_behavior_curriculum.task import Task, TaskParameters
 
 TTask = TypeVar("TTask", bound=Task)
 
@@ -1031,12 +1028,14 @@ class Curriculum(AindBehaviorModel):
                 Dictionary with the json content
             """
 
-            s3 = boto3.client('s3')
+            s3 = boto3.client("s3")
             response = s3.get_object(Bucket=bucket_name, Key=json_key)
-            json_data = json.loads(response['Body'].read().decode('utf-8'))
+            json_data = json.loads(response["Body"].read().decode("utf-8"))
             return json_data
 
-        json_dict = read_json(bucket, str(Path("curriculums") / name / version / 'schema.json'))
+        json_dict = read_json(
+            bucket, str(Path("curriculums") / name / version / "schema.json")
+        )  # noqa: E501
         json_string = json.dumps(json_dict)
         curr = cls.model_validate_json(json_string)
 
