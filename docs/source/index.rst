@@ -227,7 +227,7 @@ Trainer cannot be defined.
    :maxdepth: 2
    :caption: Contents:
 
-   modules
+   aind_behavior_curriculum
 
 
 Indices and tables
@@ -236,3 +236,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
