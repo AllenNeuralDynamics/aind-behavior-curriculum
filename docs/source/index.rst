@@ -161,9 +161,9 @@ time. Define all the **Tasks/Stages/Stage Transitions** associated
 with the higher level graph, and then move onto defining the
 **Policies/Policy Transitions** associated with each **Stage**.
 
--  **Metrics** contains all the variables that trigger conditions
+-  :py:class:`aind_behavior_curriculum.curriculum.Metrics` contains all the variables that trigger conditions
    associated with **Stage Transitions** and
-   **Policy Transitions**. Progressively add to **Metrics** as
+   **Policy Transitions**. Progressively add to :py:class:`aind_behavior_curriculum.curriculum.Metrics` as
    needed.
 
 -  Keep **Stage Transitions** and **Policy Transitions** simple.
@@ -189,6 +189,20 @@ curriculum_utils.GRADUATED.
    PolicyTransition.validate_rule(...)/StageTransition.validate_rule(...)
 
 :math:`~`
+
+
+A word on `Metrics`
+------------------
+
+:py:class:`~aind_behavior_curriculum.curriculum.Metrics` used in the curriculum should follow the following general principles:
+
+-  :py:class:`~aind_behavior_curriculum.curriculum.Metrics` should be simple and cheap to calculate. A :py:class:`aind_behavior_curriculum.curriculum.Metrics` should represent a
+   single variable that can be used to trigger a **Stage Transition** or **Policy Transition**. For example, a metric could be 'time spent in stage', 'distance traveled', or 'number of licks'.
+
+- :py:class:`aind_behavior_curriculum.curriculum.Metrics` should be calculated as soon as the data is acquired, ideally at the rig.
+
+- While the calculation of these metrics will be largely up to the user, we strongly encourage users to maintain a single method that is used to solely return the populated model. This will make it easier to maintain and update the metrics as needed, without incurring in extra dependencies (e.g. plotting libraries, etc.).
+
 
 Building a Trainer
 ------------------
