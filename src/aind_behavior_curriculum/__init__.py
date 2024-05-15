@@ -4,7 +4,7 @@ Init package
 Modules in this file are public facing.
 """
 
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 from .task import Task, TaskParameters
 
