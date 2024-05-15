@@ -13,6 +13,7 @@ from pathlib import Path
 from aind_behavior_curriculum import __version__ as package_version
 
 INSTITUTE_NAME = "Allen Institute for Neural Dynamics"
+SOURCE_ROOT = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/tree/main/src/"
 
 current_year = date.today().year
 
@@ -34,7 +35,12 @@ extensions = [
     "sphinxcontrib.autodoc_pydantic",
     # "autoapi.extension",
     "sphinx.ext.napoleon",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.githubpages",
+    "sphinx.ext.linkcode",
 ]
+
+
 templates_path = ["_templates"]
 exclude_patterns = []
 
@@ -57,3 +63,12 @@ html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
 html_show_copyright = False
+
+# -- Options for linkcode extension ------------------------------------------
+def linkcode_resolve(domain, info):
+    if domain != "py":
+        return None
+    if not info["module"]:
+        return None
+    filename = info["module"].replace(".", "/")
+    return f"{SOURCE_ROOT}/{filename}.py"
