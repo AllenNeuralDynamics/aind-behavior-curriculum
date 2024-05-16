@@ -262,8 +262,9 @@ Trainer cannot be defined.
    :maxdepth: 2
    :caption: Contents:
 
+   self
    aind_behavior_curriculum
-
+   Examples <https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/tree/main/examples>
 
 Indices and tables
 ==================
