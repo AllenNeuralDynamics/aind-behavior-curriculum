@@ -167,6 +167,7 @@ please reference examples/example_project and examples/example_project_2 within
 the project files and their associated diagrams, examples/example_project/diagrams and examples/example_project_2/diagrams.
 
 Tips for building your own :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`:
+
 - Focus on one graph at a time. Define all the **Tasks/Stages/Stage Transitions** associated
   with the higher level graph, and then move onto defining the
   **Policies/Policy Transitions/Start Policies** associated with each :py:class:`~aind_behavior_curriculum.curriculum.Stage`.
