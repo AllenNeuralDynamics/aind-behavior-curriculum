@@ -20,11 +20,11 @@ Each :py:class:`~aind_behavior_curriculum.curriculum.Stage`
 is associated with a :py:class:`~aind_behavior_curriculum.task.Task`,
 which defines a set of configuration parameters via
 :py:class:`~aind_behavior_curriculum.task.TaskParameters`.
-Stages are connected by :py:class:`~aind_behavior_curriculum.trainer.Trainer`,
+Stages are connected by :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`,
 which are directed edges associated with a trigger condition.
 
 :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-and :py:class:`~aind_behavior_curriculum.trainer.Trainer` form the nodes and edges of
+and :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` form the nodes and edges of
 a :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
 graph, respectively. With this structure alone, a user can
 define a basic curriculum with the flexibility of defining skip
@@ -35,7 +35,7 @@ edges are labelled by priority, set by the user.
 
    *An example curriculum consisting of purely stages and stage
    transitions. This* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum` *consists of a skip connection between* :py:class:`~aind_behavior_curriculum.curriculum.Stage` *'StageA* and :py:class:`~aind_behavior_curriculum.curriculum.Stage` *'Graduated'*.
-   :py:class:`~aind_behavior_curriculum.trainer.Trainer` *are triggered on a parameter 't2' and the
+   :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` *are triggered on a parameter 't2' and the
    skip transition is ordered before the transition going to*
    :py:class:`~aind_behavior_curriculum.curriculum.Stage` *StageB.*
 
@@ -52,8 +52,8 @@ within a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
 . A :py:class:`~aind_behavior_curriculum.curriculum.Policy`, changes the task parameters of
 a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
 , as described above. A :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` acts
-just like a :py:class:`~aind_behavior_curriculum.trainer.Trainer`, and defines transitions between
-:py:class:`~aind_behavior_curriculum.curriculum.Policy` on a trigger condition. Like :py:class:`~aind_behavior_curriculum.trainer.Trainer`,
+just like a :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`, and defines transitions between
+:py:class:`~aind_behavior_curriculum.curriculum.Policy` on a trigger condition. Like :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`,
 :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` can connect any two arbitrary
 :py:class:`~aind_behavior_curriculum.curriculum.Policy` and are ordered by priority set by the user.
 
@@ -176,11 +176,11 @@ Tips for building your own :py:class:`~aind_behavior_curriculum.curriculum.Curri
   associated with :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`.
   Progressively add to :py:class:`aind_behavior_curriculum.curriculum.Metrics` as needed.
 
-- Keep :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` simple.
+- Keep :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` simple.
   A typical transition will only trigger on one metric variable. This
   makes transitions much easier to name.
 
-- Validate :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
+- Validate :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
   priority with the :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.export_diagram` utility, which
   labels edges with its rank. Use
   :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_stage_transition_priority` and
