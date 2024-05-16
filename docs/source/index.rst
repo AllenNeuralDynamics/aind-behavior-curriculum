@@ -42,8 +42,7 @@ edges are labelled by priority, set by the user.
 
 :math:`~`
 
-This library also supports :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
- **hypergraphs**.
+This library also supports :py:class:`~aind_behavior_curriculum.curriculum.Curriculum` **hypergraphs**.
 
 Conceptually, a user may want to change the task parameters associated
 with a stage, but this set of task parameters would be unnatural to
@@ -52,13 +51,14 @@ may define a graph of :py:class:`~aind_behavior_curriculum.curriculum.Policy` an
 within a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
 . A :py:class:`~aind_behavior_curriculum.curriculum.Policy`, changes the task parameters of
 a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-, as described above. A `~aind_behavior_curriculum.curriculum.PolicyTransition` acts
+, as described above. A :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` acts
 just like a :py:class:`~aind_behavior_curriculum.trainer.Trainer`, and defines transitions between
 :py:class:`~aind_behavior_curriculum.curriculum.Policy` on a trigger condition. Like :py:class:`~aind_behavior_curriculum.trainer.Trainer`,
 :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` can connect any two arbitrary
 :py:class:`~aind_behavior_curriculum.curriculum.Policy` and are ordered by priority set by the user.
 
 |Full Curriculum|
+
    *An example* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum` *consisting of*
    :py:class:`~aind_behavior_curriculum.curriculum.Stage`
    *and* :py:class:`~aind_behavior_curriculum.curriculum.Policy`
@@ -162,50 +162,43 @@ automation and further analysis.
 Building a Curriculum
 ---------------------
 
-For examples of how to build a :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
-, please reference
-examples/example_project and examples/example_project_2 within
-the project files and their associated diagrams,
-examples/example_project/diagrams and
-examples/example_project_2/diagrams.
+For examples of how to build a :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`,
+please reference examples/example_project and examples/example_project_2 within
+the project files and their associated diagrams, examples/example_project/diagrams and examples/example_project_2/diagrams.
 
-Tips for building your own :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
-: - Focus on one graph at a
-time. Define all the **Tasks/Stages/Stage Transitions** associated
-with the higher level graph, and then move onto defining the
-**Policies/Policy Transitions/Start Policies** associated with each :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-.
+Tips for building your own :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`:
+- Focus on one graph at a time. Define all the **Tasks/Stages/Stage Transitions** associated
+  with the higher level graph, and then move onto defining the
+  **Policies/Policy Transitions/Start Policies** associated with each :py:class:`~aind_behavior_curriculum.curriculum.Stage`.
 
--  :py:class:`aind_behavior_curriculum.curriculum.Metrics` contains all the variables that trigger conditions
-   associated with :py:class:`~aind_behavior_curriculum.trainer.Trainer` and
-   :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`. Progressively add to :py:class:`aind_behavior_curriculum.curriculum.Metrics` as
-   needed.
+- :py:class:`aind_behavior_curriculum.curriculum.Metrics` contains all the variables that trigger conditions
+  associated with :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`.
+  Progressively add to :py:class:`aind_behavior_curriculum.curriculum.Metrics` as needed.
 
--  Keep :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` simple.
-   A typical transition will only trigger on one metric variable. This
-   makes transitions much easier to name.
+- Keep :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` simple.
+  A typical transition will only trigger on one metric variable. This
+  makes transitions much easier to name.
 
--  Validate :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
-   priority with the :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.export_diagram` utility, which
-   labels edges with its rank. Use
-   :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_stage_transition_priority` and
-   :py:meth:`~aind_behavior_curriculum.curriculum.Stage.set_policy_transition_priority`
- to reorder priority.
+- Validate :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
+  priority with the :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.export_diagram` utility, which
+  labels edges with its rank. Use
+  :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_stage_transition_priority` and
+  :py:meth:`~aind_behavior_curriculum.curriculum.Stage.set_policy_transition_priority` to reorder priority.
 
-Common mistakes: - Every :py:class:`~aind_behavior_curriculum.curriculum.Stage` needs a set of start policies, see :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_start_policies`.
-If a stage with no policies is desired, use
-:py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.create_empty_stage`.
-This is a common pattern for the final stage of a
-:py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
-, so the library also offers a prebuilt final stage
-:py:class:`~aind_behavior_curriculum.curriculum_utils.GRADUATED`.
+Common mistakes:
 
--  The callables in :py:class:`~aind_behavior_curriculum.curriculum.Policy` and
-   :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` /
-   :py:class::py:class:`~aind_behavior_curriculum.trainer.Trainer` have different input
-   signatures. Please reference :py:meth:`~aind_behavior_curriculum.curriculum.Policy.validate_rule` and
-   :py:meth:`~aind_behavior_curriculum.curriculum.PolicyTransition.validate_rule` /
-   :py:meth:`~aind_behavior_curriculum.curriculum.StageTransition.validate_rule`
+- Every :py:class:`~aind_behavior_curriculum.curriculum.Stage` needs a set of start policies, see :py:meth:`~aind_behavior_curriculum.curriculum.Stage.set_start_policies`.
+  If a stage with no policies is desired, use :py:meth:`~aind_behavior_curriculum.curriculum_utils.create_empty_stage`.
+  This is a common pattern for the final stage of a :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`,
+  so the library also offers a prebuilt final stage :py:class:`~aind_behavior_curriculum.curriculum_utils.GRADUATED`.
+
+-  The :py:class:`~aind_behavior_curriculum.curriculum.Rule` callables in :py:class:`~aind_behavior_curriculum.curriculum.Policy`,
+   :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`, and
+   :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` have different input
+   signatures. Please reference the corresponding validate_rule(...) in the documentation.
+   (Policy) :py:meth:`~aind_behavior_curriculum.curriculum.Policy.validate_rule`
+   (PolicyTransition) :py:meth:`~aind_behavior_curriculum.curriculum.PolicyTransition.validate_rule`
+   (StageTransition) :py:meth:`~aind_behavior_curriculum.curriculum.StageTransition.validate_rule`
 
 :math:`~`
 
@@ -214,16 +207,16 @@ A word on :py:class:`~aind_behavior_curriculum.curriculum.Metrics`
 ------------------------------------------------------------------
 
 
-
-
 :py:class:`~aind_behavior_curriculum.curriculum.Metrics` used in the curriculum should follow the following general principles:
 
--  :py:class:`~aind_behavior_curriculum.curriculum.Metrics` should be simple and cheap to calculate. A :py:class:`~aind_behavior_curriculum.curriculum.Metrics` should represent a
-   single variable that can be used to trigger a :py:class:`~aind_behavior_curriculum.trainer.Trainer` or `~aind_behavior_curriculum.curriculum.PolicyTransition`. For example, a metric could be 'time spent in stage', 'distance traveled', or 'number of licks'.
+- :py:class:`~aind_behavior_curriculum.curriculum.Metrics` should be simple and cheap to calculate. A :py:class:`~aind_behavior_curriculum.curriculum.Metrics` should represent a
+  collection of variables that can be used to trigger a :py:class:`~aind_behavior_curriculum.trainer.StageTransition` or :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`.
+  For example, a metric could be 'time spent in stage', 'distance traveled', or 'number of licks'.
 
 - :py:class:`~aind_behavior_curriculum.curriculum.Metrics` should be calculated as soon as the data is acquired, ideally at the rig.
 
-- While the calculation of these metrics will be largely up to the user, we strongly encourage users to maintain a single method that is used to solely return the populated model. This will make it easier to maintain and update the metrics as needed, without incurring in extra dependencies (e.g. plotting libraries, etc.).
+- While the calculation of these metrics will be largely up to the user, we strongly encourage users to maintain a single method that is used to solely return the populated model.
+  This will make it easier to maintain and update the metrics as needed, without incurring in extra dependencies (e.g. plotting libraries, etc.).
 
 
 Building a Trainer
@@ -273,5 +266,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-
