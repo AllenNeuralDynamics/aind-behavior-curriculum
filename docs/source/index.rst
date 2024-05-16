@@ -173,7 +173,7 @@ Tips for building your own :py:class:`~aind_behavior_curriculum.curriculum.Curri
 : - Focus on one graph at a
 time. Define all the **Tasks/Stages/Stage Transitions** associated
 with the higher level graph, and then move onto defining the
-**Policies/Policy Transitions** associated with each :py:class:`~aind_behavior_curriculum.curriculum.Stage`
+**Policies/Policy Transitions/Start Policies** associated with each :py:class:`~aind_behavior_curriculum.curriculum.Stage`
 .
 
 -  :py:class:`aind_behavior_curriculum.curriculum.Metrics` contains all the variables that trigger conditions
@@ -186,10 +186,11 @@ with the higher level graph, and then move onto defining the
    makes transitions much easier to name.
 
 -  Validate :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
-   priority with the Curriculum.export_digram(...) utility, which
+   priority with the :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.export_diagram` utility, which
    labels edges with its rank. Use
-   Curriculum.set_stage_transition_priority(...) and
-   Stage.set_policy_transition_priority(...) to reorder priority.
+   :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_stage_transition_priority` and
+   :py:meth:`~aind_behavior_curriculum.curriculum.Stage.set_policy_transition_priority`
+ to reorder priority.
 
 Common mistakes: - Every :py:class:`~aind_behavior_curriculum.curriculum.Stage` needs a set of start policies, see :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_start_policies`.
 If a stage with no policies is desired, use
