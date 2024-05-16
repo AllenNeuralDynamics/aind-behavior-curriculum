@@ -1,8 +1,8 @@
-aind\_behavior\_curriculum package
+API
 ==================================
 
 aind_behavior_curriculum
--------------
+--------------------------
 
 .. toctree::
    :maxdepth: 1

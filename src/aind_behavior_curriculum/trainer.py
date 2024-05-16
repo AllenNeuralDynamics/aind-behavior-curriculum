@@ -61,13 +61,12 @@ class Trainer:
     Intended usage:
     1) Implement abstract methods
     2) Call Trainer.register_subject() x N
-    3) Call Trainer.evaluate_subject() or
-            Trainer.override_subject_status() x N
+    3) Call Trainer.evaluate_subject() or Trainer.override_subject_status() x N
     """
 
     def __init__(self):
         """
-        Trainer manages a list of subjects initalized here.
+        Trainer manages a list of subjects initialized here.
         NOTE: Within Trainer subclass, please call super().__init__()
         """
         self.subject_ids = []
