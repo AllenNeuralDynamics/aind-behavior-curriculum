@@ -4,7 +4,7 @@ Init package
 Modules in this file are public facing.
 """
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 from .curriculum import (
     Curriculum,
