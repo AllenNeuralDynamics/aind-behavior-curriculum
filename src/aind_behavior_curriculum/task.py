@@ -39,7 +39,7 @@ class Task(AindBehaviorModel):
         ..., description=TaskParameters.__doc__.strip(), validate_default=True
     )
     version: Optional[str] = Field(
-        ...,
+        default=None,
         pattern=r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$",
         description="task schema version",
         frozen=True,
