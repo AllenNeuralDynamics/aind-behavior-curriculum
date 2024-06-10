@@ -4,7 +4,7 @@ Base Behavior Models
 
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 from pydantic import Field
 
@@ -38,7 +38,7 @@ class Task(AindBehaviorModel):
     task_parameters: TaskParameters = Field(
         ..., description=TaskParameters.__doc__.strip(), validate_default=True
     )
-    version: str = Field(
+    version: Optional[str] = Field(
         ...,
         pattern=r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$",
         description="task schema version",
