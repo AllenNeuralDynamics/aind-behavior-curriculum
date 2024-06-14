@@ -4,7 +4,7 @@ Base Behavior Models
 
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 from pydantic import Field
 
@@ -37,4 +37,8 @@ class Task(AindBehaviorModel):
     )
     task_parameters: TaskParameters = Field(
         ..., description=TaskParameters.__doc__.strip(), validate_default=True
+    )
+    stage_name: Optional[str] = Field(
+        default=None,
+        description="Optional stage name the `Task` object instance represents.",
     )
