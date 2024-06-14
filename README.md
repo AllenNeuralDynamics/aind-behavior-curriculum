@@ -37,6 +37,7 @@ for example, Stage1 = {P1, P2, P3} -> Stage2 = {P4, P5, P6}.
 
 If a curriculum demands changing the same set of parameters,
 for example, Stage1 = {P1, P2, P3} -> Stage1' = {P1', P2', P3}, it is a good idea to use PolicyGraphs.
+
 A PolicyGraph is a **parallel programming interface** for changing **``Stage``** parameters.
 
 
@@ -49,6 +50,7 @@ A PolicyGraph is a **parallel programming interface** for changing **``Stage``**
 |:--:|
 |*A 'Train Track' **``Curriculum``*** |
 
+$~$
 
 A PolicyGraph consists of **``Policy``** nodes and **``PolicyTransition``** directed edges.
 Policies are user-defined functions that take in the current Stage **``TaskParameters``** and return the updated Stage **``TaskParameters``**.
@@ -84,8 +86,6 @@ This library has been rigorously tested, and all combinations of StageGraph and 
 Here are some more examples of the possibilities.
 The high-level stage graph are shown to the left and the individual policy graphs are shown to the right.
 All diagrams have been generated automatically from examples/example_project and examples/example_project_2.
-
-Here are some examples of the possibilities. The high-level stage graph are shown to the left and the inidividual policy graphs are shown to the right.
 
 | ![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title") |
 |:--:|

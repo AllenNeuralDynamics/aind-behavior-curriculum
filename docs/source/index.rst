@@ -47,6 +47,7 @@ for example, Stage1 = {P1, P2, P3} -> Stage2 = {P4, P5, P6}.
 
 If a curriculum demands changing the same set of parameters,
 for example, Stage1 = {P1, P2, P3} -> Stage1' = {P1', P2', P3}, it is a good idea to use PolicyGraphs.
+
 A PolicyGraph is a **parallel programming interface** for changing :py:class:`~aind_behavior_curriculum.curriculum.Stage` parameters.
 
 |Full Curriculum|
@@ -60,6 +61,9 @@ A PolicyGraph is a **parallel programming interface** for changing :py:class:`~a
 |Track Curriculum|
 
    *A 'Track'* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
+
+
+:math:`~`
 
 A PolicyGraph consists of :py:class:`~aind_behavior_curriculum.curriculum.Policy` nodes and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` directed edges.
 Policies are user-defined functions that take in the current Stage :py:class:`~aind_behavior_curriculum.task.TaskParameters` and return the updated Stage :py:class:`~aind_behavior_curriculum.task.TaskParameters`.
@@ -104,7 +108,6 @@ All diagrams have been generated automatically from examples/example_project and
 |Policy Triangle Curriculum|
 
    *A 'Policy Triangle'* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
-
 
 |Stage Triangle Curriculum|
 
