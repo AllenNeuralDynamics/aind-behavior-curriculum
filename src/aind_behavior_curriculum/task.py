@@ -45,5 +45,8 @@ class Task(AindBehaviorModel):
         default=None,
         pattern=SEMVER_REGEX,
         description="task schema version",
-        frozen=True,
+        frozen=True)
+    stage_name: Optional[str] = Field(
+        default=None,
+        description="Optional stage name the `Task` object instance represents.",
     )
