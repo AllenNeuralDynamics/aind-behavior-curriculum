@@ -42,20 +42,12 @@ edges are labelled by priority, set by the user.
 
 :math:`~`
 
-This library also supports :py:class:`~aind_behavior_curriculum.curriculum.Curriculum` **hypergraphs**.
+Stages are intended to represent 'checkpoint learning objectives', which wrap independent sets of parameters,
+for example, Stage1 = {P1, P2, P3} -> Stage2 = {P4, P5, P6}.
 
-Conceptually, a user may want to change the task parameters associated
-with a stage, but this set of task parameters would be unnatural to
-classify as a new training stage altogether. In this situation, the user
-may define a graph of :py:class:`~aind_behavior_curriculum.curriculum.Policy` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
-within a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-. A :py:class:`~aind_behavior_curriculum.curriculum.Policy`, changes the task parameters of
-a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-, as described above. A :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` acts
-just like a :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`, and defines transitions between
-:py:class:`~aind_behavior_curriculum.curriculum.Policy` on a trigger condition. Like :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`,
-:py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` can connect any two arbitrary
-:py:class:`~aind_behavior_curriculum.curriculum.Policy` and are ordered by priority set by the user.
+If a curriculum demands changing the same set of parameters,
+for example, Stage1 = {P1, P2, P3} -> Stage1' = {P1', P2', P3}, it is a good idea to use PolicyGraphs.
+A PolicyGraph is a **parallel programming interface** for changing :py:class:`~aind_behavior_curriculum.curriculum.Stage` parameters.
 
 |Full Curriculum|
 
@@ -65,37 +57,49 @@ just like a :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`, an
    *graphs. Left: The high level policy graph. Right: Internal policy graphs.*
 
 
-:py:class:`~aind_behavior_curriculum.curriculum.Policy` are more nuanced than :py:class:`~aind_behavior_curriculum.curriculum.Stage`.
-
-Yellow :py:class:`~aind_behavior_curriculum.curriculum.Policy` in the example indicate '**Start Policies**'. To
-initialize the task parameters of a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-, the user must specify
-which :py:class:`~aind_behavior_curriculum.curriculum.Policy` in the :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-policy graph to start with.
-
-Unlike :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-, a mouse can occupy multiple active
-:py:class:`~aind_behavior_curriculum.curriculum.Policy` within a :py:class:`~aind_behavior_curriculum.curriculum.Stage`
-. As described later, the
-:py:class:`~aind_behavior_curriculum.trainer.Trainer` will record the net combination of task parameters.
-
-:math:`~`
-
-**Any hypergraph is supported!**
-
-Here are some examples of the possibilities. The high-level stage graph
-are shown to the left and the individual policy graphs are shown to the
-right.
-
-|Tree Curriculum|
-
-   *A 'Tree'* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
-
-
 |Track Curriculum|
 
    *A 'Track'* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
 
+A PolicyGraph consists of :py:class:`~aind_behavior_curriculum.curriculum.Policy` nodes and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` directed edges.
+Policies are user-defined functions that take in the current Stage :py:class:`~aind_behavior_curriculum.task.TaskParameters` and return the updated Stage :py:class:`~aind_behavior_curriculum.task.TaskParameters`.
+PolicyTransitions define conditional execution of downstream Policies. Like :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`, :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
+can connect any two arbitrary :py:class:`~aind_behavior_curriculum.curriculum.Policy` and are ordered by priority set by the user.
+The yellow polices indicate **Start policies**, which are entrypoint(s) into the PolicyGraph specified by the user.
+Altogether, Policies and PolicyTransitions may be assembled to form arbitrary execution trees and loops.
+
+Notably, PolicyGraph is executed in parallel (execution is done by the Trainer, discussed later).
+A mouse may occupy multiple policies at once and will traverse down all trigger transitions returning True, similar to current in a circuitboard.
+While a mouse can only occupy one Stage at a time, a mouse can and will often occupy many active policies.
+Intuitively, the current state of Stage parameters is the net parameter change of all active policies.
+
+Parallel execution has the benefit of supporting asynchronous parameter updates, which is a more natural way of defining parameter changes.
+Rather than defining how all stage parameters all change as a group, a policy can instead define updates to individual parameters, which asynchronously trigger on different metrics.
+
+A good example of using PolicyGraphs can be demonstrated in the 'Track' curriculum above.
+
+Imagine 'Track Stage' manages two rig parameters, P1 and P2,and these rig parameters update independently from one another
+according to different metrics, in this case, metrics m1 and m2 associated with m1_rule and m2_rule respectively.
+With parallel execution, the most natural way of implementing this situation is with two tracks as shown, where a mouse can progress asynchronously along each parameter track.
+If PolicyGraph was limited to serial execution, implementing this use case would be possible but more clumsy.
+m1_rule and m2_rule would have to be combined into a compound policy transition and the left/right policies
+would need to be combined into a compound policy with additional conditional logic inside checking if m1_rule or m2_rule was triggered.
+With parallel execution, Policies and PolicyTransitions simplify into atomic operations.
+
+Writing to PolicyGraph is easy.
+Similar to Curriculum's API for adding, removing, and reordering stages,
+Stage comes with a simple API for adding, removing, and reordering policies.
+The structure of the high-level graph and the policy graphs can always be seen using :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.export_diagram`.
+
+This library has been rigorously tested, and all combinations of StageGraph and PolicyGraph are supported.
+Here are some more examples of the possibilities.
+The high-level stage graph are shown to the left and the individual policy graphs are shown to the right.
+All diagrams have been generated automatically from examples/example_project and examples/example_project_2.
+
+
+|Tree Curriculum|
+
+   *A 'Tree'* :py:class:`~aind_behavior_curriculum.curriculum.Curriculum`
 
 |Policy Triangle Curriculum|
 
@@ -123,18 +127,19 @@ policies as a starting place for evaluation.
 
 2) Evaluation: For each registered mouse, the :py:class:`~aind_behavior_curriculum.trainer.Trainer` looks at
    the mouse's current position in its hypergraph curriculum. The
-   :py:class:`~aind_behavior_curriculum.trainer.Trainer` collects all the current outgoing transitions and checks which evaluate to True. The :py:class:`~aind_behavior_curriculum.trainer.Trainer` determines the updated hypergraph position and associated :py:class:`~aind_behavior_curriculum.task.Task` parameters according to the following simple rules:
+   :py:class:`~aind_behavior_curriculum.trainer.Trainer` collects all the current outgoing transitions and checks which evaluate to True.
+   The :py:class:`~aind_behavior_curriculum.trainer.Trainer` determines the updated hypergraph position and associated :py:class:`~aind_behavior_curriculum.task.Task` parameters according to the following simple rules:
 
-   -  :py:class:`~aind_behavior_curriculum.trainer.Trainer` takes the outgoing :py:class:`~aind_behavior_curriculum.trainer.Trainer` with
-      the highest priority. If multiple :py:class:`~aind_behavior_curriculum.trainer.Trainer`
-      evaluate to True, then the :py:class:`~aind_behavior_curriculum.trainer.Trainer` with the
-      highest priority is chosen. Priority is set by the user.
+   -  :py:class:`~aind_behavior_curriculum.trainer.Trainer` takes the outgoing :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` with
+      the highest priority. If multiple :py:class:`~aind_behavior_curriculum.curriculum.StageTransition`
+      evaluate to True, then the :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` with the
+      highest priority is chosen. Priority is set by the user using :py:meth:`~aind_behavior_curriculum.curriculum.Curriculum.set_stage_transition_priority`.
    -  :py:class:`~aind_behavior_curriculum.trainer.Trainer` takes the outgoing :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` with
       the highest priority. If multiple :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`
       evaluate to True, then the :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` with the
-      highest priority is chosen. Priority is set by the user.
-   -  :py:class:`~aind_behavior_curriculum.trainer.Trainer` override :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`. If
-      a :py:class:`~aind_behavior_curriculum.trainer.Trainer` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` both
+      highest priority is chosen. Priority is set by the user using :py:meth:`~aind_behavior_curriculum.curriculum.Stage.set_policy_transition_priority`.
+   -  :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` overrides :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition`. If
+      a :py:class:`~aind_behavior_curriculum.curriculum.StageTransition` and :py:class:`~aind_behavior_curriculum.curriculum.PolicyTransition` both
       evaluate to True, the :py:class:`~aind_behavior_curriculum.trainer.Trainer` jumps directly to the next
       :py:class:`~aind_behavior_curriculum.curriculum.Stage`.
    -  If no transitions are True, the mouse stays in place.
