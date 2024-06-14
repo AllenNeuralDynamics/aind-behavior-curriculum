@@ -26,50 +26,77 @@ Stages are connected by **``Stage Transitions``**, which are directed edges asso
 With this structure alone, a user can define a basic curriculum with the flexibility of defining skip connections and regressions. For nodes with multiple ongoing edges, edges are labelled by priority, set by the user.
 
 
-| ![High-Level Curriculum](./examples/example_project/diagrams/high_level_curr_diagram.png "Title") | 
-|:--:| 
+| ![High-Level Curriculum](./examples/example_project/diagrams/high_level_curr_diagram.png "Title") |
+|:--:|
 |*An example curriculum consisting of purely stages and stage transitions. This **``Curriculum``** consists of a skip connection between **``Stage``** 'StageA' and **``Stage``** 'Graduated'. **``Stage Transitions``** are triggered on a parameter 't2' and the skip transition is ordered before the transition going to **``Stage``** StageB.* |
 
 $~$
 
-This library also supports **``Curriculum``** **hypergraphs**. 
+Stages are intended to represent 'checkpoint learning objectives', which wrap independent sets of parameters,
+for example, Stage1 = {P1, P2, P3} -> Stage2 = {P4, P5, P6}.
 
-Conceptually, a user may want to change the rig parameters associated with a stage, but this set of rig parameters would be unnatural to classify as a new training stage altogether.
-In this situation, the user may define a graph of **``Policies``** and **``Policy Transitions``** within a **``Stage``**.
-A **``Policy``**, changes the task parameters of a **``Stage``**, as described above. A **``Policy Transition``** acts just like a **``Stage Transition``**, and defines transitions between **``Policies``** on a trigger condition. Like **``Stage Transitions``**, **``Policy Transitions``**  can connect any two arbitrary **``Policies``** and are ordered by priority set by the user.
+If a curriculum demands changing the same set of parameters,
+for example, Stage1 = {P1, P2, P3} -> Stage1' = {P1', P2', P3}, it is a good idea to use PolicyGraphs.
+A PolicyGraph is a **parallel programming interface** for changing **``Stage``** parameters.
 
 
-| ![Full Curriculum](./examples/example_project/diagrams/my_curr_diagram.png "Title") | 
-|:--:| 
+| ![Full Curriculum](./examples/example_project/diagrams/my_curr_diagram.png "Title") |
+|:--:|
 |*An example **``Curriculum``** consisting of **``Stage``** and  **``Policy``** graphs. Left: The high level policy graph. Right: Internal policy graphs.* |
 
-**``Policies``** are more nuanced than **``Stages``**.
 
-Yellow **``Policies``** in the example indicate '**Start Policies**'. To initialize the rig parameters of a **``Stage``**, the user must specify which **``Policy/Policies``** in the **``Stage``** policy graph to start with.
+| ![Track Curriculum](./examples/example_project_2/diagrams/track_curr_diagram.png "Title") |
+|:--:|
+|*A 'Train Track' **``Curriculum``*** |
 
-Unlike **``Stages``**, a mouse can occupy multiple active **``Policies``**  within a **``Stage``**. As described later, the **``Trainer``** will record the net combination of rig parameters.
 
-$~$
+A PolicyGraph consists of **``Policy``** nodes and **``PolicyTransition``** directed edges.
+Policies are user-defined functions that take in the current Stage **``TaskParameters``** and return the updated Stage **``TaskParameters``**.
+PolicyTransitions define conditional execution of downstream Policies. Like **``StageTransition``**, **``PolicyTransition``**
+can connect any two arbitrary **``Policy``** and are ordered by priority set by the user.
+The yellow polices indicate **Start policies**, which are entrypoint(s) into the PolicyGraph specified by the user.
+Altogether, Policies and PolicyTransitions may be assembled to form arbitrary execution trees and loops.
 
-**Any hypergraph is supported!**
+Notably, PolicyGraph is executed in parallel (execution is done by the Trainer, discussed later).
+A mouse may occupy multiple policies at once and will traverse down all trigger transitions returning True, similar to current in a circuitboard.
+While a mouse can only occupy one Stage at a time, a mouse can and will often occupy many active policies.
+Intuitively, the current state of Stage parameters is the net parameter change of all active policies.
+
+Parallel execution has the benefit of supporting asynchronous parameter updates, which is a more natural way of defining parameter changes.
+Rather than defining how all stage parameters all change as a group, a policy can instead define updates to individual parameters, which asynchronously trigger on different metrics.
+
+A good example of using PolicyGraphs can be demonstrated in the 'Track' curriculum above.
+
+Imagine 'Track Stage' manages two rig parameters, P1 and P2,and these rig parameters update independently from one another
+according to different metrics, in this case, metrics m1 and m2 associated with m1_rule and m2_rule respectively.
+With parallel execution, the most natural way of implementing this situation is with two tracks as shown, where a mouse can progress asynchronously along each parameter track.
+If PolicyGraph was limited to serial execution, implementing this use case would be possible but more clumsy.
+m1_rule and m2_rule would have to be combined into a compound policy transition and the left/right policies
+would need to be combined into a compound policy with additional conditional logic inside checking if m1_rule or m2_rule was triggered.
+With parallel execution, Policies and PolicyTransitions simplify into atomic operations.
+
+Writing to PolicyGraph is easy.
+Similar to Curriculum's API for adding, removing, and reordering stages,
+Stage comes with a simple API for adding, removing, and reordering policies.
+The structure of the high-level graph and the policy graphs can always be seen using **``Curriculum.export_diagram(...)``**.
+
+This library has been rigorously tested, and all combinations of StageGraph and PolicyGraph are supported.
+Here are some more examples of the possibilities.
+The high-level stage graph are shown to the left and the individual policy graphs are shown to the right.
+All diagrams have been generated automatically from examples/example_project and examples/example_project_2.
 
 Here are some examples of the possibilities. The high-level stage graph are shown to the left and the inidividual policy graphs are shown to the right.
 
-
-| ![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title") | 
-|:--:| 
+| ![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title") |
+|:--:|
 |*A 'Tree' **``Curriculum``*** |
 
-| ![Track Curriculum](./examples/example_project_2/diagrams/track_curr_diagram.png "Title") | 
-|:--:| 
-|*A 'Train Track' **``Curriculum``*** |
-
-| ![Policy Triangle Curriculum](./examples/example_project_2/diagrams/p_triangle_curr_diagram.png "Title") | 
-|:--:| 
+| ![Policy Triangle Curriculum](./examples/example_project_2/diagrams/p_triangle_curr_diagram.png "Title") |
+|:--:|
 |*A 'Policy Triangle' **``Curriculum``*** |
 
-| ![Stage Triangle Curriculum](./examples/example_project_2/diagrams/s_triangle_curr_diagram.png "Title") | 
-|:--:| 
+| ![Stage Triangle Curriculum](./examples/example_project_2/diagrams/s_triangle_curr_diagram.png "Title") |
+|:--:|
 |*A 'Stage Triangle' **``Curriculum``*** |
 
 $~$
