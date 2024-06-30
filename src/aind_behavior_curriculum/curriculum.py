@@ -752,9 +752,9 @@ class Curriculum(AindBehaviorModel):
 
     def remove_stage_transition(
         self,
-        start_stage: Policy,
-        dest_stage: Policy,
-        rule: PolicyTransition,
+        start_stage: Stage,
+        dest_stage: Stage,
+        rule: StageTransition,
         remove_start_stage: bool = False,
         remove_dest_stage: bool = False,
     ) -> None:
