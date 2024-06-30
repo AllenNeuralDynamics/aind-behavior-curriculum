@@ -312,7 +312,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         start_node -> dest_node.
 
         If start_node has been added to graph before, this method starts a transition
-            from the exisiting start_node.
+            from the existing start_node.
         If dest_node has been added to graph before, this method creates a transition
             into the existing dest_node.
 
