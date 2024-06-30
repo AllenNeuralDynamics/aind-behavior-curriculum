@@ -118,7 +118,7 @@ class Rule:
     def _serialize_callable(value: str | Callable) -> Callable:
         """
         Custom Serialization.
-        Simlply exports reference to function as package + function name.
+        Simply exports reference to function as package + function name.
         """
         if isinstance(value, str):
             value = Rule._deserialize_callable(value)
