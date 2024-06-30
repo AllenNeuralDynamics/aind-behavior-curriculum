@@ -10,7 +10,7 @@ import subprocess
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar, Annotated
 
 import boto3
 from jinja2 import Template
@@ -699,7 +699,7 @@ class Curriculum(AindBehaviorModel):
         validate_default=True,
         description="Curriculum version.",
     )
-    graph: StageGraph = Field(default=StageGraph(), validate_default=True)
+    graph: Annotated[StageGraph, Field(default=StageGraph(), validate_default=True)]
 
     def model_post_init(self, __context: Any) -> None:
         """
