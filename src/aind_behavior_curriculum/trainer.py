@@ -17,6 +17,10 @@ from aind_behavior_curriculum.curriculum import (
 )
 from aind_behavior_curriculum.task import TaskParameters
 
+StageEntry: TypeAlias = Optional[Stage]
+PolicyEntry: TypeAlias = Optional[Tuple[Policy, ...]]
+
+
 Stage_Entry: TypeAlias = Stage | None
 Policy_Entry: TypeAlias = Tuple[Policy, ...] | None
 
@@ -29,12 +33,12 @@ class SubjectHistory(AindBehaviorModel):
     Pydantic model for de/serialization.
     """
 
-    stage_history: list[Stage_Entry] = Field(default=[], validate_default=True)
-    policy_history: list[Policy_Entry] = Field(
+    stage_history: list[StageEntry] = Field(default=[], validate_default=True)
+    policy_history: list[PolicyEntry] = Field(
         default=[], validate_default=True
     )
 
-    def add_entry(self, stage: Stage_Entry, policies: Policy_Entry) -> None:
+    def add_entry(self, stage: StageEntry, policies: PolicyEntry) -> None:
         """
         Add to stage and policy history synchronously.
         """
@@ -46,7 +50,7 @@ class SubjectHistory(AindBehaviorModel):
 
         self.policy_history.append(policies)
 
-    def peek_last_entry(self) -> tuple[Stage_Entry, Policy_Entry]:
+    def peek_last_entry(self) -> tuple[StageEntry, PolicyEntry]:
         """
         Return most-recently added entry.
         """
@@ -137,9 +141,9 @@ class Trainer:
         s_id: int,
         curriculum: Curriculum,
         subject_history: SubjectHistory,
-        stage: Stage_Entry,
+        stage: StageEntry,
         stage_parameters: TaskParameters | None,
-        stage_policies: Policy_Entry,
+        stage_policies: PolicyEntry,
     ) -> None:
         """
         Updates subject history, which involves many steps.
