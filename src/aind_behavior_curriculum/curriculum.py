@@ -1000,7 +1000,7 @@ class Curriculum(AindBehaviorModel):
         ), "Please add .json extension to end of json_path."
         self.validate_curriculum()
 
-        with open(json_path, "w") as f:
+        with open(json_path, "w", encoding="utf-8") as f:
             json_dict = self.model_dump()
             json_string = json.dumps(json_dict, indent=4)
             f.write(json_string)
