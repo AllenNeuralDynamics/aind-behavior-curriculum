@@ -149,7 +149,7 @@ class Trainer:
         s_id: int,
         curriculum: Curriculum,
         stage: StageEntry,
-        stage_parameters: TaskParameters | None,
+        updated_stage_parameters: Optional[TaskParameters],
         stage_policies: PolicyEntry,
     ) -> None:
         """
@@ -157,14 +157,16 @@ class Trainer:
         Stage parameters and policies are expected to be part
         of stage-- not checked here b/c this is a private utility.
 
-        If any of {stage, stage_parameters, stage_policies} are None,
+        If any of {stage, updated_stage_parameters, stage_policies} are None,
         all of the elements are expected to be None.
         """
         if not (
-            stage is None or stage_parameters is None or stage_policies is None
+            stage is None
+            or updated_stage_parameters is None
+            or stage_policies is None
         ):
             stage = stage.model_copy(deep=True)
-            stage.set_task_parameters(stage_parameters)
+            stage.set_task_parameters(updated_stage_parameters)
 
         self.write_data(
             s_id,
@@ -388,6 +390,6 @@ class Trainer:
             s_id,
             curriculum,
             stage=None,
-            stage_parameters=None,
+            updated_stage_parameters=None,
             stage_policies=None,
         )
