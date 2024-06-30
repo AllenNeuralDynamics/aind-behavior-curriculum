@@ -179,7 +179,7 @@ class Trainer:
         subject_id: int,
         curriculum: Curriculum,
         start_stage: Stage,
-        start_policies: Optional[Policy | list[Policy]] = None,
+        start_policies: Optional[Policy | List[Policy]] = None,
     ) -> None:
         """
         Adds subject into the Trainer system.
@@ -189,36 +189,38 @@ class Trainer:
 
         curriculum = curriculum.validate_curriculum()
 
-        assert (
-            start_stage in curriculum.see_stages()
-        ), "Provided start_stage is not in provided curriculum."
-
-        assert (
-            subject_id not in self.subject_ids
-        ), f"Subject_id {subject_id} is already registered."
+        if not (start_stage in curriculum.see_stages()):
+            raise ValueError(
+                "Provided start_stage is not in provided curriculum."
+            )
+        if subject_id in self.subject_ids:
+            raise ValueError(f"Subject_id {subject_id} is already registered.")
 
         if start_policies is None:
             start_policies = start_stage.see_policies()
         elif isinstance(start_policies, Policy):
             start_policies = [start_policies]
+
         for s_policy in start_policies:
-            assert s_policy in start_stage.see_policies(), (
-                f"Provided start_policy {s_policy} not in "
-                f"provided start_stage {start_stage.name}."
-            )
-        start_policies = tuple(start_policies)
+            if not (s_policy in start_stage.see_policies()):
+                raise ValueError(
+                    f"Provided start_policy {s_policy} not in "
+                    f"provided start_stage {start_stage.name}."
+                )
+
+        _start_policies = tuple(start_policies)
 
         initial_params = self._get_net_parameter_update(
             start_stage.get_task_parameters(),
-            start_policies,
-            curr_metrics=Metrics(),  # Metrics is empty on regsitration.
+            _start_policies,
+            curr_metrics=Metrics(),  # Metrics is empty on registration.
         )
         self._update_subject_trainer_state(
             subject_id,
             curriculum,
             start_stage,
             initial_params,
-            start_policies,
+            _start_policies,
         )
 
         # Add to trainer's local list!
@@ -260,7 +262,7 @@ class Trainer:
             # 0) Subject Ejected
             if current_stage is None or current_policies is None:
                 self._update_subject_trainer_state(
-                    s_id, curriculum, trainer_state, None, None, None
+                    s_id, curriculum, None, None, None
                 )
                 break  # Head to next subject
 
@@ -343,24 +345,25 @@ class Trainer:
 
         (Soft Rejection-- send mouse to Stage/Policy w/in Curriculum)
         """
-        assert (
-            s_id in self.subject_ids
-        ), f"subject id {s_id} not in self.subject_ids."
+        if not (s_id in self.subject_ids):
+            raise ValueError(f"subject id {s_id} not in self.subject_ids.")
 
         curriculum, trainer_state, curr_metrics = self.load_data(s_id)
 
-        assert override_stage in curriculum.see_stages(), (
-            f"override stage {override_stage.name} not in "
-            f"curriculum stages for subject id {s_id}."
-        )
+        if not (override_stage in curriculum.see_stages()):
+            raise ValueError(
+                f"Override stage {override_stage.name} not in curriculum.\
+                curriculum stages for subject id {s_id}."
+            )
 
         if isinstance(override_policies, Policy):
             override_policies = [override_policies]
         for o_policy in override_policies:
-            assert o_policy in override_stage.see_policies(), (
-                f"override policy {o_policy} not in "
-                f"given override stage {override_stage.name}."
-            )
+            if not (o_policy in override_stage.see_policies()):
+                raise ValueError(
+                    f"Override policy {o_policy} not in \
+                    given override stage {override_stage.name}."
+                )
 
         # Update Stage parameters according to override policies
         updated_params = self._get_net_parameter_update(
@@ -371,7 +374,6 @@ class Trainer:
         self._update_subject_trainer_state(
             s_id,
             curriculum,
-            trainer_state,
             override_stage,
             updated_params,
             tuple(override_policies),
