@@ -10,7 +10,7 @@ import subprocess
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar
+from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, TypeVar
 
 import boto3
 from jinja2 import Template
@@ -22,7 +22,7 @@ from aind_behavior_curriculum.base import (
     AindBehaviorModel,
     AindBehaviorModelExtra,
 )
-from aind_behavior_curriculum.task import Task, TaskParameters
+from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
 
 TTask = TypeVar("TTask", bound=Task)
 
@@ -679,6 +679,19 @@ class Curriculum(AindBehaviorModel):
     To use, subclass this and add subclass metrics.
     """
 
+    pkg_location: str = Field(
+        default="",
+        frozen=True,
+        description="Location of the python package \
+                                that instantiated the Curriculum.",
+    )
+    name: str = Field(
+        default="Please subclass, rename, and define \
+                      a StageGraph with your own Stage objs \
+                      Ex: StageGraph[Union[StageA, StageB, Graduated]]",
+        description="Name of the Curriculum.",
+        frozen=True,
+    )
     version: str = Field(
         default="0.0.0",
         pattern=SEMVER_REGEX,
