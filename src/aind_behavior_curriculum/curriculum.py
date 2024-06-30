@@ -679,11 +679,12 @@ class Curriculum(AindBehaviorModel):
     To use, subclass this and add subclass metrics.
     """
 
-    pkg_location: str = ""
-    name: str = (
-        "Please subclass, rename, and define \
-                 a StageGraph with your own Stage objs \
-                 Ex: StageGraph[Union[StageA, StageB, Graduated]]"
+    version: str = Field(
+        default="0.0.0",
+        pattern=SEMVER_REGEX,
+        frozen=True,
+        validate_default=True,
+        description="Curriculum version.",
     )
     graph: StageGraph = Field(default=StageGraph(), validate_default=True)
 
