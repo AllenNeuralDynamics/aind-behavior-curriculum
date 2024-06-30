@@ -10,7 +10,16 @@ import subprocess
 import warnings
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar, Annotated
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Tuple,
+    TypeVar,
+)
 
 import boto3
 from jinja2 import Template
@@ -105,10 +114,11 @@ class Rule:
             return value
         else:
             split = value.rsplit(".", 1)
-            assert len(split) > 0, (
-                f"Invalid rule value while attempting to deserialize callable. "
-                f"Got {value}, expected string in the format '<module>.Rule'"
-            )
+            if not (len(split) > 0):
+                raise ValueError(
+                    f"Invalid rule value while attempting to deserialize callable. \
+                    Got {value}, expected string in the format '<module>.Rule'"
+                )
 
             module = import_module(split[0])
             obj = getattr(module, split[1])
@@ -282,9 +292,8 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
-        assert (
-            node in self.nodes.values()
-        ), f"Node {node} is not in the graph to be removed."
+        if not (node in self.nodes.values()):
+            raise ValueError(f"Node {node} is not in the graph to be removed.")
 
         # Resolve node id
         p_id = self._get_node_id(node)
@@ -352,20 +361,22 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         of changing transition priority.
         """
 
-        assert (
-            start_node in self.nodes.values()
-        ), f"Node {start_node} is not in the behavior graph to be removed."
+        if not (start_node in self.nodes.values()):
+            raise ValueError(
+                f"Node {start_node} is not in the behavior graph to be removed."
+            )
 
-        assert (
-            dest_node in self.nodes.values()
-        ), f"Node {dest_node} is not in the behavior graph to be removed."
+        if not (dest_node in self.nodes.values()):
+            raise ValueError(
+                f"Node {dest_node} is not in the behavior graph to be removed."
+            )
 
         start_id = self._get_node_id(start_node)
         dest_id = self._get_node_id(dest_node)
-        assert (rule, dest_id) in self.graph[start_id], (
-            f"Node {start_node} does not transition "
-            f"into Node {dest_node} with Rule {rule}."
-        )
+        if not ((rule, dest_id) in self.graph[start_id]):
+            raise ValueError(
+                f"Node {start_node} does not transition into Node {dest_node} with Rule {rule}."
+            )
 
         # Optionally remove nodes
         if remove_start_node:
@@ -389,9 +400,9 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         See transitions of node in behavior graph.
         """
 
-        assert (
-            node in self.nodes.values()
-        ), f"Node {node} is not in behavior graph."
+        if not (node in self.nodes.values()):
+            raise ValueError(f"Node {node} is not in the behavior graph.")
+
         node_id = self._get_node_id(node)
         node_list = self.graph[node_id]
         node_list = [(rule, self.nodes[p_id]) for (rule, p_id) in node_list]
@@ -410,9 +421,10 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
         input_transitions = []
         for rule, n in node_transitions:
-            assert (
-                n in self.nodes.values()
-            ), f"Node {n} is not a node inside the behavior graph."
+            if not (n in self.nodes.values()):
+                raise ValueError(
+                    f"Node {n} is not a node inside the behavior graph."
+                )
             input_transitions.append((rule, self._get_node_id(n)))
 
         n_id = self._get_node_id(node)
@@ -452,10 +464,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         Adds a floating policy to the Stage adjacency graph.
         """
-        assert not (policy in self.graph.see_nodes()), (
-            f"Policy {policy.rule.__name__} is a duplicate Policy "
-            f"in Stage {self.name}. Stage cannot have duplicate policies"
-        )
+        if policy in self.graph.see_nodes():
+            raise ValueError(
+                f"Policy {policy.rule.__name__} is a duplicate Policy in Stage {self.name}."
+            )
 
         self.graph.add_node(policy)
 
@@ -549,11 +561,12 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             (t.rule, p.rule) for (t, p) in self.see_policy_transitions(policy)
         )
 
-        assert set(policy_transitions_list) == set(current_list), (
-            f"Elements of input node transitions {policy_transitions} does not "
-            f"match the elements under this node: {self.see_policy_transitions(policy)}."
-            " Please call 'see_policy_transitions()' for a precise list of elements."
-        )
+        if len(policy_transitions_list) != len(current_list):
+            raise ValueError(
+                f"Number of input node transitions {policy_transitions} does not \
+                match the number of elements under this node: {self.see_policy_transitions(policy)}.\
+                Please call 'see_policy_transitions()' for a precise list of elements."
+            )
 
         self.graph.set_transition_priority(policy, policy_transitions)
 
@@ -576,7 +589,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     def set_task_parameters(self, task_params: TaskParameters) -> None:
         """
         Set task with new set of task parameters.
-        Task revalidates TaskParameters on assignment.
+        Task re-validates TaskParameters on assignment.
         """
         self.task.task_parameters = task_params
 
@@ -585,20 +598,21 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         Check if stage is non-empty and specifies start policies.
         """
 
-        assert len(self.see_policies()) > 0, (
-            f"Stage {self.name} in Curriculum does not have policies. "
-            "Please add at least one policy to all Curriculum stages "
-            "with Stage.add_policy(...). "
-            "If you would like an empty Stage, you can use "
-            "curriculum_utils.create_empty_stage(...)"
-        )
+        if len(self.see_policies()) == 0:
+            raise ValueError(
+                f"Stage {self.name} in Curriculum is empty. \
+                Please add at least one policy to all Curriculum stages \
+                with Stage.add_policy(...). \
+                If you would like an empty Stage, you can use \
+                curriculum_utils.create_empty_stage(...)"
+            )
 
-        assert len(self.start_policies) > 0, (
-            f"Stage {self.name} in Curriculum does not have start_policies. "
-            "Please define start_polices for all Curriculum stages "
-            "with Stage.set_start_policies(...)"
-            ""
-        )
+        if len(self.start_policies) == 0:
+            raise ValueError(
+                f"Stage {self.name} in Curriculum does not have start_policies. \
+                Please define start_polices for all Curriculum stages \
+                with Stage.set_start_policies(...)"
+            )
 
         # Check round trip serialization
         try:
@@ -699,7 +713,9 @@ class Curriculum(AindBehaviorModel):
         validate_default=True,
         description="Curriculum version.",
     )
-    graph: Annotated[StageGraph, Field(default=StageGraph(), validate_default=True)]
+    graph: Annotated[
+        StageGraph, Field(default=StageGraph(), validate_default=True)
+    ]
 
     def model_post_init(self, __context: Any) -> None:
         """
@@ -712,11 +728,11 @@ class Curriculum(AindBehaviorModel):
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
-        assert not (stage in self.graph.see_nodes()), (
-            f"Stage {stage.name} is a duplicate stage. "
-            "Curriculum cannot have duplicate stages, "
-            "please change stage name or task."
-        )
+
+        if stage in self.graph.see_nodes():
+            raise ValueError(
+                f"Stage {stage.name} is a duplicate stage in Curriculum."
+            )
 
         self.graph.add_node(stage)
 
@@ -804,11 +820,12 @@ class Curriculum(AindBehaviorModel):
             (t.rule, s.name) for (t, s) in self.see_stage_transitions(stage)
         )
 
-        assert set(stage_transitions_list) == set(current_list), (
-            f"Elements of input node transitions {stage_transitions} does not "
-            f"match the elements under this node: {self.see_stage_transitions(stage)}. "
-            "Please call 'see_stage_transitions()' for a precise list of elements."
-        )
+        if len(stage_transitions_list) != len(current_list):
+            raise ValueError(
+                f"Elements of input node transitions {stage_transitions} does not \
+                    match the elements under this node: {self.see_stage_transitions(stage)}. \
+                        Please call 'see_stage_transitions()' for a precise list of elements."
+            )
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
@@ -817,9 +834,8 @@ class Curriculum(AindBehaviorModel):
         Validate curriculum for export/serialization.
         """
 
-        assert (
-            len(self.see_stages()) != 0
-        ), "Curriculum is empty! Please add stages."
+        if len(self.see_stages()) == 0:
+            raise ValueError("Curriculum is empty! Please add stages.")
 
         for s in self.see_stages():
             s.validate_stage()
@@ -957,9 +973,9 @@ class Curriculum(AindBehaviorModel):
 
             return curriculum_dot_script
 
-        assert png_path.endswith(
-            ".png"
-        ), "Please add .png extension to end of png_path."
+        if not png_path.endswith(".png"):
+            raise ValueError("Please add .png extension to end of png_path.")
+
         self.validate_curriculum()
 
         dot_scripts = [make_curriculum_script(self)]
@@ -995,9 +1011,9 @@ class Curriculum(AindBehaviorModel):
         Export curriculum json to export path
         """
 
-        assert json_path.endswith(
-            ".json"
-        ), "Please add .json extension to end of json_path."
+        if not json_path.endswith(".json"):
+            raise ValueError("Please add .json extension to end of json_path.")
+
         self.validate_curriculum()
 
         with open(json_path, "w", encoding="utf-8") as f:
