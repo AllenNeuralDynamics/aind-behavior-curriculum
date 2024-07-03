@@ -14,7 +14,7 @@ class AindBehaviorModel(BaseModel):
             Do not allow a model to be initialized with undocumented parameters.
         - validate_assignment=True:
             Revalidate fields against schema on any change to model instance.
-        - validate_defaults=True:
+        - validate_default=True:
             Validate default fields on subclasses.
         - strict=True:
             Enforce strict typing.
