@@ -45,7 +45,7 @@ class Metrics(AindBehaviorModelExtra):
 
 class Rule:
     """
-    Custom Pydantic Type that defines de/serialiation for Callables.
+    Custom Pydantic Type that defines de/serialization for Callables.
     """
 
     def __eq__(self, __value: object) -> bool:
@@ -125,7 +125,7 @@ class Rule:
             return obj
 
     @staticmethod
-    def _serialize_callable(value: str | Callable) -> Callable:
+    def _serialize_callable(value: str | Callable) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
