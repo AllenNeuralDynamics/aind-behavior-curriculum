@@ -23,7 +23,7 @@ class AindBehaviorModel(BaseModel):
     model_config = ConfigDict(
         extra="forbid",  # Potentially change to 'ignore'
         validate_assignment=True,
-        validate_defaults=True,
+        validate_default=True,
         strict=True,
         str_strip_whitespace=True,
     )
@@ -38,7 +38,7 @@ class AindBehaviorModelExtra(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         validate_assignment=True,
-        validate_defaults=True,
+        validate_default=True,
         strict=True,
         str_strip_whitespace=True,
     )
