@@ -11,7 +11,7 @@ class AindBehaviorModel(BaseModel):
     BaseModel: Validate arguments on initialization.
     Configurations:
         - extra='forbid':
-            Do not allow a model to be initalized with undocumented parameters.
+            Do not allow a model to be initialized with undocumented parameters.
         - validate_assignment=True:
             Revalidate fields against schema on any change to model instance.
         - validate_defaults=True:
