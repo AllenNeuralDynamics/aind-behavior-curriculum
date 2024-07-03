@@ -27,42 +27,12 @@ class TrainerState(AindBehaviorModel):
     Pydantic model for de/serialization.
     """
 
-    current_stage: StageEntry = Field(default=None, validate_default=True)
-    current_policies: PolicyEntry = Field(default=None, validate_default=True)
-
-
-class SubjectHistory(AindBehaviorModel):
-    """
-    Record of subject locations in Curriculum.
-    Histories can hold a 'None' object indicating user
-    override off-curriculum.
-    Pydantic model for de/serialization.
-    """
-
-    history: List[TrainerState] = Field(
-        default=[],
-        validate_default=True,
-        description="Record of previous trainer states.",
-    )
-
-    def add_entry(self, stage: StageEntry, policies: PolicyEntry) -> None:
-        """
-        Add to stage and policy history synchronously.
-        """
-
-        # Sort policies for ease of reading/testing.
-        if not (policies is None):
-            policies = tuple(sorted(policies, key=lambda x: x.rule.__name__))
-
-        self.history.append(
-            TrainerState(current_stage=stage, current_policies=policies)
-        )
-
-    def peek_last_entry(self) -> TrainerState:
-        """
-        Return most-recently added entry.
-        """
-        return self.history[-1]
+    stage: StageEntry = Field(..., validate_default=True, description="The output suggestion of the curriculum")
+    is_on_curriculum: bool = Field(default=True, validate_default=True, description="Was the output suggestion generated as part of the curriculum?")
+    # Note: This will deserialize to a base Stage object.
+    # Should users require the subclass, they will need to either serialize it themselves,
+    # or we should make CurriculumState a generic model on Union[SubStage1, SubStage2, ...]
+    active_policies: PolicyEntry = Field(default=None, validate_default=True, description="The active policies for the current stage")
 
 
 class Trainer:
@@ -168,11 +138,16 @@ class Trainer:
             stage = stage.model_copy(deep=True)
             stage.set_task_parameters(updated_stage_parameters)
 
-        self.write_data(
-            s_id,
-            curriculum,
-            TrainerState(current_stage=stage, current_policies=stage_policies),
-        )
+        if stage is None:
+            trainer_state = TrainerState(stage=None,
+                                         is_on_curriculum=False,
+                                         active_policies=None)
+        else:
+            trainer_state = TrainerState(stage=stage,
+                                         is_on_curriculum=True,
+                                         active_policies=stage_policies)
+
+        self.write_data(s_id, curriculum, trainer_state)
 
     def register_subject(
         self,
@@ -256,8 +231,8 @@ class Trainer:
 
         for s_id in self.subject_ids:
             curriculum, trainer_state, curr_metrics = self.load_data(s_id)
-            current_stage = trainer_state.current_stage
-            current_policies = trainer_state.current_policies
+            current_stage = trainer_state.stage
+            current_policies = trainer_state.active_policies
 
             # 0) Subject Ejected
             if current_stage is None or current_policies is None:
@@ -348,7 +323,7 @@ class Trainer:
         if not (s_id in self.subject_ids):
             raise ValueError(f"subject id {s_id} not in self.subject_ids.")
 
-        curriculum, trainer_state, curr_metrics = self.load_data(s_id)
+        curriculum, _, curr_metrics = self.load_data(s_id)
 
         if not (override_stage in curriculum.see_stages()):
             raise ValueError(
@@ -386,7 +361,7 @@ class Trainer:
         with Trainer.override_subject_status(...)
         """
 
-        curriculum, trainer_state, curr_metrics = self.load_data(s_id)
+        curriculum, _, _ = self.load_data(s_id)
 
         self._update_subject_trainer_state(
             s_id,
