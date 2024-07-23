@@ -695,7 +695,7 @@ class Curriculum(AindBehaviorModel):
 
     pkg_location: str = Field(
         default="",
-        frozen=True,
+        frozen=False,  # This one has to stay non-frozen to avoid pydantic errors
         description="Location of the python package \
                                 that instantiated the Curriculum.",
     )

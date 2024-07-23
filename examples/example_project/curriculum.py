@@ -154,7 +154,7 @@ Tasks = get_task_types()
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
     # graph: StageGraph[Union[TaskA, TaskB, Graduated]] = Field(default=StageGraph())
-    graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
+    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())  # type: ignore
 
 
 def construct_curriculum() -> MyCurriculum:
