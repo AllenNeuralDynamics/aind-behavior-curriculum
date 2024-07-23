@@ -688,6 +688,17 @@ class TrainerTests(unittest.TestCase):
         # Reset database
         tr.clear_database()
 
+    def test_round_trip_trainer_state(self):
+        curr = ex.construct_curriculum()
+        stageA = curr.see_stages()[0]
+        ts = TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,))
+
+        # Serialize from Child
+        instance_json = ts.model_dump_json()
+        # Deserialize from Child
+        recovered = TrainerState.model_validate_json(instance_json)
+        self.assertTrue(ts == recovered)
+
 
 if __name__ == "__main__":
     unittest.main()
