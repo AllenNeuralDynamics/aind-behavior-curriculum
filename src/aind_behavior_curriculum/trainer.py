@@ -3,8 +3,9 @@ Core Trainer primitive.
 """
 
 from abc import abstractmethod
+from collections import defaultdict
 from collections.abc import Iterable
-from typing import List, Optional, Tuple, TypeAlias
+from typing import List, Optional, Tuple, TypeAlias, Dict, Callable
 
 from pydantic import Field
 
@@ -34,6 +35,26 @@ class TrainerState(AindBehaviorModel):
     # or we should make CurriculumState a generic model on Union[SubStage1, SubStage2, ...]
     active_policies: PolicyEntry = Field(default=None, validate_default=True, description="The active policies for the current stage")
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, TrainerState):
+            return NotImplemented
+
+        # Compare 'stage' and 'is_on_curriculum' attributes
+        if self.stage != other.stage or self.is_on_curriculum != other.is_on_curriculum:
+            return False
+
+        # Compare active_policies using set equality
+        if self.active_policies is None and other.active_policies is None:
+            return True
+        if self.active_policies is None or other.active_policies is None:
+            return False
+
+        # Extract Rule callable which is hashable for set equality
+        self_rules = [p.rule for p in self.active_policies]
+        other_rules = [p.rule for p in other.active_policies]
+
+        return set(self_rules) == set(other_rules)
+
 
 class Trainer:
     """
@@ -52,6 +73,35 @@ class Trainer:
         NOTE: Within Trainer subclass, please call super().__init__()
         """
         self.subject_ids = []
+
+        # Optional Logging triggered by log_subject_history decorator
+        self.subject_curriculum: Dict[int, Curriculum] = {}
+        self.subject_history: Dict[int, TrainerState] = defaultdict(list)
+
+    @staticmethod
+    def log_subject_history(func) -> Callable:
+        """
+        Optional decorator for write_data(...)
+        that logs the history
+        """
+
+        # This is what write_data is 'replaced' with
+        def wrapper(self, *args, **kwargs):
+            """
+            Input arguments to write_data(...) are:
+            subject_id: int,
+            curriculum: Curriculum,
+            trainer_state: TrainerState
+            """
+            s_id = args[0]
+            s_curr = args[1]
+            s_ts = args[2]
+            self.subject_curriculum[s_id] = s_curr
+            self.subject_history[s_id].append(s_ts)
+
+            func(self, *args, **kwargs)
+
+        return wrapper
 
     @abstractmethod
     def load_data(

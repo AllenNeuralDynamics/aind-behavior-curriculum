@@ -11,7 +11,7 @@ from aind_behavior_curriculum import (
     GRADUATED,
     INIT_STAGE,
     Stage,
-    SubjectHistory,
+    TrainerState,
     create_empty_stage,
 )
 
@@ -56,39 +56,30 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         # Validate mouse histories
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageA, stageB, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
 
-        M1 = SubjectHistory(
-            stage_history=[stageA, stageB, stageB, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M1 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
 
-        M2 = SubjectHistory(
-            stage_history=[stageA, GRADUATED, GRADUATED, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M2 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[2] == M2)
+        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertTrue(tr.subject_history[1] == M1)
+        self.assertTrue(tr.subject_history[2] == M2)
 
         # Reset database
         tr.clear_database()
@@ -146,39 +137,30 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         # Validate mouse histories
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageA, stageAA, stageAAA],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (ex.stageA_policyA,),
-                (ex.stageA_policyB,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
+            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyB,)),
+        ]
 
-        M1 = SubjectHistory(
-            stage_history=[stageA, stageAA, stageAA, stageAAA],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageA_policyA,),
-                (ex.stageA_policyA,),
-                (ex.stageA_policyB,),
-            ],
-        )
+        M1 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
+            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+        ]
 
-        M2 = SubjectHistory(
-            stage_history=[stageA, stageAAA, stageAAA, stageAAA],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageA_policyB,),
-                (ex.stageA_policyB,),
-                (ex.stageA_policyB,),
-            ],
-        )
+        M2 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[2] == M2)
+        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertTrue(tr.subject_history[1] == M1)
+        self.assertTrue(tr.subject_history[2] == M2)
 
         # Reset database
         tr.clear_database()
@@ -240,42 +222,33 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         # Validate mouse histories
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageAA, stageB, stageBB, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageA_policyA,),
-                (INIT_STAGE,),
-                (ex.stageB_policyA,),
-                (INIT_STAGE,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
 
-        M1 = SubjectHistory(
-            stage_history=[stageA, stageAAA, stageB, stageBBB, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageA_policyB,),
-                (INIT_STAGE,),
-                (ex.stageB_policyB,),
-                (INIT_STAGE,),
-            ],
-        )
+        M1 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageBBB, active_policies=(ex.stageB_policyB,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
 
-        M2 = SubjectHistory(
-            stage_history=[stageA, stageAAA, GRADUATED, GRADUATED, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageA_policyB,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M2 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[2] == M2)
+        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertTrue(tr.subject_history[1] == M1)
+        self.assertTrue(tr.subject_history[2] == M2)
 
         # Reset database
         tr.clear_database()
@@ -325,16 +298,14 @@ class TrainerTests(unittest.TestCase):
         )
 
         # Validate mouse history
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageBB, stageAAA, GRADUATED],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageB_policyA,),
-                (ex.stageA_policyB,),
-                (INIT_STAGE,),
-            ],
-        )
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        M0 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
+            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+        ]
+
+        self.assertTrue(tr.subject_history[0] == M0)
 
         # Reset database
         tr.clear_database()
@@ -381,28 +352,22 @@ class TrainerTests(unittest.TestCase):
         )
 
         # Validate mouse history
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageA, stageB, stageA],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+        ]
 
-        M1 = SubjectHistory(
-            stage_history=[stageB, stageB, stageA, stageB],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M1 = [
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
+        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertTrue(tr.subject_history[1] == M1)
 
         # Reset database
         tr.clear_database()
@@ -460,28 +425,22 @@ class TrainerTests(unittest.TestCase):
         )
 
         # Validate mouse history
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageA, stageA, stageA],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (ex.stageA_policyA,),
-                (ex.stageA_policyB,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,)),
+            TrainerState(stage=stageA, active_policies=(ex.stageA_policyB,)),
+        ]
 
-        M1 = SubjectHistory(
-            stage_history=[stageA, stageA, stageA, stageA],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (ex.stageA_policyB,),
-                (ex.stageA_policyA,),
-            ],
-        )
+        M1 = [
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=(ex.stageA_policyB,)),
+            TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[1] == M1)
+        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertTrue(tr.subject_history[1] == M1)
 
         # Reset database
         tr.clear_database()
@@ -519,16 +478,13 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
-        M0 = SubjectHistory(
-            stage_history=[stage_init, stage_1, stage_2],
-            policy_history=[
-                (ex2.policy_1, ex2.policy_4),
-                (ex2.policy_2, ex2.policy_5),
-                (ex2.policy_3, ex2.policy_6),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stage_init, active_policies=(ex2.policy_1, ex2.policy_4,)),
+            TrainerState(stage=stage_1, active_policies=(ex2.policy_2, ex2.policy_5,)),
+            TrainerState(stage=stage_2, active_policies=(ex2.policy_3, ex2.policy_6,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(tr.subject_history[0] == M0)
 
         # Reset database
         tr.clear_database()
@@ -570,17 +526,14 @@ class TrainerTests(unittest.TestCase):
         ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=10, m2=10)
         tr.evaluate_subjects()
 
-        M0 = SubjectHistory(
-            stage_history=[stage_init, stage_1, stage_1, stage_2],
-            policy_history=[
-                (ex2.policy_1, ex2.policy_2, ex2.policy_3),
-                (ex2.policy_4, ex2.policy_5),
-                (ex2.policy_4, ex2.policy_5),
-                (ex2.policy_6,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stage_init, active_policies=(ex2.policy_1, ex2.policy_2, ex2.policy_3,)),
+            TrainerState(stage=stage_1, active_policies=(ex2.policy_4, ex2.policy_5,)),
+            TrainerState(stage=stage_1, active_policies=(ex2.policy_4, ex2.policy_5,)),
+            TrainerState(stage=stage_2, active_policies=(ex2.policy_6,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(tr.subject_history[0] == M0)
 
         # Reset database
         tr.clear_database()
@@ -629,30 +582,18 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
-        M0 = SubjectHistory(
-            stage_history=[
-                stage_init,
-                stage_1,
-                stage_2,
-                stage_3,
-                stage_3,
-                stage_4,
-                stage_5,
-                stage_6,
-            ],
-            policy_history=[
-                (ex2.policy_1,),
-                (ex2.policy_2,),
-                (ex2.policy_3,),
-                (ex2.policy_1,),  # Return to start
-                (ex2.policy_1,),
-                (ex2.policy_3,),
-                (ex2.policy_2,),
-                (ex2.policy_1,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stage_init, active_policies=(ex2.policy_1,)),
+            TrainerState(stage=stage_1, active_policies=(ex2.policy_2,)),
+            TrainerState(stage=stage_2, active_policies=(ex2.policy_3,)),
+            TrainerState(stage=stage_3, active_policies=(ex2.policy_1,)),  # Return to start
+            TrainerState(stage=stage_3, active_policies=(ex2.policy_1,)),
+            TrainerState(stage=stage_4, active_policies=(ex2.policy_3,)),
+            TrainerState(stage=stage_5, active_policies=(ex2.policy_2,)),
+            TrainerState(stage=stage_6, active_policies=(ex2.policy_1,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(tr.subject_history[0] == M0)
 
         # Reset database
         tr.clear_database()
@@ -681,30 +622,18 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
-        M0 = SubjectHistory(
-            stage_history=[
-                stage_1,
-                stage_2,
-                stage_3,
-                stage_1,
-                stage_1,
-                stage_3,
-                stage_2,
-                stage_1,
-            ],
-            policy_history=[
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),  # Return to start
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-                (INIT_STAGE,),
-            ],
-        )
+        M0 = [
+            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_2, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_3, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),  # Return to start
+            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_3, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_2, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),
+        ]
 
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        self.assertTrue(tr.subject_history[0] == M0)
 
         # Reset database
         tr.clear_database()
@@ -738,17 +667,23 @@ class TrainerTests(unittest.TestCase):
         )
 
         # Validate mouse history
-        M0 = SubjectHistory(
-            stage_history=[stageA, stageAA, None, None, stageB],
-            policy_history=[
-                (INIT_STAGE,),
-                (ex.stageA_policyA,),
-                None,
-                None,
-                (INIT_STAGE,),
-            ],
-        )
-        self.assertTrue(ex.MICE_SUBJECT_HISTORY[0] == M0)
+        M0 = [
+            TrainerState(stage=stageA,
+                         is_on_curriculum=True,
+                         active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageAA,
+                         is_on_curriculum=True,
+                         active_policies=(ex.stageA_policyA,)),
+            TrainerState(stage=None,
+                         is_on_curriculum=False,
+                         active_policies=None),
+            TrainerState(stage=None,
+                         is_on_curriculum=False,
+                         active_policies=None),
+            TrainerState(stage=stageB,
+                         active_policies=(INIT_STAGE,)),
+        ]
+        self.assertTrue(tr.subject_history[0] == M0)
 
         # Reset database
         tr.clear_database()
