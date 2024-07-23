@@ -7,3 +7,8 @@ exclude =
     src/aind_behavior_curriculum/__init__.py
 max-complexity = 10
 max-line-length = 90
+
+per-file-ignores =
+    # Line to long
+    src/aind_behavior_curriculum/curriculum.py: E501
+    src/aind_behavior_curriculum/trainer.py: E501

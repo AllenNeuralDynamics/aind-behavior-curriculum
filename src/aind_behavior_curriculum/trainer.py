@@ -5,7 +5,7 @@ Core Trainer primitive.
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import List, Optional, Tuple, TypeAlias, Dict, Callable
+from typing import Callable, Dict, List, Optional, Tuple, TypeAlias
 
 from pydantic import Field
 
@@ -28,19 +28,37 @@ class TrainerState(AindBehaviorModel):
     Pydantic model for de/serialization.
     """
 
-    stage: StageEntry = Field(..., validate_default=True, description="The output suggestion of the curriculum")
-    is_on_curriculum: bool = Field(default=True, validate_default=True, description="Was the output suggestion generated as part of the curriculum?")
+    stage: StageEntry = Field(
+        ...,
+        validate_default=True,
+        description="The output suggestion of the curriculum",
+    )
+    is_on_curriculum: bool = Field(
+        default=True,
+        validate_default=True,
+        description="Was the output suggestion generated as part of the curriculum?",
+    )
     # Note: This will deserialize to a base Stage object.
     # Should users require the subclass, they will need to either serialize it themselves,
     # or we should make CurriculumState a generic model on Union[SubStage1, SubStage2, ...]
-    active_policies: PolicyEntry = Field(default=None, validate_default=True, description="The active policies for the current stage")
+    active_policies: PolicyEntry = Field(
+        default=None,
+        validate_default=True,
+        description="The active policies for the current stage",
+    )
 
     def __eq__(self, other: object) -> bool:
+        """
+        TrainerState Equality
+        """
         if not isinstance(other, TrainerState):
             return NotImplemented
 
         # Compare 'stage' and 'is_on_curriculum' attributes
-        if self.stage != other.stage or self.is_on_curriculum != other.is_on_curriculum:
+        if (
+            self.stage != other.stage
+            or self.is_on_curriculum != other.is_on_curriculum
+        ):
             return False
 
         # Compare active_policies using set equality
@@ -189,13 +207,15 @@ class Trainer:
             stage.set_task_parameters(updated_stage_parameters)
 
         if stage is None:
-            trainer_state = TrainerState(stage=None,
-                                         is_on_curriculum=False,
-                                         active_policies=None)
+            trainer_state = TrainerState(
+                stage=None, is_on_curriculum=False, active_policies=None
+            )
         else:
-            trainer_state = TrainerState(stage=stage,
-                                         is_on_curriculum=True,
-                                         active_policies=stage_policies)
+            trainer_state = TrainerState(
+                stage=stage,
+                is_on_curriculum=True,
+                active_policies=stage_policies,
+            )
 
         self.write_data(s_id, curriculum, trainer_state)
 

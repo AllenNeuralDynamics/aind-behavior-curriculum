@@ -6,12 +6,7 @@ from collections import defaultdict
 
 import example_project as ex
 
-from aind_behavior_curriculum import (
-    Curriculum,
-    Metrics,
-    Trainer,
-    TrainerState,
-)
+from aind_behavior_curriculum import Curriculum, Metrics, Trainer, TrainerState
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation
@@ -57,7 +52,6 @@ class ExampleTrainer(Trainer):
         """
         MICE_CURRICULUMS[subject_id] = curriculum
         MICE_SUBJECT_HISTORY[subject_id].append(trainer_state)
-
 
     def clear_database(self) -> None:
         """
