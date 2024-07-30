@@ -3,6 +3,7 @@ Example of Trainer creation
 """
 
 from collections import defaultdict
+from typing import Callable, Dict
 
 import example_project as ex
 
@@ -12,7 +13,7 @@ from aind_behavior_curriculum import Curriculum, Metrics, Trainer, TrainerState
 # NOTE: Trainer's concerte implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
-MICE_SUBJECT_HISTORY: dict[int, TrainerState] = defaultdict(list)
+MICE_SUBJECT_HISTORY: dict[int, list[TrainerState]] = defaultdict(list)
 MICE_METRICS: dict[int, Metrics] = {
     0: ex.ExampleMetrics(),
     1: ex.ExampleMetrics(),
@@ -28,6 +29,8 @@ class ExampleTrainer(Trainer):
         """
         super().__init__()
 
+        self.subject_history: Dict[int, TrainerState] = defaultdict(list)
+
     def load_data(
         self, subject_id: int
     ) -> tuple[Curriculum, TrainerState, Metrics]:
@@ -40,7 +43,6 @@ class ExampleTrainer(Trainer):
             MICE_METRICS[subject_id],
         )
 
-    @Trainer.log_subject_history
     def write_data(
         self,
         subject_id: int,
@@ -53,14 +55,4 @@ class ExampleTrainer(Trainer):
         MICE_CURRICULUMS[subject_id] = curriculum
         MICE_SUBJECT_HISTORY[subject_id].append(trainer_state)
 
-    def clear_database(self) -> None:
-        """
-        Testing utility, clears the database for the next unit test.
-        """
-        MICE_CURRICULUMS: dict[int, Curriculum] = {}
-        MICE_SUBJECT_HISTORY: dict[int, TrainerState] = defaultdict(list)
-        MICE_METRICS: dict[int, Metrics] = {
-            0: ex.ExampleMetrics(),
-            1: ex.ExampleMetrics(),
-            2: ex.ExampleMetrics(),
-        }
+        self.subject_history[subject_id].append(trainer_state)

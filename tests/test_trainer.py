@@ -81,9 +81,6 @@ class TrainerTests(unittest.TestCase):
         self.assertTrue(tr.subject_history[1] == M1)
         self.assertTrue(tr.subject_history[2] == M2)
 
-        # Reset database
-        tr.clear_database()
-
     def test_pure_policy_evaluation(self):
         """
         Tests if multiple trajectories through policies
@@ -161,9 +158,6 @@ class TrainerTests(unittest.TestCase):
         self.assertTrue(tr.subject_history[0] == M0)
         self.assertTrue(tr.subject_history[1] == M1)
         self.assertTrue(tr.subject_history[2] == M2)
-
-        # Reset database
-        tr.clear_database()
 
     def test_stage_policy_evaluation(self):
         """
@@ -250,9 +244,6 @@ class TrainerTests(unittest.TestCase):
         self.assertTrue(tr.subject_history[1] == M1)
         self.assertTrue(tr.subject_history[2] == M2)
 
-        # Reset database
-        tr.clear_database()
-
     def test_status_override(self):
         """
         Test if status override
@@ -306,9 +297,6 @@ class TrainerTests(unittest.TestCase):
         ]
 
         self.assertTrue(tr.subject_history[0] == M0)
-
-        # Reset database
-        tr.clear_database()
 
     def test_floating_stages(self):
         """
@@ -368,9 +356,6 @@ class TrainerTests(unittest.TestCase):
 
         self.assertTrue(tr.subject_history[0] == M0)
         self.assertTrue(tr.subject_history[1] == M1)
-
-        # Reset database
-        tr.clear_database()
 
     def test_floating_policies(self):
         """
@@ -442,9 +427,6 @@ class TrainerTests(unittest.TestCase):
         self.assertTrue(tr.subject_history[0] == M0)
         self.assertTrue(tr.subject_history[1] == M1)
 
-        # Reset database
-        tr.clear_database()
-
     def test_policy_tracks(self):
         """
         Tests multiple active policies along 2 policy tracks.
@@ -470,11 +452,11 @@ class TrainerTests(unittest.TestCase):
         )
 
         # Associate mice with curriculum
-        tr = ex.ExampleTrainer()
+        tr = ex2.ExampleTrainer()
         tr.register_subject(0, curr, track_stage, track_stage.start_policies)
 
         # Constant mouse metrics
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=10, m2=10)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=10, m2=10)
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
@@ -504,9 +486,6 @@ class TrainerTests(unittest.TestCase):
 
         self.assertTrue(tr.subject_history[0] == M0)
 
-        # Reset database
-        tr.clear_database()
-
     def test_policy_tree(self):
         """
         Tests multiple active policies along policy graph
@@ -534,14 +513,14 @@ class TrainerTests(unittest.TestCase):
         )
 
         # Associate mice with curriculum
-        tr = ex.ExampleTrainer()
+        tr = ex2.ExampleTrainer()
         tr.register_subject(0, curr, tree_stage, tree_stage.start_policies)
 
         # Constant mouse metrics
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=10, m2=0)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=10, m2=0)
         tr.evaluate_subjects()
         tr.evaluate_subjects()
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=10, m2=10)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=10, m2=10)
         tr.evaluate_subjects()
 
         M0 = [
@@ -572,9 +551,6 @@ class TrainerTests(unittest.TestCase):
 
         self.assertTrue(tr.subject_history[0] == M0)
 
-        # Reset database
-        tr.clear_database()
-
     def test_policy_complete_graph(self):
         """
         Tests policy traversal through a complete graph of 3 policies.
@@ -602,19 +578,19 @@ class TrainerTests(unittest.TestCase):
         stage_6.set_task_parameters(ex2.DummyParameters(field_1=35))
 
         # Associate mice with curriculum
-        tr = ex.ExampleTrainer()
+        tr = ex2.ExampleTrainer()
         tr.register_subject(
             0, curr, triangle_stage, triangle_stage.start_policies
         )
 
         # Constant mouse metrics
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=10, m2=0)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=10, m2=0)
         tr.evaluate_subjects()
         tr.evaluate_subjects()
         tr.evaluate_subjects()
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=0, m2=0)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=0, m2=0)
         tr.evaluate_subjects()
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=0, m2=10)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=0, m2=10)
         tr.evaluate_subjects()
         tr.evaluate_subjects()
         tr.evaluate_subjects()
@@ -633,9 +609,6 @@ class TrainerTests(unittest.TestCase):
 
         self.assertTrue(tr.subject_history[0] == M0)
 
-        # Reset database
-        tr.clear_database()
-
     def test_stage_complete_graph(self):
         """
         Tests stage traversal through a complete graph of 3 stages.
@@ -645,17 +618,17 @@ class TrainerTests(unittest.TestCase):
         curr = ex2.construct_stage_triangle_curriculum()
 
         stage_1, stage_2, stage_3 = curr.see_stages()
-        tr = ex.ExampleTrainer()
+        tr = ex2.ExampleTrainer()
         tr.register_subject(0, curr, stage_1, stage_1.start_policies)
 
         # Constant mouse metrics
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=10, m2=0)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=10, m2=0)
         tr.evaluate_subjects()
         tr.evaluate_subjects()
         tr.evaluate_subjects()
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=0, m2=0)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=0, m2=0)
         tr.evaluate_subjects()
-        ex.MICE_METRICS[0] = ex.ExampleMetrics(m1=0, m2=10)
+        ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=0, m2=10)
         tr.evaluate_subjects()
         tr.evaluate_subjects()
         tr.evaluate_subjects()
@@ -674,9 +647,6 @@ class TrainerTests(unittest.TestCase):
         ]
 
         self.assertTrue(tr.subject_history[0] == M0)
-
-        # Reset database
-        tr.clear_database()
 
     def test_eject_subject(self):
         """
@@ -727,9 +697,6 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
         ]
         self.assertTrue(tr.subject_history[0] == M0)
-
-        # Reset database
-        tr.clear_database()
 
     def test_round_trip_trainer_state(self):
         curr = ex.construct_curriculum()
