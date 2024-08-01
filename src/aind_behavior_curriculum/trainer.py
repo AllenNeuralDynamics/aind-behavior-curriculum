@@ -17,40 +17,60 @@ from aind_behavior_curriculum.curriculum import (
 )
 from aind_behavior_curriculum.task import TaskParameters
 
-Stage_Entry: TypeAlias = Stage | None
-Policy_Entry: TypeAlias = Tuple[Policy, ...] | None
+StageEntry: TypeAlias = Optional[Stage]
+PolicyEntry: TypeAlias = Optional[Tuple[Policy, ...]]
 
 
-class SubjectHistory(AindBehaviorModel):
+class TrainerState(AindBehaviorModel):
     """
-    Record of subject locations in Curriculum.
-    Histories can hold a 'None' object indicating user
-    override off-curriculum.
+    Trainer State.
     Pydantic model for de/serialization.
     """
 
-    stage_history: list[Stage_Entry] = Field(default=[], validate_default=True)
-    policy_history: list[Policy_Entry] = Field(
-        default=[], validate_default=True
+    stage: StageEntry = Field(
+        ...,
+        validate_default=True,
+        description="The output suggestion of the curriculum",
+    )
+    is_on_curriculum: bool = Field(
+        default=True,
+        validate_default=True,
+        description="Was the output suggestion generated as part of the curriculum?",
+    )
+    # Note: This will deserialize to a base Stage object.
+    # Should users require the subclass, they will need to either serialize it themselves,
+    # or we should make CurriculumState a generic model on Union[SubStage1, SubStage2, ...]
+    active_policies: PolicyEntry = Field(
+        default=None,
+        validate_default=True,
+        description="The active policies for the current stage",
     )
 
-    def add_entry(self, stage: Stage_Entry, policies: Policy_Entry) -> None:
+    def __eq__(self, other: object) -> bool:
         """
-        Add to stage and policy history synchronously.
+        TrainerState Equality
         """
-        self.stage_history.append(stage)
+        if not isinstance(other, TrainerState):
+            return NotImplemented
 
-        # Sort policies for ease of reading/testing.
-        if not (policies is None):
-            policies = tuple(sorted(policies, key=lambda x: x.rule.__name__))
+        # Compare 'stage' and 'is_on_curriculum' attributes
+        if (
+            self.stage != other.stage
+            or self.is_on_curriculum != other.is_on_curriculum
+        ):
+            return False
 
-        self.policy_history.append(policies)
+        # Compare active_policies using set equality
+        if self.active_policies is None and other.active_policies is None:
+            return True
+        if self.active_policies is None or other.active_policies is None:
+            return False
 
-    def peek_last_entry(self) -> tuple[Stage_Entry, Policy_Entry]:
-        """
-        Return most-recently added entry.
-        """
-        return (self.stage_history[-1], self.policy_history[-1])
+        # Extract Rule callable which is hashable for set equality
+        self_rules = [p.rule for p in self.active_policies]
+        other_rules = [p.rule for p in other.active_policies]
+
+        return set(self_rules) == set(other_rules)
 
 
 class Trainer:
@@ -74,12 +94,12 @@ class Trainer:
     @abstractmethod
     def load_data(
         self, subject_id: int
-    ) -> tuple[Curriculum, SubjectHistory, Metrics]:
+    ) -> tuple[Curriculum, TrainerState, Metrics]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
         - subject Curriculum
-        - subject History
+        - subject Trainer State
         - subject Metrics
         """
         raise NotImplementedError
@@ -89,14 +109,14 @@ class Trainer:
         self,
         subject_id: int,
         curriculum: Curriculum,
-        history: SubjectHistory,
+        trainer_state: TrainerState,
     ) -> None:
         """
         User-defined.
         Exports 3 pieces of data to database.
         - subject Id
         - subject Curriculum
-        - subject History
+        - subject Trainer State
 
         For Curriculums with no internal policies, insert tacit INIT_STAGE
         """
@@ -132,38 +152,49 @@ class Trainer:
 
         return output
 
-    def _update_subject_history(
+    def _update_subject_trainer_state(
         self,
         s_id: int,
         curriculum: Curriculum,
-        subject_history: SubjectHistory,
-        stage: Stage_Entry,
-        stage_parameters: TaskParameters | None,
-        stage_policies: Policy_Entry,
+        stage: StageEntry,
+        updated_stage_parameters: Optional[TaskParameters],
+        stage_policies: PolicyEntry,
     ) -> None:
         """
         Updates subject history, which involves many steps.
         Stage parameters and policies are expected to be part
         of stage-- not checked here b/c this is a private utility.
 
-        If any of {stage, stage_parameters, stage_policies} are None,
+        If any of {stage, updated_stage_parameters, stage_policies} are None,
         all of the elements are expected to be None.
         """
         if not (
-            stage is None or stage_parameters is None or stage_policies is None
+            stage is None
+            or updated_stage_parameters is None
+            or stage_policies is None
         ):
             stage = stage.model_copy(deep=True)
-            stage.set_task_parameters(stage_parameters)
+            stage.set_task_parameters(updated_stage_parameters)
 
-        subject_history.add_entry(stage, stage_policies)
-        self.write_data(s_id, curriculum, subject_history)
+        if stage is None:
+            trainer_state = TrainerState(
+                stage=None, is_on_curriculum=False, active_policies=None
+            )
+        else:
+            trainer_state = TrainerState(
+                stage=stage,
+                is_on_curriculum=True,
+                active_policies=stage_policies,
+            )
+
+        self.write_data(s_id, curriculum, trainer_state)
 
     def register_subject(
         self,
         subject_id: int,
         curriculum: Curriculum,
         start_stage: Stage,
-        start_policies: Optional[Policy | list[Policy]] = None,
+        start_policies: Optional[Policy | List[Policy]] = None,
     ) -> None:
         """
         Adds subject into the Trainer system.
@@ -173,37 +204,38 @@ class Trainer:
 
         curriculum = curriculum.validate_curriculum()
 
-        assert (
-            start_stage in curriculum.see_stages()
-        ), "Provided start_stage is not in provided curriculum."
-
-        assert (
-            subject_id not in self.subject_ids
-        ), f"Subject_id {subject_id} is already registered."
+        if not (start_stage in curriculum.see_stages()):
+            raise ValueError(
+                "Provided start_stage is not in provided curriculum."
+            )
+        if subject_id in self.subject_ids:
+            raise ValueError(f"Subject_id {subject_id} is already registered.")
 
         if start_policies is None:
             start_policies = start_stage.see_policies()
         elif isinstance(start_policies, Policy):
             start_policies = [start_policies]
+
         for s_policy in start_policies:
-            assert s_policy in start_stage.see_policies(), (
-                f"Provided start_policy {s_policy} not in "
-                f"provided start_stage {start_stage.name}."
-            )
-        start_policies = tuple(start_policies)
+            if not (s_policy in start_stage.see_policies()):
+                raise ValueError(
+                    f"Provided start_policy {s_policy} not in "
+                    f"provided start_stage {start_stage.name}."
+                )
+
+        _start_policies = tuple(start_policies)
 
         initial_params = self._get_net_parameter_update(
             start_stage.get_task_parameters(),
-            start_policies,
-            curr_metrics=Metrics(),  # Metrics is empty on regsitration.
+            _start_policies,
+            curr_metrics=Metrics(),  # Metrics is empty on registration.
         )
-        self._update_subject_history(
+        self._update_subject_trainer_state(
             subject_id,
             curriculum,
-            SubjectHistory(),  # Brand New History.
             start_stage,
             initial_params,
-            start_policies,
+            _start_policies,
         )
 
         # Add to trainer's local list!
@@ -213,7 +245,7 @@ class Trainer:
         """
         Calls user-defined functions to automatically update
         subject stage along curriculum.
-        The timestep between evaluate_subject calls is flexible--
+        The time-step between evaluate_subject calls is flexible--
         this function will skip subject to the latest stage/policy
         they are applicable for.
 
@@ -238,16 +270,14 @@ class Trainer:
         #   current stage + policy
 
         for s_id in self.subject_ids:
-            a, b, c = self.load_data(s_id)
-            curriculum: Curriculum = a
-            subject_history: SubjectHistory = b
-            curr_metrics: Metrics = c
-            current_stage, current_policies = subject_history.peek_last_entry()
+            curriculum, trainer_state, curr_metrics = self.load_data(s_id)
+            current_stage = trainer_state.stage
+            current_policies = trainer_state.active_policies
 
             # 0) Subject Ejected
             if current_stage is None or current_policies is None:
-                self._update_subject_history(
-                    s_id, curriculum, subject_history, None, None, None
+                self._update_subject_trainer_state(
+                    s_id, curriculum, None, None, None
                 )
                 break  # Head to next subject
 
@@ -255,8 +285,7 @@ class Trainer:
             advance_stage = False
             stage_transitions = curriculum.see_stage_transitions(current_stage)
             for stage_eval, dest_stage in stage_transitions:
-                # On first true evaluation, update SubjectHistory
-                # and publish back to database.
+                # On first true evaluation push to database.
                 if stage_eval.rule(curr_metrics):
                     # Publish updated stage and start polices
                     updated_params = self._get_net_parameter_update(
@@ -264,10 +293,9 @@ class Trainer:
                         dest_stage.start_policies,
                         curr_metrics,
                     )
-                    self._update_subject_history(
+                    self._update_subject_trainer_state(
                         s_id,
                         curriculum,
-                        subject_history,
                         dest_stage,
                         updated_params,
                         tuple(dest_stage.start_policies),
@@ -301,10 +329,9 @@ class Trainer:
                     )
 
                     dest_policies = self._get_unique_policies(dest_policies)
-                    self._update_subject_history(
+                    self._update_subject_trainer_state(
                         s_id,
                         curriculum,
-                        subject_history,
                         current_stage,
                         updated_params,
                         tuple(dest_policies),
@@ -312,10 +339,9 @@ class Trainer:
 
             # 3) No Transition
             if not (advance_stage or advance_policy):
-                self._update_subject_history(
+                self._update_subject_trainer_state(
                     s_id,
                     curriculum,
-                    subject_history,
                     current_stage,
                     current_stage.get_task_parameters(),
                     current_policies,
@@ -334,27 +360,25 @@ class Trainer:
 
         (Soft Rejection-- send mouse to Stage/Policy w/in Curriculum)
         """
-        assert (
-            s_id in self.subject_ids
-        ), f"subject id {s_id} not in self.subject_ids."
+        if not (s_id in self.subject_ids):
+            raise ValueError(f"subject id {s_id} not in self.subject_ids.")
 
-        a, b, c = self.load_data(s_id)
-        curriculum: Curriculum = a
-        subject_history: SubjectHistory = b
-        curr_metrics: Metrics = c
+        curriculum, _, curr_metrics = self.load_data(s_id)
 
-        assert override_stage in curriculum.see_stages(), (
-            f"override stage {override_stage.name} not in "
-            f"curriculum stages for subject id {s_id}."
-        )
+        if not (override_stage in curriculum.see_stages()):
+            raise ValueError(
+                f"Override stage {override_stage.name} not in curriculum.\
+                curriculum stages for subject id {s_id}."
+            )
 
         if isinstance(override_policies, Policy):
             override_policies = [override_policies]
         for o_policy in override_policies:
-            assert o_policy in override_stage.see_policies(), (
-                f"override policy {o_policy} not in "
-                f"given override stage {override_stage.name}."
-            )
+            if not (o_policy in override_stage.see_policies()):
+                raise ValueError(
+                    f"Override policy {o_policy} not in \
+                    given override stage {override_stage.name}."
+                )
 
         # Update Stage parameters according to override policies
         updated_params = self._get_net_parameter_update(
@@ -362,10 +386,9 @@ class Trainer:
             override_policies,
             curr_metrics,
         )
-        self._update_subject_history(
+        self._update_subject_trainer_state(
             s_id,
             curriculum,
-            subject_history,
             override_stage,
             updated_params,
             tuple(override_policies),
@@ -378,16 +401,12 @@ class Trainer:
         with Trainer.override_subject_status(...)
         """
 
-        a, b, c = self.load_data(s_id)
-        curriculum: Curriculum = a
-        subject_history: SubjectHistory = b
-        curr_metrics: Metrics = c  # noqa: F841
+        curriculum, _, _ = self.load_data(s_id)
 
-        self._update_subject_history(
+        self._update_subject_trainer_state(
             s_id,
             curriculum,
-            subject_history,
             stage=None,
-            stage_parameters=None,
+            updated_stage_parameters=None,
             stage_policies=None,
         )

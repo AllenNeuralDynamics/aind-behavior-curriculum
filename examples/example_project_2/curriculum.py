@@ -36,7 +36,7 @@ class DummyTask(Task):
 
 
 # --- METRICS ---
-class ExampleMetrics(Metrics):
+class ExampleMetrics2(Metrics):
     """
     Totally made up values we will edit ourselves to simulate mouse training.
     Each theta value is reserved for a test case.
@@ -50,7 +50,7 @@ class ExampleMetrics(Metrics):
 # Policies 1-3 do the same thing
 # Policies 4-6 do the same thing
 def policy_1_rule(
-    metrics: ExampleMetrics, task_params: DummyParameters
+    metrics: ExampleMetrics2, task_params: DummyParameters
 ) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_1 += 5
@@ -61,7 +61,7 @@ policy_1 = Policy(rule=policy_1_rule)
 
 
 def policy_2_rule(
-    metrics: ExampleMetrics, task_params: DummyParameters
+    metrics: ExampleMetrics2, task_params: DummyParameters
 ) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_1 += 5
@@ -72,7 +72,7 @@ policy_2 = Policy(rule=policy_2_rule)
 
 
 def policy_3_rule(
-    metrics: ExampleMetrics, task_params: DummyParameters
+    metrics: ExampleMetrics2, task_params: DummyParameters
 ) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_1 += 5
@@ -83,7 +83,7 @@ policy_3 = Policy(rule=policy_3_rule)
 
 
 def policy_4_rule(
-    metrics: ExampleMetrics, task_params: DummyParameters
+    metrics: ExampleMetrics2, task_params: DummyParameters
 ) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_2 += 5
@@ -94,7 +94,7 @@ policy_4 = Policy(rule=policy_4_rule)
 
 
 def policy_5_rule(
-    metrics: ExampleMetrics, task_params: DummyParameters
+    metrics: ExampleMetrics2, task_params: DummyParameters
 ) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_2 += 5
@@ -105,7 +105,7 @@ policy_5 = Policy(rule=policy_5_rule)
 
 
 def policy_6_rule(
-    metrics: ExampleMetrics, task_params: DummyParameters
+    metrics: ExampleMetrics2, task_params: DummyParameters
 ) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_2 += 5
@@ -116,7 +116,7 @@ policy_6 = Policy(rule=policy_6_rule)
 
 
 # --- POLICY/STAGE TRANSTITIONS ---
-def m1_rule(metrics: ExampleMetrics) -> bool:
+def m1_rule(metrics: ExampleMetrics2) -> bool:
     return metrics.m1 > 0
 
 
@@ -124,7 +124,7 @@ m1_policy_transition = PolicyTransition(rule=m1_rule)
 m1_stage_transition = StageTransition(rule=m1_rule)
 
 
-def m2_rule(metrics: ExampleMetrics) -> bool:
+def m2_rule(metrics: ExampleMetrics2) -> bool:
     return metrics.m2 > 0
 
 
@@ -138,7 +138,7 @@ Tasks = get_task_types()
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Tasks] = Field(default=StageGraph())  # type: ignore
+    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())  # type: ignore
 
 
 def construct_track_curriculum() -> MyCurriculum:

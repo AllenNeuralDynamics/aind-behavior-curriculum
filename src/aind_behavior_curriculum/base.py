@@ -11,10 +11,10 @@ class AindBehaviorModel(BaseModel):
     BaseModel: Validate arguments on initialization.
     Configurations:
         - extra='forbid':
-            Do not allow a model to be initalized with undocumented parameters.
+            Do not allow a model to be initialized with undocumented parameters.
         - validate_assignment=True:
             Revalidate fields against schema on any change to model instance.
-        - validate_defaults=True:
+        - validate_default=True:
             Validate default fields on subclasses.
         - strict=True:
             Enforce strict typing.
@@ -23,7 +23,7 @@ class AindBehaviorModel(BaseModel):
     model_config = ConfigDict(
         extra="forbid",  # Potentially change to 'ignore'
         validate_assignment=True,
-        validate_defaults=True,
+        validate_default=True,
         strict=True,
         str_strip_whitespace=True,
     )
@@ -38,7 +38,7 @@ class AindBehaviorModelExtra(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         validate_assignment=True,
-        validate_defaults=True,
+        validate_default=True,
         strict=True,
         str_strip_whitespace=True,
     )
