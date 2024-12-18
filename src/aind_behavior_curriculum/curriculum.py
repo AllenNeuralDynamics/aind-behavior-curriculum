@@ -1189,15 +1189,9 @@ def _get_discriminator_value(v: Task) -> str:
     _discriminator: Any = None
     if isinstance(v, dict):
         _discriminator = v.get("name", None)
-    elif isinstance(v, BaseModel):
-        _discriminator = getattr(v, "name", None)
-    else:
+    if isinstance(v, BaseModel):
         _discriminator = getattr(v, "name", None)
     if isinstance(_discriminator, str):
         return _discriminator
-    if _discriminator is None:
-        raise ValueError("Discriminator field not found or is null.")
-    else:
-        raise ValueError(
-            f"Discriminator value must be a string, got {_discriminator} of type {type(_discriminator)}"
-        )
+    print(_discriminator)
+    raise ValueError(f"Discriminator field not found, null or not string type. Got {_discriminator}.")
