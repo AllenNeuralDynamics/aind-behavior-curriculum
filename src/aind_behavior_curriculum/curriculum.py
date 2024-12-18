@@ -17,25 +17,25 @@ from typing import (
     Dict,
     Generic,
     List,
-    Tuple,
-    TypeVar,
     Literal,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
     Union,
     get_args,
-    Optional,
-    Type,
 )
 
 import boto3
 from jinja2 import Template
 from pydantic import (
-    Field,
-    GetJsonSchemaHandler,
-    field_validator,
-    create_model,
     BaseModel,
     Discriminator,
+    Field,
+    GetJsonSchemaHandler,
     Tag,
+    create_model,
+    field_validator,
 )
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
@@ -45,7 +45,6 @@ from aind_behavior_curriculum.base import (
     AindBehaviorModelExtra,
 )
 from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
-
 
 TTask = TypeVar("TTask", bound=Task)
 
