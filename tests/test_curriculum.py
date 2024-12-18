@@ -3,21 +3,25 @@ Curriculum Test Suite
 """
 
 import unittest
+from typing import Annotated, Literal, Union
 
 import example_project as ex
 import example_project_2 as ex2
+from pydantic import BaseModel, Field
 
 from aind_behavior_curriculum import (
     INIT_STAGE,
     Curriculum,
     Stage,
-    create_curriculum,
     StageGraph,
+    create_curriculum,
+)
+from aind_behavior_curriculum.curriculum import (
+    Task,
+    TaskParameters,
+    _get_discriminator_value,
 )
 from aind_behavior_curriculum.curriculum_utils import create_empty_stage
-from aind_behavior_curriculum.curriculum import _get_discriminator_value, Task, TaskParameters
-from pydantic import BaseModel, Field
-from typing import Annotated, Union, Literal
 
 
 class CurriculumTests(unittest.TestCase):
@@ -530,17 +534,24 @@ class CurriculumTests(unittest.TestCase):
     def test_get_discriminator_value(self):
         class TaskDefault(Task):
             name: str = Field(default="Task")
-            task_parameters: TaskParameters = Field(TaskParameters(), validate_default=True)
-
+            task_parameters: TaskParameters = Field(
+                TaskParameters(), validate_default=True
+            )
 
         class TaskLiteral(Task):
             name: Literal["Task"] = "Task"
-            task_parameters: TaskParameters = Field(TaskParameters(), validate_default=True)
+            task_parameters: TaskParameters = Field(
+                TaskParameters(), validate_default=True
+            )
 
         self.assertEqual(_get_discriminator_value(TaskDefault()), "Task")
         self.assertEqual(_get_discriminator_value(TaskLiteral()), "Task")
-        self.assertEqual(_get_discriminator_value(TaskDefault().model_dump()), "Task")
-        self.assertEqual(_get_discriminator_value(TaskLiteral().model_dump()), "Task")
+        self.assertEqual(
+            _get_discriminator_value(TaskDefault().model_dump()), "Task"
+        )
+        self.assertEqual(
+            _get_discriminator_value(TaskLiteral().model_dump()), "Task"
+        )
 
         with self.assertRaises(ValueError):
             _get_discriminator_value("123")
