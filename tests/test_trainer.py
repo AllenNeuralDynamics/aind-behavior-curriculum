@@ -634,16 +634,14 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
 
         M0 = [
-            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stage_2, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stage_3, active_policies=(INIT_STAGE,)),
-            TrainerState(
-                stage=stage_1, active_policies=(INIT_STAGE,)
-            ),  # Return to start
-            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stage_3, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stage_2, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stage_1, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stage_1, active_policies=()),
+            TrainerState(stage=stage_2, active_policies=()),
+            TrainerState(stage=stage_3, active_policies=()),
+            TrainerState(stage=stage_1, active_policies=()),  # Return to start
+            TrainerState(stage=stage_1, active_policies=()),
+            TrainerState(stage=stage_3, active_policies=()),
+            TrainerState(stage=stage_2, active_policies=()),
+            TrainerState(stage=stage_1, active_policies=()),
         ]
 
         self.assertTrue(tr.subject_history[0] == M0)
