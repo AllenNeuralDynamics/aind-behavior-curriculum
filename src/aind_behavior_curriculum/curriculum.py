@@ -619,15 +619,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             instance_json = self.model_dump_json()
             curr_subtype = type(self)
             curr_subtype.model_validate_json(instance_json)
-        except Exception:
-            print(
-                (
-                    f"Pydantic cannot serialize Stage {self.name}, please use "
-                    "mypy to verify your types "
-                    "(check signatures of policy functions, etc.)."
-                )
+        except Exception as e:
+            e.add_note(
+                f"Pydantic cannot serialize Stage {self.name}, please use "
+                "mypy to verify your types "
+                "(check signatures of policy functions, etc.)."
             )
-            raise
+            raise e
 
         return self
 
