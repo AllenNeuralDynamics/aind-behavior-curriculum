@@ -1132,7 +1132,24 @@ def create_curriculum(
     return t_curriculum
 
 
-def _make_task_discriminator(*tasks: Type[Task]) -> Type[Task]:
+def _make_task_discriminator(*tasks: Type[Task]) -> Type:
+    """
+    Creates a discriminated union type for the given tasks.
+    This function takes a variable number of Task types and generates a
+    discriminated union type using the 'name' field of each task to create
+    a valid Tag and corresponding Discriminator.
+    Args:
+        *tasks (Type[Task]): A variable number of Task types.
+    Returns:
+        Type: A discriminated union type of the provided tasks.
+    Raises:
+        ValueError: If a task does not have a 'name' field defined as
+                    Literal[name] or with a default value.
+        ValueError: If a task has a 'name' field that is not a string.
+        ValueError: If duplicate task names are found.
+        ValueError: If one or more task names are not found.
+    """
+
     # https://docs.pydantic.dev/2.10/concepts/unions/#discriminated-unions-with-callable-discriminator
     tasks = tuple(set(tasks))
     _candidate_discriminators: List[str] = []
@@ -1186,6 +1203,20 @@ def _make_task_discriminator(*tasks: Type[Task]) -> Type[Task]:
 
 
 def _get_discriminator_value(v: Task) -> str:
+    """
+    Retrieves the discriminator value from the given task.
+    The discriminator value is extracted from the 'name' attribute of the input,
+    which can be either a dictionary or an instance of BaseModel.
+    Args:
+        v (Task): The task from which to extract the discriminator value. This can
+                  be either a dictionary or an instance of BaseModel.
+    Returns:
+        str: The discriminator value extracted from the input.
+    Raises:
+        ValueError: If the discriminator field is not found, is null, or is not of
+                    string type.
+    """
+
     _discriminator: Any = None
     if isinstance(v, dict):
         _discriminator = v.get("name", None)
@@ -1193,7 +1224,6 @@ def _get_discriminator_value(v: Task) -> str:
         _discriminator = getattr(v, "name", None)
     if isinstance(_discriminator, str):
         return _discriminator
-    print(_discriminator)
     raise ValueError(
         f"Discriminator field not found, null or not string type. Got {_discriminator}."
     )

@@ -552,6 +552,7 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(
             _get_discriminator_value(TaskLiteral().model_dump()), "Task"
         )
+        self.assertIsInstance(_get_discriminator_value(TaskDefault()), str)
 
         with self.assertRaises(ValueError):
             _get_discriminator_value("123")
