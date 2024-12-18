@@ -23,7 +23,7 @@ from typing import (
 
 import boto3
 from jinja2 import Template
-from pydantic import Field, GetJsonSchemaHandler, field_validator
+from pydantic import Field, GetJsonSchemaHandler, field_validator, ValidationError
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -583,7 +583,6 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         See current task parameters of Task.
         """
-
         return self.task.task_parameters
 
     def set_task_parameters(self, task_params: TaskParameters) -> None:
@@ -595,31 +594,14 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     def validate_stage(self) -> Stage:
         """
-        Check if stage is non-empty and specifies start policies.
+        Validates that the stage can be (de)serialized.
         """
-
-        if len(self.see_policies()) == 0:
-            raise ValueError(
-                f"Stage {self.name} in Curriculum is empty. \
-                Please add at least one policy to all Curriculum stages \
-                with Stage.add_policy(...). \
-                If you would like an empty Stage, you can use \
-                curriculum_utils.create_empty_stage(...)"
-            )
-
-        if len(self.start_policies) == 0:
-            raise ValueError(
-                f"Stage {self.name} in Curriculum does not have start_policies. \
-                Please define start_polices for all Curriculum stages \
-                with Stage.set_start_policies(...)"
-            )
 
         # Check round trip serialization
         try:
             instance_json = self.model_dump_json()
-            curr_subtype = type(self)
-            curr_subtype.model_validate_json(instance_json)
-        except Exception as e:
+            self.model_validate_json(instance_json)
+        except ValidationError as e:
             e.add_note(
                 f"Pydantic cannot serialize Stage {self.name}, please use "
                 "mypy to verify your types "
@@ -841,16 +823,15 @@ class Curriculum(AindBehaviorModel):
         # Check round trip serialization
         try:
             instance_json = self.model_dump_json()
-            curr_subtype = type(self)
-            curr_subtype.model_validate_json(instance_json)
-        except Exception:
-            print(
+            self.model_validate_json(instance_json)
+        except ValidationError as e:
+            e.add_note(
                 (
                     "Pydantic cannot serialize Curriculum, please use "
                     "mypy to verify your types (check stage transition signature, etc.)."
                 )
             )
-            raise
+            raise e
 
         return self
 
