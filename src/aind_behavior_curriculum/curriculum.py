@@ -23,7 +23,11 @@ from typing import (
 
 import boto3
 from jinja2 import Template
-from pydantic import Field, GetJsonSchemaHandler, field_validator
+from pydantic import (
+    Field,
+    GetJsonSchemaHandler,
+    field_validator,
+)
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -694,8 +698,9 @@ class Curriculum(AindBehaviorModel):
     """
 
     pkg_location: str = Field(
-        default="",
-        frozen=False,  # This one has to stay non-frozen to avoid pydantic errors
+        # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+        default_factory=lambda: Curriculum.default_pkg_location_factory(),  # pylint: disable=unnecessary-lambda
+        frozen=True,
         description="Location of the python package \
                                 that instantiated the Curriculum.",
     )
@@ -717,12 +722,12 @@ class Curriculum(AindBehaviorModel):
         StageGraph, Field(default=StageGraph(), validate_default=True)
     ]
 
-    def model_post_init(self, __context: Any) -> None:
+    @classmethod
+    def default_pkg_location_factory(cls) -> str:
         """
-        Add Curriculum pkg location
+        Location of the python package that instantiated the Curriculum.
         """
-        super().model_post_init(__context)
-        self.pkg_location = self.__module__ + "." + type(self).__name__
+        return cls.__module__ + "." + type(cls).__name__
 
     def add_stage(self, stage: Stage) -> None:
         """
