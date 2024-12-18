@@ -1100,7 +1100,7 @@ def create_curriculum(
     Returns:
         Type[Curriculum]: A curriculum class with the specified tasks.
     """
-    _tasks_tagged = _make_task_descriminator(*tasks)
+    _tasks_tagged = _make_task_discriminator(*tasks)
     _props = {
         "name": Annotated[
             Literal[name],
@@ -1132,7 +1132,7 @@ def create_curriculum(
     return t_curriculum
 
 
-def _make_task_descriminator(*tasks: Type[Task]) -> Type[Task]:
+def _make_task_discriminator(*tasks: Type[Task]) -> Type[Task]:
     # https://docs.pydantic.dev/2.10/concepts/unions/#discriminated-unions-with-callable-discriminator
     tasks = tuple(set(tasks))
     _candidate_discriminators: List[str] = []
