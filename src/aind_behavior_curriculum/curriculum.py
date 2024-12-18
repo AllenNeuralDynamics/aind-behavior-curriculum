@@ -1194,4 +1194,6 @@ def _get_discriminator_value(v: Task) -> str:
     if isinstance(_discriminator, str):
         return _discriminator
     print(_discriminator)
-    raise ValueError(f"Discriminator field not found, null or not string type. Got {_discriminator}.")
+    raise ValueError(
+        f"Discriminator field not found, null or not string type. Got {_discriminator}."
+    )
