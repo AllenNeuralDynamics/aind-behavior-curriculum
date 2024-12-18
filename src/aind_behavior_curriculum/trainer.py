@@ -4,7 +4,16 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import List, Optional, Tuple, TypeAlias
+from typing import (
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Self,
+    Tuple,
+    TypeAlias,
+    TypeVar,
+)
 
 from pydantic import Field
 
@@ -21,7 +30,7 @@ StageEntry: TypeAlias = Optional[Stage]
 PolicyEntry: TypeAlias = Optional[Tuple[Policy, ...]]
 
 
-class TrainerState(AindBehaviorModel):
+class _TrainerState(AindBehaviorModel):
     """
     Trainer State.
     Pydantic model for de/serialization.
@@ -46,11 +55,15 @@ class TrainerState(AindBehaviorModel):
         description="The active policies for the current stage",
     )
 
+    @classmethod
+    def default(cls) -> Self:
+        return cls(stage=None, is_on_curriculum=False, active_policies=None)
+
     def __eq__(self, other: object) -> bool:
         """
         TrainerState Equality
         """
-        if not isinstance(other, TrainerState):
+        if not isinstance(other, _TrainerState):
             return NotImplemented
 
         # Compare 'stage' and 'is_on_curriculum' attributes
@@ -73,7 +86,181 @@ class TrainerState(AindBehaviorModel):
         return set(self_rules) == set(other_rules)
 
 
-class Trainer:
+TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
+TMetrics = TypeVar("TMetrics", bound=Metrics)
+
+
+def _make_trainer_state_type_aware(curriculum: Curriculum) -> _TrainerState:
+    """
+    Makes the Curriculum type aware of the Trainer state.
+    """
+    return curriculum
+
+
+class Trainer(Generic[TCurriculum]):
+
+    def __init__(self, curriculum: TCurriculum):
+        self._curriculum = curriculum
+        self._trainer = _make_trainer_state_type_aware(self.curriculum)
+
+    @property
+    def curriculum(self) -> TCurriculum:
+        return self._curriculum
+
+    @staticmethod
+    def _evaluate_stage_transition(
+        curriculum: Curriculum, current_stage: Stage, metrics: TMetrics
+    ) -> Optional[Stage]:
+        """
+        Evaluates whether a transition to a new stage is needed based on the given metrics.
+
+        Args:
+            curriculum (Curriculum): The curriculum containing the stage transitions.
+            current_stage (Stage): The current stage of the curriculum.
+            metrics (TMetrics): The metrics used to evaluate the stage transition.
+
+        Returns:
+            Optional[Stage]: The new stage if a transition is made, otherwise None.
+        """
+        updated_stage: Optional[Stage] = None
+        # This line binds the Stage object to the curriculum.
+        # TODO may be worth finding a better way to hash the stage object.
+        stage_transitions = curriculum.see_stage_transitions(current_stage)
+        for stage_eval, dest_stage in stage_transitions:
+            # On the first (and only first) true evaluation we transition.
+            if stage_eval.rule(metrics):  # type: ignore
+                updated_stage = dest_stage
+                break
+        return updated_stage
+
+    @classmethod
+    def _evaluate_policy_transitions(
+        cls,
+        current_stage: Stage,
+        active_policies: Iterable[Policy],
+        metrics: TMetrics,
+    ) -> List[Policy]:
+        """
+        Evaluates policy transitions, for the given current stage and currently active policies, based on the provided metrics.
+        Args:
+            current_stage (Stage): The current stage in the curriculum.
+            active_policies (Iterable[Policy]): Currently active policies.
+            metrics (TMetrics): The metrics used to evaluate policy transitions.
+        Returns:
+            List[Policy]: a list of unique policies that are active after the evaluation.
+        """
+        # Buffer data structures to store result of active policy transitions.
+        dest_policies: list[Policy] = []
+
+        for active_policy in active_policies:
+            policy_transitions = current_stage.see_policy_transitions(
+                active_policy
+            )
+
+            _has_transitioned = False
+            for policy_eval, dest_policy in policy_transitions:
+                # On first true evaluation, add to buffers
+                # and evaluate next active_policy.
+                if policy_eval.rule(metrics):  # type: ignore
+                    dest_policies.append(dest_policy)
+                    _has_transitioned = True
+                    break  # onto next active policy
+            if (
+                not _has_transitioned
+            ):  # if no policy transition keep the current one
+                dest_policies.append(active_policy)
+
+        return cls._get_unique_policies(dest_policies)
+
+    def evaluate(
+        self, trainer_state: _TrainerState, metrics: TMetrics
+    ) -> _TrainerState:
+        """
+        Evaluates the current state of the trainer and updates the stage and policies based on the provided metrics.
+        Args:
+            trainer_state (TrainerState): The current state of the trainer, including the current stage and active policies.
+            metrics (TMetrics): The metrics used to evaluate the current state and determine transitions.
+        Returns:
+            TrainerState: The updated state of the trainer, including the new stage and active policies.
+        Raises:
+            ValueError: If the current stage or active policies are not set in the trainer state.
+        """
+        current_stage = trainer_state.stage
+        active_policies: Optional[Iterable[Policy]] = (
+            trainer_state.active_policies
+        )
+
+        if current_stage is None:
+            raise ValueError(
+                "No current stage. This likely means subject is off-curriculum."
+            )
+        if active_policies is None:
+            raise ValueError(
+                "No active policies. This likely means subject is off-curriculum."
+            )
+
+        # 1) Stage Transition
+        updated_stage = self._evaluate_stage_transition(
+            self.curriculum, current_stage, metrics
+        )
+
+        # 2) Policy Transition
+        # If we've already transitioned stages, we don't need to check policies.
+        if updated_stage is None:
+            updated_stage = current_stage
+            active_policies = self._evaluate_policy_transitions(
+                current_stage, active_policies, metrics
+            )
+        # If we've transitioned stages, we need to reset the active policies.
+        else:
+            active_policies = updated_stage.start_policies
+
+        # 3) Bootstrap updated parameters
+        updated_task_parameters = self.get_net_parameter_update(
+            current_stage.get_task_parameters(), active_policies, metrics
+        )
+
+        updated_stage.set_task_parameters(updated_task_parameters)
+
+        return _TrainerState(
+            stage=updated_stage,
+            is_on_curriculum=True,
+            active_policies=tuple(active_policies),
+        )
+
+    @staticmethod
+    def get_net_parameter_update(
+        stage_parameters: TaskParameters,
+        stage_policies: Iterable[Policy],
+        curr_metrics: Metrics,
+    ) -> TaskParameters:
+        """
+        Aggregates parameter update of input stage_policies
+        given current stage_parameters and current metrics.
+        """
+
+        updated_params = stage_parameters.model_copy(deep=True)
+        for p in stage_policies:
+            updated_params = p.rule(curr_metrics, updated_params)
+
+        return updated_params
+
+    @staticmethod
+    def _get_unique_policies(policies: List[Policy]) -> List[Policy]:
+        """
+        set(policies) is not hashable, although Policy
+        only contains a function, which is hashable.
+        This utility filters on policy functions and
+        reassembles the Policy objects.
+        """
+
+        filtered_funcs = list(set(p.rule for p in policies))
+        output = [Policy(rule=f) for f in filtered_funcs]
+
+        return output
+
+
+class TrainerServer:
     """
     Pulls subject curriculum and history,
     and performs fundamental curriculum evaluation/update.
@@ -94,7 +281,7 @@ class Trainer:
     @abstractmethod
     def load_data(
         self, subject_id: int
-    ) -> tuple[Curriculum, TrainerState, Metrics]:
+    ) -> tuple[Curriculum, _TrainerState, Metrics]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
@@ -109,7 +296,7 @@ class Trainer:
         self,
         subject_id: int,
         curriculum: Curriculum,
-        trainer_state: TrainerState,
+        trainer_state: _TrainerState,
     ) -> None:
         """
         User-defined.
@@ -121,36 +308,6 @@ class Trainer:
         For Curriculums with no internal policies, insert tacit INIT_STAGE
         """
         raise NotImplementedError
-
-    def _get_net_parameter_update(
-        self,
-        stage_parameters: TaskParameters,
-        stage_policies: Iterable[Policy],
-        curr_metrics: Metrics,
-    ) -> TaskParameters:
-        """
-        Aggregates parameter update of input stage_policies
-        given current stage_parameters and current metrics.
-        """
-
-        updated_params = stage_parameters
-        for p in stage_policies:
-            updated_params = p.rule(curr_metrics, updated_params)
-
-        return updated_params
-
-    def _get_unique_policies(self, policies: List[Policy]) -> List[Policy]:
-        """
-        set(policies) is not hashable, although Policy
-        only contains a function, which is hashable.
-        This utility filters on policy functions and
-        reassembles the Policy objects.
-        """
-
-        filtered_funcs = list(set(p.rule for p in policies))
-        output = [Policy(rule=f) for f in filtered_funcs]
-
-        return output
 
     def _update_subject_trainer_state(
         self,
@@ -177,11 +334,11 @@ class Trainer:
             stage.set_task_parameters(updated_stage_parameters)
 
         if stage is None:
-            trainer_state = TrainerState(
+            trainer_state = _TrainerState(
                 stage=None, is_on_curriculum=False, active_policies=None
             )
         else:
-            trainer_state = TrainerState(
+            trainer_state = _TrainerState(
                 stage=stage,
                 is_on_curriculum=True,
                 active_policies=stage_policies,
@@ -225,7 +382,7 @@ class Trainer:
 
         _start_policies = tuple(start_policies)
 
-        initial_params = self._get_net_parameter_update(
+        initial_params = Trainer.get_net_parameter_update(
             start_stage.get_task_parameters(),
             _start_policies,
             curr_metrics=Metrics(),  # Metrics is empty on registration.
@@ -256,96 +413,27 @@ class Trainer:
         in stage history.
         """
 
-        # Added Edge Case:
-        # 0) Subject has been ejected off-curriculum
-
-        # Three Transition Cases:
-        # 1) Stage transition: update stage history with
-        #   both stage + policy and execute the policy
-
-        # 2) Policy transition: update stage history with
-        #   policy and execute the policy
-
-        # 3) No transition: update stage history with
-        #   current stage + policy
-
         for s_id in self.subject_ids:
             curriculum, trainer_state, curr_metrics = self.load_data(s_id)
-            current_stage = trainer_state.stage
-            current_policies = trainer_state.active_policies
+            trainer = Trainer(curriculum)
 
-            # 0) Subject Ejected
-            if current_stage is None or current_policies is None:
-                self._update_subject_trainer_state(
-                    s_id, curriculum, None, None, None
+            updated_trainer_state = trainer.evaluate(
+                trainer_state, curr_metrics
+            )
+            if updated_trainer_state.stage is None:
+                updated_parameters = None
+            else:
+                updated_parameters = (
+                    updated_trainer_state.stage.get_task_parameters()
                 )
-                break  # Head to next subject
 
-            # 1) Stage Transition
-            advance_stage = False
-            stage_transitions = curriculum.see_stage_transitions(current_stage)
-            for stage_eval, dest_stage in stage_transitions:
-                # On first true evaluation push to database.
-                if stage_eval.rule(curr_metrics):
-                    # Publish updated stage and start polices
-                    updated_params = self._get_net_parameter_update(
-                        dest_stage.get_task_parameters(),
-                        dest_stage.start_policies,
-                        curr_metrics,
-                    )
-                    self._update_subject_trainer_state(
-                        s_id,
-                        curriculum,
-                        dest_stage,
-                        updated_params,
-                        tuple(dest_stage.start_policies),
-                    )
-                    advance_stage = True
-                    break  # Finish stage transition, onto next subject
-
-            # 2) Policy Transition
-            advance_policy = False
-            if not advance_stage:
-                # Buffer data structures to store result of active policy transitions.
-                dest_policies: list[Policy] = []
-                for active_policy in current_policies:
-                    policy_transitions = current_stage.see_policy_transitions(
-                        active_policy
-                    )
-                    for policy_eval, dest_policy in policy_transitions:
-                        # On first true evaluation, add to buffers
-                        # and evaluate next active_policy.
-                        if policy_eval.rule(curr_metrics):
-                            dest_policies.append(dest_policy)
-                            advance_policy = True
-                            break  # onto next active policy
-
-                if len(dest_policies) != 0:
-                    # Publish updated stage and unique dest_polices
-                    updated_params = self._get_net_parameter_update(
-                        current_stage.get_task_parameters(),
-                        dest_policies,
-                        curr_metrics,
-                    )
-
-                    dest_policies = self._get_unique_policies(dest_policies)
-                    self._update_subject_trainer_state(
-                        s_id,
-                        curriculum,
-                        current_stage,
-                        updated_params,
-                        tuple(dest_policies),
-                    )
-
-            # 3) No Transition
-            if not (advance_stage or advance_policy):
-                self._update_subject_trainer_state(
-                    s_id,
-                    curriculum,
-                    current_stage,
-                    current_stage.get_task_parameters(),
-                    current_policies,
-                )
+            self._update_subject_trainer_state(
+                s_id,
+                curriculum,
+                updated_trainer_state.stage,
+                updated_parameters,
+                updated_trainer_state.active_policies,
+            )
 
     def override_subject_status(
         self,
@@ -381,7 +469,7 @@ class Trainer:
                 )
 
         # Update Stage parameters according to override policies
-        updated_params = self._get_net_parameter_update(
+        updated_params = Trainer(curriculum).get_net_parameter_update(
             override_stage.get_task_parameters(),
             override_policies,
             curr_metrics,
