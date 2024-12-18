@@ -15,8 +15,9 @@ from aind_behavior_curriculum import (
     StageGraph,
 )
 from aind_behavior_curriculum.curriculum_utils import create_empty_stage
+from aind_behavior_curriculum.curriculum import _get_discriminator_value, Task, TaskParameters
 from pydantic import BaseModel, Field
-from typing import Annotated, Union
+from typing import Annotated, Union, Literal
 
 
 class CurriculumTests(unittest.TestCase):
@@ -525,6 +526,22 @@ class CurriculumTests(unittest.TestCase):
             _ = create_curriculum(
                 "test_curriculum", "1.2.3", ex.TaskA, ex.TaskB, NotATask
             )
+
+    def test_get_discriminator_value(self):
+        class TaskDefault(Task):
+            name: str = Field(default="Task")
+            task_parameters: TaskParameters = Field(TaskParameters(), validate_default=True)
+
+
+        class TaskLiteral(Task):
+            name: Literal["Task"] = "Task"
+            task_parameters: TaskParameters = Field(TaskParameters(), validate_default=True)
+
+        self.assertEqual(_get_discriminator_value(TaskDefault()), "Task")
+        self.assertEqual(_get_discriminator_value(TaskLiteral()), "Task")
+        self.assertEqual(_get_discriminator_value(TaskDefault().model_dump()), "Task")
+        self.assertEqual(_get_discriminator_value(TaskLiteral().model_dump()), "Task")
+
 
 
 if __name__ == "__main__":
