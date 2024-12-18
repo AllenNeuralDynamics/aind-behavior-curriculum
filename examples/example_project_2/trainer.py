@@ -7,13 +7,13 @@ from typing import Callable, Dict
 
 import example_project_2 as ex2
 
-from aind_behavior_curriculum import Curriculum, Metrics, Trainer, TrainerState
+from aind_behavior_curriculum import Curriculum, Metrics, TrainerServer, _TrainerState
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
-MICE_SUBJECT_HISTORY: dict[int, list[TrainerState]] = defaultdict(list)
+MICE_SUBJECT_HISTORY: dict[int, list[_TrainerState]] = defaultdict(list)
 MICE_METRICS: dict[int, Metrics] = {
     0: ex2.ExampleMetrics2(),
     1: ex2.ExampleMetrics2(),
@@ -21,7 +21,7 @@ MICE_METRICS: dict[int, Metrics] = {
 }
 
 
-class ExampleTrainer(Trainer):
+class ExampleTrainer(TrainerServer):
     def __init__(self) -> None:
         """
         Custom init w/ super.__init__()
@@ -29,11 +29,11 @@ class ExampleTrainer(Trainer):
         """
         super().__init__()
 
-        self.subject_history: Dict[int, TrainerState] = defaultdict(list)
+        self.subject_history: Dict[int, _TrainerState] = defaultdict(list)
 
     def load_data(
         self, subject_id: int
-    ) -> tuple[Curriculum, TrainerState, Metrics]:
+    ) -> tuple[Curriculum, _TrainerState, Metrics]:
         """
         Read from proxy database.
         """
@@ -47,7 +47,7 @@ class ExampleTrainer(Trainer):
         self,
         subject_id: int,
         curriculum: Curriculum,
-        trainer_state: TrainerState,
+        trainer_state: _TrainerState,
     ) -> None:
         """
         Add to proxy database.
