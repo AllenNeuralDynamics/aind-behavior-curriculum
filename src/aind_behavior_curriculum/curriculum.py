@@ -19,11 +19,24 @@ from typing import (
     List,
     Tuple,
     TypeVar,
+    Literal,
+    Union,
+    get_args,
+    Optional,
+    Type,
 )
 
 import boto3
 from jinja2 import Template
-from pydantic import Field, GetJsonSchemaHandler, field_validator
+from pydantic import (
+    Field,
+    GetJsonSchemaHandler,
+    field_validator,
+    create_model,
+    BaseModel,
+    Discriminator,
+    Tag,
+)
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -32,6 +45,7 @@ from aind_behavior_curriculum.base import (
     AindBehaviorModelExtra,
 )
 from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
+
 
 TTask = TypeVar("TTask", bound=Task)
 
@@ -1070,3 +1084,120 @@ class Curriculum(AindBehaviorModel):
         curr = cls.model_validate_json(json_string)
 
         return curr
+
+
+def create_curriculum(
+    name: str,
+    version: str,
+    *tasks: Type[Task],
+    pkg_location: Optional[str] = None,
+) -> Type[Curriculum]:
+    """_summary_
+
+    Args:
+        name (str): Name of the Curriculum.
+        version (str): Curriculum version in SemVer format.
+
+    Returns:
+        Type[Curriculum]: A curriculum class with the specified tasks.
+    """
+    _tasks_tagged = _make_task_descriminator(*tasks)
+    _props = {
+        "name": Annotated[
+            Literal[name],
+            Field(default=name, frozen=True, validate_default=True),
+        ],
+        "version": Annotated[
+            Literal[version],
+            Field(
+                default=version,
+                frozen=True,
+                pattern=SEMVER_REGEX,
+                validate_default=True,
+            ),
+        ],
+        "graph": Annotated[
+            StageGraph[_tasks_tagged],
+            Field(default_factory=StageGraph, validate_default=True),
+        ],
+    }
+
+    if pkg_location is not None:
+        _props["pkg_location"] = Annotated[
+            str,
+            Field(default=pkg_location, frozen=True, validate_default=True),
+        ]
+
+    t_curriculum = create_model(name, __base__=Curriculum, **_props)  # type: ignore
+
+    return t_curriculum
+
+
+def _make_task_descriminator(*tasks: Type[Task]) -> Type[Task]:
+    # https://docs.pydantic.dev/2.10/concepts/unions/#discriminated-unions-with-callable-discriminator
+    tasks = tuple(set(tasks))
+    _candidate_discriminators: List[str] = []
+    for task in tasks:
+        name: Optional[str] = None
+        try:  # Use reflection to try to get the name from the type annotation, i.e. Literal[T]
+            name = get_args(task.model_fields["name"].annotation)[0]
+        except (
+            IndexError
+        ):  # If we don't find it, keep going, while throwing any other errors
+            pass
+        if name is None:
+            try:
+                name = task.model_fields["name"].default
+            except IndexError as exc:
+                raise ValueError(
+                    f"Task {task} does not have a name field defined as "
+                    f"Literal[name] or with a default value."
+                ) from exc
+        if isinstance(name, str):
+            _candidate_discriminators.append(name)
+        else:
+            raise ValueError(
+                f"Task {task} has a name field that is not a string, got {name} of type {type(name)}"
+            )
+
+    if len(_candidate_discriminators) != len(set(_candidate_discriminators)):
+        raise ValueError("Duplicate task names found.")
+    if len(_candidate_discriminators) != len(tasks):
+        raise ValueError("One of more task names were not found.")
+
+    _union = Union[  # type: ignore
+        tuple(
+            [
+                Annotated[task, Tag(task_name)]
+                for task, task_name in zip(tasks, _candidate_discriminators)
+            ]
+        )
+    ]
+
+    Tasks = Annotated[
+        _union,  # type: ignore
+        Field(
+            discriminator=Discriminator(
+                _get_discriminator_value,
+            )
+        ),
+    ]
+    return Tasks  # type: ignore
+
+
+def _get_discriminator_value(v: Task) -> str:
+    _discriminator: Any = None
+    if isinstance(v, dict):
+        _discriminator = v.get("name", None)
+    elif isinstance(v, BaseModel):
+        _discriminator = getattr(v, "name", None)
+    else:
+        _discriminator = getattr(v, "name", None)
+    if isinstance(_discriminator, str):
+        return _discriminator
+    if _discriminator is None:
+        raise ValueError("Discriminator field not found or is null.")
+    else:
+        raise ValueError(
+            f"Discriminator value must be a string, got {_discriminator} of type {type(_discriminator)}"
+        )
