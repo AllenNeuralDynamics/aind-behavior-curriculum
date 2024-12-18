@@ -1124,7 +1124,7 @@ def create_curriculum(
     if pkg_location is not None:
         _props["pkg_location"] = Annotated[
             str,
-            Field(default=pkg_location, frozen=True, validate_default=True),
+            Field(default=pkg_location, frozen=False, validate_default=True),
         ]
 
     t_curriculum = create_model(name, __base__=Curriculum, **_props)  # type: ignore
@@ -1141,13 +1141,14 @@ def _make_task_descriminator(*tasks: Type[Task]) -> Type[Task]:
         try:  # Use reflection to try to get the name from the type annotation, i.e. Literal[T]
             name = get_args(task.model_fields["name"].annotation)[0]
         except (
-            IndexError
+            IndexError,
+            KeyError,
         ):  # If we don't find it, keep going, while throwing any other errors
             pass
         if name is None:
             try:
                 name = task.model_fields["name"].default
-            except IndexError as exc:
+            except KeyError as exc:
                 raise ValueError(
                     f"Task {task} does not have a name field defined as "
                     f"Literal[name] or with a default value."
