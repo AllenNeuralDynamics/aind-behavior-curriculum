@@ -23,7 +23,12 @@ from typing import (
 
 import boto3
 from jinja2 import Template
-from pydantic import Field, GetJsonSchemaHandler, field_validator, ValidationError
+from pydantic import (
+    Field,
+    GetJsonSchemaHandler,
+    ValidationError,
+    field_validator,
+)
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
