@@ -1143,6 +1143,9 @@ def create_curriculum(
     Returns:
         Type[Curriculum]: A curriculum class with the specified tasks.
     """
+    if len(tasks) == 0:
+        raise ValueError("At least one task must be provided.")
+
     _tasks_tagged = make_task_discriminator(*tasks)
     _props = {
         "name": Annotated[
