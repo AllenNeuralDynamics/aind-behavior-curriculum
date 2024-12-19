@@ -6,7 +6,12 @@ from typing import Annotated, Literal, Union
 
 from pydantic import Field
 
-from aind_behavior_curriculum.curriculum import Metrics, Policy, Stage
+from aind_behavior_curriculum.curriculum import (
+    Metrics,
+    Policy,
+    Stage,
+    make_task_discriminator,
+)
 from aind_behavior_curriculum.task import Task, TaskParameters
 
 
@@ -27,10 +32,7 @@ def get_task_types():
 
     """
 
-    Tasks = Annotated[
-        Union[tuple(Task.__subclasses__())], Field(discriminator="name")
-    ]
-    return Tasks
+    return make_task_discriminator(*Task.__subclasses__())
 
 
 def init_stage_rule(
