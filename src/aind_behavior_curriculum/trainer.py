@@ -408,15 +408,25 @@ class TrainerServer:
             curriculum, trainer_state, curr_metrics = self.load_data(s_id)
             trainer = Trainer(curriculum)
 
-            updated_trainer_state = trainer.evaluate(
-                trainer_state, curr_metrics
-            )
-            if updated_trainer_state.stage is None:
-                updated_parameters = None
-            else:
+            if trainer_state.stage is not None:
+                updated_trainer_state = trainer.evaluate(
+                    trainer_state, curr_metrics
+                )
+                if updated_trainer_state.stage is None:
+                    raise ValueError(
+                        "Trainer.evaluate() returned None stage. "
+                        "This should not happen."
+                    )
                 updated_parameters = (
                     updated_trainer_state.stage.get_task_parameters()
                 )
+            else:
+                updated_trainer_state = _TrainerState(
+                    stage=None,
+                    is_on_curriculum=False,
+                    active_policies=trainer_state.active_policies,
+                )  # Not sure if this is correct, but a user may want to keep track of the policies that were active when the subject was off-curriculum.
+                updated_parameters = None
 
             self._update_subject_trainer_state(
                 s_id,

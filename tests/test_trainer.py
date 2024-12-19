@@ -145,14 +145,22 @@ class TrainerTests(unittest.TestCase):
             _TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
             _TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
             _TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
         ]
 
         M2 = [
             _TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
         ]
 
         self.assertTrue(tr.subject_history[0] == M0)
@@ -226,15 +234,21 @@ class TrainerTests(unittest.TestCase):
 
         M1 = [
             _TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
             _TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            _TrainerState(stage=stageBBB, active_policies=(ex.stageB_policyB,)),
+            _TrainerState(
+                stage=stageBBB, active_policies=(ex.stageB_policyB,)
+            ),
             _TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
         ]
 
         M2 = [
             _TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
             _TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
             _TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
             _TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
@@ -292,7 +306,9 @@ class TrainerTests(unittest.TestCase):
         M0 = [
             _TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
             _TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
-            _TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            _TrainerState(
+                stage=stageAAA, active_policies=(ex.stageA_policyB,)
+            ),
             _TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
         ]
 
@@ -637,7 +653,9 @@ class TrainerTests(unittest.TestCase):
             _TrainerState(stage=stage_1, active_policies=()),
             _TrainerState(stage=stage_2, active_policies=()),
             _TrainerState(stage=stage_3, active_policies=()),
-            _TrainerState(stage=stage_1, active_policies=()),  # Return to start
+            _TrainerState(
+                stage=stage_1, active_policies=()
+            ),  # Return to start
             _TrainerState(stage=stage_1, active_policies=()),
             _TrainerState(stage=stage_3, active_policies=()),
             _TrainerState(stage=stage_2, active_policies=()),
