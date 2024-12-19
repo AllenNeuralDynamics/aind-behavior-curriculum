@@ -15,6 +15,7 @@ from .curriculum import (
     Stage,
     StageGraph,
     StageTransition,
+    create_curriculum,
 )
 from .curriculum_utils import *
 from .task import Task, TaskParameters
