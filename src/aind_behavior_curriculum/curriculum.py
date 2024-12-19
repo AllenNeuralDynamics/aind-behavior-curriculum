@@ -726,6 +726,39 @@ class Curriculum(AindBehaviorModel):
         StageGraph, Field(default=StageGraph(), validate_default=True)
     ]
 
+    @property
+    def _known_tasks(self) -> List[Type[Task]]:
+        """Get all known tasks in the curriculum."""
+
+        # We introspect into the StageGraph[T] type to get the known tasks.
+        _generic = self.model_fields["graph"].annotation
+        _inner_args = _generic.__dict__["__pydantic_generic_metadata__"][
+            "args"
+        ][0]
+        _inner_union = get_args(_inner_args)[0]
+        _known_tasks = [get_args(x)[0] for x in get_args(_inner_union)]
+
+        # Since we are here, we also check if the known tasks match the nodes in the graph
+        # The tasks known to the graph type should be a super set of the known tasks in the nodes
+        _known_nodes = [type(stage.task) for stage in self.graph.see_nodes()]
+        if not set(_known_tasks).issuperset(set(_known_nodes)):
+            raise ValueError(
+                "Known tasks in the Curriculum do not match the tasks in the StageGraph. This is likely a problem with StageGraph type definition."
+            )
+        return _known_tasks
+
+    def task_discriminator_type(self) -> type:
+        """Create a Discriminated Union  type for the known tasks."""
+        return make_task_discriminator(*self._known_tasks)
+
+    def _is_task_type_known(self, task_type: Task | Type[Task]) -> bool:
+        """Check if a task type is known in the curriculum."""
+        if isinstance(task_type, Task):
+            task_type = type(task_type)
+        if isinstance(task_type, type):
+            return task_type in self._known_tasks
+        raise ValueError("task_type must be a Task instance or a Task type.")
+
     @classmethod
     def default_pkg_location_factory(cls) -> str:
         """
@@ -737,6 +770,11 @@ class Curriculum(AindBehaviorModel):
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
+
+        if not self._is_task_type_known(stage.task):
+            raise ValueError(
+                f"Task {stage.task} is not a known task type in the Curriculum."
+            )
 
         if stage in self.graph.see_nodes():
             raise ValueError(
@@ -842,6 +880,16 @@ class Curriculum(AindBehaviorModel):
         """
         Validate curriculum for export/serialization.
         """
+
+        if not all(
+            [
+                self._is_task_type_known(stage.task)
+                for stage in self.see_stages()
+            ]
+        ):
+            raise ValueError(
+                "Not all tasks in the curriculum are known. Please add stages with known tasks."
+            )
 
         if len(self.see_stages()) == 0:
             raise ValueError("Curriculum is empty! Please add stages.")
