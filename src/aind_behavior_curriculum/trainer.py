@@ -21,7 +21,7 @@ StageEntry: TypeAlias = Optional[Stage]
 PolicyEntry: TypeAlias = Optional[Tuple[Policy, ...]]
 
 
-class _TrainerState(AindBehaviorModel):
+class TrainerState(AindBehaviorModel):
     """
     Trainer State.
     Pydantic model for de/serialization.
@@ -48,14 +48,22 @@ class _TrainerState(AindBehaviorModel):
 
     @classmethod
     def default(cls) -> Self:
+        """
+        Class method to create a default instance of the class.
+
+        Returns:
+            Self: An instance of the class with default parameters.
+        """
         return cls(stage=None, is_on_curriculum=False, active_policies=None)
 
     def __eq__(self, other: object) -> bool:
         """
         TrainerState Equality
         """
-        if not isinstance(other, _TrainerState):
-            return NotImplemented
+        if not isinstance(other, TrainerState):
+            raise NotImplementedError(
+                "Equality comparison only implemented for _TrainerState objects."
+            )
 
         # Compare 'stage' and 'is_on_curriculum' attributes
         if (
@@ -81,21 +89,43 @@ TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
 TMetrics = TypeVar("TMetrics", bound=Metrics)
 
 
-def _make_trainer_state_type_aware(curriculum: Curriculum) -> _TrainerState:
-    """
-    Makes the Curriculum type aware of the Trainer state.
-    """
-    return curriculum
-
-
 class Trainer(Generic[TCurriculum]):
+    """
+    Trainer class for managing and evaluating curriculum stages and policy transitions,
+    and updating the task parameters based on the active policies and provided metrics.
+    The entry point is the "evaluate" method.
+    Attributes:
+        curriculum (TCurriculum): The curriculum used by the trainer.
+    Methods:
+        __init__(self, curriculum: TCurriculum):
+        curriculum(self) -> TCurriculum:
+        _evaluate_stage_transition(curriculum: Curriculum, current_stage: Stage, metrics: TMetrics) -> Optional[Stage]:
+        _evaluate_policy_transitions(cls, current_stage: Stage, active_policies: Iterable[Policy], metrics: TMetrics) -> List[Policy]:
+            Evaluates policy transitions for the given current stage and currently active policies, based on the provided metrics.
+        evaluate(self, trainer_state: TrainerState, metrics: TMetrics) -> TrainerState:
+        get_net_parameter_update(stage_parameters: TaskParameters, stage_policies: Iterable[Policy], curr_metrics: Metrics) -> TaskParameters:
+            Aggregates parameter updates of input stage_policies given current stage_parameters and current metrics.
+        _get_unique_policies(policies: List[Policy]) -> List[Policy]:
+            Filters unique policies based on their rule functions and reassembles the Policy objects.
+    """
 
     def __init__(self, curriculum: TCurriculum):
+        """
+        Initializes the Trainer with the given curriculum.
+        Args:
+            curriculum (TCurriculum): The curriculum to be used by the trainer.
+        """
+
         self._curriculum = curriculum
-        self._trainer = _make_trainer_state_type_aware(self.curriculum)
 
     @property
     def curriculum(self) -> TCurriculum:
+        """
+        Property that returns the current curriculum.
+
+        Returns:
+            TCurriculum: The current curriculum instance.
+        """
         return self._curriculum
 
     @staticmethod
@@ -164,8 +194,8 @@ class Trainer(Generic[TCurriculum]):
         return cls._get_unique_policies(dest_policies)
 
     def evaluate(
-        self, trainer_state: _TrainerState, metrics: TMetrics
-    ) -> _TrainerState:
+        self, trainer_state: TrainerState, metrics: TMetrics
+    ) -> TrainerState:
         """
         Evaluates the current state of the trainer and updates the stage and policies based on the provided metrics.
         Args:
@@ -213,7 +243,7 @@ class Trainer(Generic[TCurriculum]):
         else:
             active_policies = updated_stage.start_policies
 
-        return _TrainerState(
+        return TrainerState(
             stage=updated_stage,
             is_on_curriculum=True,
             active_policies=tuple(active_policies),
@@ -254,7 +284,7 @@ class Trainer(Generic[TCurriculum]):
 class TrainerServer:
     """
     Pulls subject curriculum and history,
-    and performs fundamental curriculum evaluation/update.
+    and performs curiculum evaluations on subjects
 
     Intended usage:
     1) Implement abstract methods
@@ -272,7 +302,7 @@ class TrainerServer:
     @abstractmethod
     def load_data(
         self, subject_id: int
-    ) -> tuple[Curriculum, _TrainerState, Metrics]:
+    ) -> tuple[Curriculum, TrainerState, Metrics]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
@@ -287,7 +317,7 @@ class TrainerServer:
         self,
         subject_id: int,
         curriculum: Curriculum,
-        trainer_state: _TrainerState,
+        trainer_state: TrainerState,
     ) -> None:
         """
         User-defined.
@@ -325,11 +355,11 @@ class TrainerServer:
             stage.set_task_parameters(updated_stage_parameters)
 
         if stage is None:
-            trainer_state = _TrainerState(
+            trainer_state = TrainerState(
                 stage=None, is_on_curriculum=False, active_policies=None
             )
         else:
-            trainer_state = _TrainerState(
+            trainer_state = TrainerState(
                 stage=stage,
                 is_on_curriculum=True,
                 active_policies=stage_policies,
@@ -421,7 +451,7 @@ class TrainerServer:
                     updated_trainer_state.stage.get_task_parameters()
                 )
             else:
-                updated_trainer_state = _TrainerState(
+                updated_trainer_state = TrainerState(
                     stage=None,
                     is_on_curriculum=False,
                     active_policies=trainer_state.active_policies,

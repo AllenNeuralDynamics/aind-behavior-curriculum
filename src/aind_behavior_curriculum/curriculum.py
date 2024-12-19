@@ -445,6 +445,15 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         self.graph[n_id] = input_transitions
 
     def __eq__(self, other: object) -> bool:
+        """
+        Compare this object with another for equality.
+
+        Args:
+            other (object): The object to compare with.
+
+        Returns:
+            bool: True if the objects are equal, False otherwise.
+        """
         if not isinstance(other, type(self)):
             return False
         return self.model_dump() == other.model_dump()

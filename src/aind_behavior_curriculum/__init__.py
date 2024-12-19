@@ -19,4 +19,4 @@ from .curriculum import (
 )
 from .curriculum_utils import *
 from .task import Task, TaskParameters
-from .trainer import TrainerServer, _TrainerState
+from .trainer import TrainerServer, TrainerState
