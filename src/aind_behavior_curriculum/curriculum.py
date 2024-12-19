@@ -497,6 +497,8 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         return self.name == other.name
 
     def model_post_init(self, __context):
+        """Runs after model_construct to ensure that the
+        initial policies update the PolicyGraph"""
         super().model_post_init(__context)
         self.set_start_policies(self.start_policies, append_non_existing=True)
 
