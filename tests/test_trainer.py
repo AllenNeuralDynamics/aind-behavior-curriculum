@@ -729,8 +729,9 @@ class TrainerStateTests(unittest.TestCase):
 
     def test_trainer_state_is_equal(self):
 
-        # This tests is a bit brittle as it relies on an implementation detail of __eq__ of Stage
-        # I also dont think its super useful, so feel free to remove it in the future if it causes problems
+        # This tests is a bit brittle as it relies on an implementation detail
+        # of __eq__ of Stage I also dont think its super useful, so feel free
+        # to remove it in the future if it causes problems
         self.assertEqual(
             self.state_from_trainer_state, self.state_from_trainer
         )
