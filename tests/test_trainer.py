@@ -11,6 +11,7 @@ from aind_behavior_curriculum import (
     GRADUATED,
     INIT_STAGE,
     Stage,
+    Trainer,
     TrainerState,
     create_empty_stage,
 )
@@ -706,6 +707,69 @@ class TrainerTests(unittest.TestCase):
         # Deserialize from Child
         recovered = TrainerState.model_validate_json(instance_json)
         self.assertTrue(ts == recovered)
+
+
+class TrainerStateTests(unittest.TestCase):
+    def setUp(self):
+        self.curr = ex.construct_curriculum()
+        stageA = self.curr.see_stages()[0]
+        active_policies = (INIT_STAGE,)
+        self.state_from_trainer_state = TrainerState(
+            stage=stageA,
+            active_policies=active_policies,
+            is_on_curriculum=True,
+        )
+
+        self.trainer = new_trainer = Trainer(curriculum=self.curr)
+        self.state_from_trainer = new_trainer.create_trainer_state(
+            stage=stageA,
+            active_policies=active_policies,
+            is_on_curriculum=True,
+        )
+
+    def test_trainer_state_is_equal(self):
+
+        # This tests is a bit brittle as it relies on an implementation detail of __eq__ of Stage
+        # I also dont think its super useful, so feel free to remove it in the future if it causes problems
+        self.assertEqual(
+            self.state_from_trainer_state, self.state_from_trainer
+        )
+
+    def test_trainer_state_dict_is_equal(self):
+        dump_from_trainer_state = self.state_from_trainer_state.model_dump()
+        dump_from_trainer = self.state_from_trainer.model_dump()
+        self.assertEqual(dump_from_trainer, dump_from_trainer_state)
+        self.assertEqual(
+            self.state_from_trainer_state.model_validate(
+                dump_from_trainer_state
+            ),
+            self.state_from_trainer.model_validate(dump_from_trainer_state),
+        )
+        self.assertEqual(
+            self.state_from_trainer_state.model_validate(dump_from_trainer),
+            self.state_from_trainer.model_validate(dump_from_trainer),
+        )
+
+    def test_trainer_state_json_is_equal(self):
+        dump_from_trainer_state = (
+            self.state_from_trainer_state.model_dump_json()
+        )
+        dump_from_trainer = self.state_from_trainer.model_dump_json()
+        self.assertEqual(dump_from_trainer, dump_from_trainer_state)
+        self.assertEqual(
+            self.state_from_trainer_state.model_validate_json(
+                dump_from_trainer_state
+            ),
+            self.state_from_trainer.model_validate_json(
+                dump_from_trainer_state
+            ),
+        )
+        self.assertEqual(
+            self.state_from_trainer_state.model_validate_json(
+                dump_from_trainer
+            ),
+            self.state_from_trainer.model_validate_json(dump_from_trainer),
+        )
 
 
 if __name__ == "__main__":
