@@ -533,6 +533,12 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
+
+        if isinstance(rule, Rule):
+            rule = PolicyTransition(rule=rule)
+        if callable(rule) and not isinstance(rule, PolicyTransition):
+            rule = PolicyTransition(rule=rule)
+
         self.graph.add_transition(start_policy, dest_policy, rule)
 
     def remove_policy_transition(
@@ -737,7 +743,7 @@ class Curriculum(AindBehaviorModel):
         ][0]
         _inner_union = get_args(_inner_args)[0]
         if isinstance(_inner_union, type):
-            _known_tasks = _inner_union
+            _known_tasks = [_inner_union]
         else:
             _known_tasks = [get_args(x)[0] for x in get_args(_inner_union)]
 
@@ -813,6 +819,12 @@ class Curriculum(AindBehaviorModel):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
+
+
+        if isinstance(rule, Rule):
+            rule = StageTransition(rule=rule)
+        if callable(rule) and not isinstance(rule, StageTransition):
+            rule = StageTransition(rule=rule)
 
         self.graph.add_transition(start_stage, dest_stage, rule)
 
