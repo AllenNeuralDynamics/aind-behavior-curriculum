@@ -4,9 +4,19 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import Generic, List, Optional, Self, Tuple, TypeAlias, TypeVar
+from typing import (
+    Annotated,
+    Generic,
+    List,
+    Optional,
+    Self,
+    Tuple,
+    Type,
+    TypeAlias,
+    TypeVar,
+)
 
-from pydantic import Field
+from pydantic import Field, create_model
 
 from aind_behavior_curriculum.base import AindBehaviorModel
 from aind_behavior_curriculum.curriculum import (
@@ -14,6 +24,7 @@ from aind_behavior_curriculum.curriculum import (
     Metrics,
     Policy,
     Stage,
+    make_task_discriminator,
 )
 from aind_behavior_curriculum.task import TaskParameters
 
@@ -117,6 +128,9 @@ class Trainer(Generic[TCurriculum]):
         """
 
         self._curriculum = curriculum
+        self._trainer = self._construct_trainer_state_type_from_curriculum(
+            curriculum
+        )
 
     @property
     def curriculum(self) -> TCurriculum:
@@ -127,6 +141,33 @@ class Trainer(Generic[TCurriculum]):
             TCurriculum: The current curriculum instance.
         """
         return self._curriculum
+
+    @property
+    def trainer(self) -> Type[TrainerState]:
+        """
+        Property that returns a type-aware TrainerState class.
+
+        Returns:
+            Type[TrainerState]: type-aware TrainerState type.
+        """
+        return self._trainer
+
+    @staticmethod
+    def _construct_trainer_state_type_from_curriculum(
+        curriculum: Curriculum,
+    ) -> Type[TrainerState]:
+        """Constructs a task-type-aware TrainerState"""
+        _union_type = make_task_discriminator(*curriculum._known_tasks)
+
+        _props = {
+            "stage": Annotated[
+                Optional[_union_type],
+                Field(frozen=True, validate_default=True),
+            ],
+        }
+
+        trainer = create_model(f"{curriculum.name}TrainerState", __base__=TrainerState, **_props)  # type: ignore
+        return trainer
 
     @staticmethod
     def _evaluate_stage_transition(
