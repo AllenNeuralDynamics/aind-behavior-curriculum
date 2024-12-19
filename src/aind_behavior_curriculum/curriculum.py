@@ -33,8 +33,8 @@ from pydantic import (
     Discriminator,
     Field,
     GetJsonSchemaHandler,
-    ValidationError,
     Tag,
+    ValidationError,
     create_model,
     field_validator,
 )
@@ -443,6 +443,11 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
         n_id = self._get_node_id(node)
         self.graph[n_id] = input_transitions
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return False
+        return self.model_dump() == other.model_dump()
 
 
 class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
@@ -1081,7 +1086,7 @@ def create_curriculum(
     Returns:
         Type[Curriculum]: A curriculum class with the specified tasks.
     """
-    _tasks_tagged = _make_task_discriminator(*tasks)
+    _tasks_tagged = make_task_discriminator(*tasks)
     _props = {
         "name": Annotated[
             Literal[name],
@@ -1113,7 +1118,7 @@ def create_curriculum(
     return t_curriculum
 
 
-def _make_task_discriminator(*tasks: Type[Task]) -> Type:
+def make_task_discriminator(*tasks: Type[Task]) -> Type:
     """
     Creates a discriminated union type for the given tasks.
     This function takes a variable number of Task types and generates a
