@@ -507,20 +507,19 @@ class CurriculumTests(unittest.TestCase):
             create_empty_stage(Stage(name="Stage 1", task=taskB))
         )
 
-        # TODO This needs to be enabled after #49
-        # self.assertEqual(expected_curriculum, created_curriculum)
-        # self.assertEqual(
-        #     expected_curriculum.model_dump_json(),
-        #     created_curriculum.model_dump_json(),
-        # )
-        # self.assertEqual(
-        #     expected_curriculum.model_validate_json(
-        #         expected_curriculum.model_dump_json()
-        #     ),
-        #     expected_curriculum.model_validate_json(
-        #         expected_curriculum.model_dump_json()
-        #     ),
-        # )
+        self.assertEqual(expected_curriculum, created_curriculum)
+        self.assertEqual(
+            expected_curriculum.model_dump_json(),
+            created_curriculum.model_dump_json(),
+        )
+        self.assertEqual(
+            expected_curriculum.model_validate_json(
+                expected_curriculum.model_dump_json()
+            ),
+            expected_curriculum.model_validate_json(
+                expected_curriculum.model_dump_json()
+            ),
+        )
 
     def test_create_curriculum_with_invalid_tagged_union(self):
         class NotATask(BaseModel):
