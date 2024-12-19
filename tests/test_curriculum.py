@@ -219,7 +219,7 @@ class CurriculumTests(unittest.TestCase):
         stageC = create_empty_stage(Stage(name="Stage C", task=dummy_task))
         stageD = create_empty_stage(Stage(name="Stage D", task=dummy_task))
 
-        ex_curr = ex2.Curriculum()
+        ex_curr = ex2.MyCurriculum()
         ex_curr.add_stage(stageA)
         ex_curr.add_stage_transition(stageA, stageB, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageA, stageC, ex2.m1_stage_transition)
@@ -384,7 +384,7 @@ class CurriculumTests(unittest.TestCase):
         stageC = create_empty_stage(Stage(name="Stage C", task=dummy_task))
         stageD = create_empty_stage(Stage(name="Stage D", task=dummy_task))
 
-        ex_curr = ex2.Curriculum()
+        ex_curr = ex2.MyCurriculum()
         ex_curr.add_stage(stageA)
         ex_curr.add_stage_transition(stageA, stageB, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageA, stageC, ex2.m1_stage_transition)
@@ -447,7 +447,7 @@ class CurriculumTests(unittest.TestCase):
         stageC = create_empty_stage(Stage(name="Stage C", task=dummy_task))
         stageD = create_empty_stage(Stage(name="Stage D", task=dummy_task))
 
-        ex_curr = ex2.Curriculum()
+        ex_curr = ex2.MyCurriculum()
         ex_curr.add_stage(stageA)
         ex_curr.add_stage_transition(stageA, stageB, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageA, stageC, ex2.m1_stage_transition)
