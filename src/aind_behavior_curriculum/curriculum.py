@@ -736,7 +736,10 @@ class Curriculum(AindBehaviorModel):
             "args"
         ][0]
         _inner_union = get_args(_inner_args)[0]
-        _known_tasks = [get_args(x)[0] for x in get_args(_inner_union)]
+        if isinstance(_inner_union, type):
+            _known_tasks = _inner_union
+        else:
+            _known_tasks = [get_args(x)[0] for x in get_args(_inner_union)]
 
         # Since we are here, we also check if the known tasks match the nodes in the graph
         # The tasks known to the graph type should be a super set of the known tasks in the nodes
