@@ -478,15 +478,50 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
-    graph: PolicyGraph = PolicyGraph()
-    start_policies: List[Policy] = []
+    graph: PolicyGraph = Field(
+        default_factory=PolicyGraph,
+        validate_default=True,
+        description="Policy Graph.",
+    )
+    start_policies: List[Policy] = Field(
+        default_factory=list, description="List of starting policies."
+    )
 
-    def __eq__(self, __value: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Custom equality method.
         Two Stage instances are only distinguished by name.
         """
-        return self.name == __value.name
+        if not isinstance(other, Stage):
+            return False
+        return self.name == other.name
+
+    def model_post_init(self, __context):
+        super().model_post_init(__context)
+        self.set_start_policies(self.start_policies, append_non_existing=True)
+
+    def set_start_policies(
+        self,
+        start_policies: Policy | List[Policy],
+        append_non_existing: bool = True,
+    ) -> None:
+        """
+        Sets stage's start policies to start policies provided.
+        Input overwrites existing start policies.
+        """
+        if isinstance(start_policies, Policy):
+            start_policies = [start_policies]
+
+        for policy in start_policies:
+            if policy not in self.graph.see_nodes():
+                if append_non_existing:
+                    self.add_policy(policy)
+                else:
+                    raise ValueError(
+                        f"Policy {policy} is not in the policy graph."
+                    )
+
+        self.start_policies = start_policies
 
     def add_policy(self, policy: Policy) -> None:
         """
@@ -603,15 +638,6 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             )
 
         self.graph.set_transition_priority(policy, policy_transitions)
-
-    def set_start_policies(self, start_policies: Policy | List[Policy]):
-        """
-        Sets stage's start policies to start policies provided.
-        Input overwrites existing start policies.
-        """
-        if isinstance(start_policies, Policy):
-            start_policies = [start_policies]
-        self.start_policies = start_policies
 
     def get_task_parameters(self) -> TaskParameters:
         """
@@ -819,7 +845,6 @@ class Curriculum(AindBehaviorModel):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
-
 
         if isinstance(rule, Rule):
             rule = StageTransition(rule=rule)
