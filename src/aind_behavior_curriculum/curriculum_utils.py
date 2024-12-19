@@ -2,7 +2,7 @@
 Useful Placeholders when making Curriculums
 """
 
-from typing import Annotated, Literal, Union
+from typing import Literal
 
 from pydantic import Field
 

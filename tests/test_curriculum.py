@@ -3,7 +3,7 @@ Curriculum Test Suite
 """
 
 import unittest
-from typing import Annotated, Literal, Union
+from typing import Literal
 
 import example_project as ex
 import example_project_2 as ex2
