@@ -20,6 +20,7 @@ from aind_behavior_curriculum.curriculum import (
     Task,
     TaskParameters,
     _get_discriminator_value,
+    make_task_discriminator,
 )
 from aind_behavior_curriculum.curriculum_utils import create_empty_stage
 
@@ -478,36 +479,28 @@ class CurriculumTests(unittest.TestCase):
     def test_create_curriculum_equivalence(self):
 
         class TestCurriculum(Curriculum):
-            name: str = "test_curriculum"
+            name: str = "TestCurriculum"
             version: str = "1.2.3"
-            graph: StageGraph[
-                Annotated[
-                    Union[ex.TaskA, ex.TaskB], Field(discriminator="name")
-                ]
-            ] = Field(default_factory=StageGraph)
+            graph: StageGraph[make_task_discriminator(ex.TaskA, ex.TaskB)] = (
+                Field(default_factory=StageGraph)
+            )
             pkg_location: str = "test"
 
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
         expected_curriculum = TestCurriculum()
-        expected_curriculum.add_stage(
-            create_empty_stage(Stage(name="Stage 0", task=taskA))
-        )
-        expected_curriculum.add_stage(
-            create_empty_stage(Stage(name="Stage 1", task=taskB))
-        )
+        expected_curriculum.add_stage(Stage(name="Stage 0", task=taskA))
+        expected_curriculum.add_stage(Stage(name="Stage 1", task=taskB))
 
         created_curriculum = create_curriculum(
             "TestCurriculum", "1.2.3", ex.TaskA, ex.TaskB, pkg_location="test"
         )()
-        created_curriculum.add_stage(
-            create_empty_stage(Stage(name="Stage 0", task=taskA))
-        )
-        created_curriculum.add_stage(
-            create_empty_stage(Stage(name="Stage 1", task=taskB))
-        )
+        created_curriculum.add_stage(Stage(name="Stage 0", task=taskA))
+        created_curriculum.add_stage(Stage(name="Stage 1", task=taskB))
 
-        self.assertEqual(expected_curriculum, created_curriculum)
+        self.assertEqual(
+            expected_curriculum.model_dump(), created_curriculum.model_dump()
+        )
         self.assertEqual(
             expected_curriculum.model_dump_json(),
             created_curriculum.model_dump_json(),
