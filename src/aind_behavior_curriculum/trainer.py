@@ -49,8 +49,8 @@ class TrainerState(AindBehaviorModel):
         description="Was the output suggestion generated as part of the curriculum?",
     )
     # Note: This will deserialize to a base Stage object.
-    # Should users require the subclass, they will need to either serialize it themselves,
-    # or we should make CurriculumState a generic model on Union[SubStage1, SubStage2, ...]
+    # Should users require the subclass, they are incentivized to use
+    # the Trainer.create_trainer_state property instead
     active_policies: PolicyEntry = Field(
         default=None,
         validate_default=True,
@@ -128,8 +128,8 @@ class Trainer(Generic[TCurriculum]):
         """
 
         self._curriculum = curriculum
-        self._trainer = self._construct_trainer_state_type_from_curriculum(
-            curriculum
+        self._trainer_state_factory = (
+            self._construct_trainer_state_type_from_curriculum(curriculum)
         )
 
     @property
@@ -142,15 +142,24 @@ class Trainer(Generic[TCurriculum]):
         """
         return self._curriculum
 
-    @property
-    def trainer(self) -> Type[TrainerState]:
+    def create_trainer_state(
+        self,
+        *,
+        stage: StageEntry,
+        is_on_curriculum: bool = True,
+        active_policies: PolicyEntry = None,
+    ) -> TrainerState:
         """
         Property that returns a type-aware TrainerState class.
 
         Returns:
             Type[TrainerState]: type-aware TrainerState type.
         """
-        return self._trainer
+        return self._trainer_state_factory(
+            stage=stage,
+            is_on_curriculum=is_on_curriculum,
+            active_policies=active_policies,
+        )
 
     @staticmethod
     def _construct_trainer_state_type_from_curriculum(
@@ -161,7 +170,7 @@ class Trainer(Generic[TCurriculum]):
 
         _props = {
             "stage": Annotated[
-                Optional[_union_type],
+                Optional[Stage[_union_type]],
                 Field(frozen=True, validate_default=True),
             ],
         }
