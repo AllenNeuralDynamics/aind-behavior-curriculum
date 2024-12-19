@@ -190,28 +190,28 @@ class Trainer(Generic[TCurriculum]):
                 "No active policies. This likely means subject is off-curriculum."
             )
 
-        # 1) Stage Transition
+        # 1) Evaluate stage transitions
         updated_stage = self._evaluate_stage_transition(
             self.curriculum, current_stage, metrics
         )
 
-        # 2) Policy Transition
+        # 2) Evaluate policy transitions
         # If we've already transitioned stages, we don't need to check policies.
         if updated_stage is None:
             updated_stage = current_stage
             active_policies = self._evaluate_policy_transitions(
                 current_stage, active_policies, metrics
             )
-        # If we've transitioned stages, we need to reset the active policies.
+            # 3) Bootstrap updated parameters with new policies
+            updated_task_parameters = self.get_net_parameter_update(
+                updated_stage.get_task_parameters(), active_policies, metrics
+            )
+            updated_stage.set_task_parameters(updated_task_parameters)
+
+        # If we've transitioned stages, we keep to default task_parameters,
+        # and reset active_policies to the start_policies of the new stage.
         else:
             active_policies = updated_stage.start_policies
-
-        # 3) Bootstrap updated parameters
-        updated_task_parameters = self.get_net_parameter_update(
-            current_stage.get_task_parameters(), active_policies, metrics
-        )
-
-        updated_stage.set_task_parameters(updated_task_parameters)
 
         return _TrainerState(
             stage=updated_stage,
