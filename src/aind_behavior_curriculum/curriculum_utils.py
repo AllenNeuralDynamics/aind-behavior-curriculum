@@ -47,17 +47,6 @@ def init_stage_rule(
 INIT_STAGE = Policy(rule=init_stage_rule)
 
 
-def create_empty_stage(s: Stage) -> Stage:
-    """
-    Prepares empty stage with tacit policy initalization.
-    Convenient for initalizing many empty stages.
-    """
-
-    s.add_policy(INIT_STAGE)
-    s.set_start_policies(INIT_STAGE)
-    return s
-
-
 class Graduated(Task):
     """
     Utility Final Task.
@@ -69,4 +58,4 @@ class Graduated(Task):
     )
 
 
-GRADUATED = create_empty_stage(Stage(name="GRADUATED", task=Graduated()))
+GRADUATED = Stage(name="GRADUATED", task=Graduated())

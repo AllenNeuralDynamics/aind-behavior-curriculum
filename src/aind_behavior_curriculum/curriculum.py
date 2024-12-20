@@ -24,6 +24,7 @@ from typing import (
     TypeVar,
     Union,
     get_args,
+    Iterable
 )
 
 import boto3
@@ -299,6 +300,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         self.nodes[p_id] = node
         self.graph[p_id] = []
 
+
     def remove_node(self, node: NodeTypes) -> None:
         """
         Removes node and all associated incoming/outgoing
@@ -454,7 +456,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         Returns:
             bool: True if the objects are equal, False otherwise.
         """
-        if not isinstance(other, type(self)):
+        if not isinstance(other, BehaviorGraph):
             return False
         return self.model_dump() == other.model_dump()
 
@@ -492,6 +494,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         Custom equality method.
         Two Stage instances are only distinguished by name.
         """
+        # TODO. We should consider cleaning this up in the future.
+        # Since Stage is mutable at the level of the TaskParameters
+        # we cannot simply compare the model_dump() of the two instances.
+        # However, we need the __eq__ to look for nodes in the graph.
+        # The solution is probably to make our own "look_up" method
+        # This should generally be safe since the Stage name is unique,
+        # but it is a brittle solution.
         if not isinstance(other, Stage):
             return False
         return self.name == other.name
@@ -504,7 +513,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     def set_start_policies(
         self,
-        start_policies: Policy | List[Policy],
+        start_policies: Policy | Iterable[Policy],
         append_non_existing: bool = True,
     ) -> None:
         """
@@ -523,7 +532,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
                         f"Policy {policy} is not in the policy graph."
                     )
 
-        self.start_policies = start_policies
+        self.start_policies = list(start_policies)
 
     def add_policy(self, policy: Policy) -> None:
         """
