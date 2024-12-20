@@ -16,6 +16,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -24,7 +25,6 @@ from typing import (
     TypeVar,
     Union,
     get_args,
-    Iterable
 )
 
 import boto3
@@ -299,7 +299,6 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         p_id = self._create_node_id()
         self.nodes[p_id] = node
         self.graph[p_id] = []
-
 
     def remove_node(self, node: NodeTypes) -> None:
         """
