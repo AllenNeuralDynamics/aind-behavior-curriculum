@@ -448,15 +448,14 @@ class CurriculumTests(unittest.TestCase):
 
     def test_create_curriculum(self):
 
-        _ = create_curriculum("test_curriculum", "1.2.3", ex.TaskA, ex.TaskB)
+        _ = create_curriculum("test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB))
         _ = create_curriculum(
-            "test_curriculum", "1.2.3", ex.TaskA, ex.TaskB, ex.TaskB
+            "test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, ex.TaskB)
         )
         _ = create_curriculum(
             "test_curriculum",
             "1.2.3",
-            ex.TaskA,
-            ex.TaskB,
+            (ex.TaskA, ex.TaskB),
             pkg_location="example_project",
         )
 
@@ -465,9 +464,9 @@ class CurriculumTests(unittest.TestCase):
         class TestCurriculum(Curriculum):
             name: str = "TestCurriculum"
             version: str = "1.2.3"
-            graph: StageGraph[make_task_discriminator(ex.TaskA, ex.TaskB)] = (
-                Field(default_factory=StageGraph)
-            )
+            graph: StageGraph[
+                make_task_discriminator((ex.TaskA, ex.TaskB))
+            ] = Field(default_factory=StageGraph)
             pkg_location: str = "test"
 
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
@@ -477,7 +476,10 @@ class CurriculumTests(unittest.TestCase):
         expected_curriculum.add_stage(Stage(name="Stage 1", task=taskB))
 
         created_curriculum = create_curriculum(
-            "TestCurriculum", "1.2.3", ex.TaskA, ex.TaskB, pkg_location="test"
+            "TestCurriculum",
+            "1.2.3",
+            (ex.TaskA, ex.TaskB),
+            pkg_location="test",
         )()
         created_curriculum.add_stage(Stage(name="Stage 0", task=taskA))
         created_curriculum.add_stage(Stage(name="Stage 1", task=taskB))
@@ -504,7 +506,7 @@ class CurriculumTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as _:
             _ = create_curriculum(
-                "test_curriculum", "1.2.3", ex.TaskA, ex.TaskB, NotATask
+                "test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, NotATask)
             )
 
     def test_get_discriminator_value(self):

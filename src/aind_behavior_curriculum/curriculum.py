@@ -794,7 +794,7 @@ class Curriculum(AindBehaviorModel):
 
     def task_discriminator_type(self) -> type:
         """Create a Discriminated Union  type for the known tasks."""
-        return make_task_discriminator(*self._known_tasks)
+        return make_task_discriminator(self._known_tasks)
 
     def _is_task_type_known(self, task_type: Task | Type[Task]) -> bool:
         """Check if a task type is known in the curriculum."""
@@ -1181,22 +1181,26 @@ class Curriculum(AindBehaviorModel):
 def create_curriculum(
     name: str,
     version: str,
-    *tasks: Type[Task],
+    tasks: Iterable[Type[Task]],
     pkg_location: Optional[str] = None,
 ) -> Type[Curriculum]:
-    """_summary_
-
-    Args:
-        name (str): Name of the Curriculum.
-        version (str): Curriculum version in SemVer format.
-
-    Returns:
-        Type[Curriculum]: A curriculum class with the specified tasks.
     """
-    if len(tasks) == 0:
+    Creates a new curriculum model with the specified name, version, and tasks.
+    Args:
+        name (str): The name of the curriculum.
+        version (str): The version of the curriculum, following semantic versioning.
+        tasks (Iterable[Type[Task]]): An iterable of Task types to be included in the curriculum.
+        pkg_location (Optional[str]): Optional package location string.
+    Returns:
+        Type[Curriculum]: A new curriculum model type.
+    Raises:
+        ValueError: If no tasks are provided.
+    """
+
+    if not any(tasks):
         raise ValueError("At least one task must be provided.")
 
-    _tasks_tagged = make_task_discriminator(*tasks)
+    _tasks_tagged = make_task_discriminator(tasks)
     _props = {
         "name": Annotated[
             Literal[name],
@@ -1228,14 +1232,14 @@ def create_curriculum(
     return t_curriculum
 
 
-def make_task_discriminator(*tasks: Type[Task]) -> Type:
+def make_task_discriminator(tasks: Iterable[Type[Task]]) -> Type:
     """
     Creates a discriminated union type for the given tasks.
     This function takes a variable number of Task types and generates a
     discriminated union type using the 'name' field of each task to create
     a valid Tag and corresponding Discriminator.
     Args:
-        *tasks (Type[Task]): A variable number of Task types.
+        tasks (Iterable[Type[Task]]): A variable number of Task types.
     Returns:
         Type: A discriminated union type of the provided tasks.
     Raises:

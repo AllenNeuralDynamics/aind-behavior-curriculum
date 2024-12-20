@@ -166,7 +166,7 @@ class Trainer(Generic[TCurriculum]):
         curriculum: Curriculum,
     ) -> Type[TrainerState]:
         """Constructs a task-type-aware TrainerState"""
-        _union_type = make_task_discriminator(*curriculum._known_tasks)
+        _union_type = make_task_discriminator(curriculum._known_tasks)
 
         _props = {
             "stage": Annotated[
@@ -333,8 +333,7 @@ class Trainer(Generic[TCurriculum]):
 
 class TrainerServer:
     """
-    Pulls subject curriculum and history,
-    and performs curiculum evaluations on subjects
+    Pulls subject curriculum and history and performs evaluation.
 
     Intended usage:
     1) Implement abstract methods

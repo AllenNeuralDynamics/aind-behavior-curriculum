@@ -32,7 +32,7 @@ def get_task_types():
 
     """
 
-    return make_task_discriminator(*Task.__subclasses__())
+    return make_task_discriminator(Task.__subclasses__())
 
 
 def init_stage_rule(
