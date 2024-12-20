@@ -16,16 +16,14 @@ class TaskTests(unittest.TestCase):
     def test_valid_construction(self):
         ex_parameters = ex.ExampleTaskParameters(field_2=50, field_4=0.8)
         ex_task = ex.ExampleTask(task_parameters=ex_parameters)
-        self.assertTrue(
-            ex_task.task_parameters.field_2 == 50
-            and ex_task.task_parameters.field_4 == 0.8
-        )
+        self.assertEqual(ex_task.task_parameters.field_2, 50)
+        self.assertEqual(ex_task.task_parameters.field_4, 0.8)
 
     def test_valid_parameter_change(self):
         ex_parameters = ex.ExampleTaskParameters()
         ex_task = ex.ExampleTask(task_parameters=ex_parameters)
         ex_task.task_parameters.field_1 = 50
-        self.assertTrue(ex_task.task_parameters.field_1 == 50)
+        self.assertEqual(ex_task.task_parameters.field_1, 50)
 
     # Invalid Usage
     def test_invalid_construction(self):
@@ -66,7 +64,7 @@ class TaskTests(unittest.TestCase):
         instance_json = ex_task.model_dump_json()
         # Deserialize from Child
         recovered = ex.ExampleTask.model_validate_json(instance_json)
-        self.assertTrue(ex_task == recovered)
+        self.assertEqual(ex_task, recovered)
 
         # Serialize from Child
         instance_json = ex_task.model_dump_json()
@@ -76,7 +74,7 @@ class TaskTests(unittest.TestCase):
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
         instance_prime = ex.ExampleTask.model_validate_json(parent_json)
-        self.assertTrue(ex_task == instance_prime)
+        self.assertEqual(ex_task, instance_prime)
 
 
 if __name__ == "__main__":

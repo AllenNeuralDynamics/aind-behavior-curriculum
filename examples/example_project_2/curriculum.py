@@ -17,7 +17,6 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    create_empty_stage,
     get_task_types,
 )
 

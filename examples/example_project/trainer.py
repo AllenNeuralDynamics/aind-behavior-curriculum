@@ -7,7 +7,12 @@ from typing import Callable, Dict
 
 import example_project as ex
 
-from aind_behavior_curriculum import Curriculum, Metrics, TrainerServer, TrainerState
+from aind_behavior_curriculum import (
+    Curriculum,
+    Metrics,
+    TrainerServer,
+    TrainerState,
+)
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation

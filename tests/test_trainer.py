@@ -13,7 +13,6 @@ from aind_behavior_curriculum import (
     Stage,
     Trainer,
     TrainerState,
-    create_empty_stage,
 )
 
 
@@ -28,8 +27,8 @@ class TrainerTests(unittest.TestCase):
         # Create Stage-only curriculum
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
-        stageA = create_empty_stage(Stage(name="StageA", task=taskA))
-        stageB = create_empty_stage(Stage(name="StageB", task=taskB))
+        stageA = Stage(name="StageA", task=taskA)
+        stageB = Stage(name="StageB", task=taskB)
 
         curr = ex.MyCurriculum(name="My Curriculum")
         curr.add_stage_transition(stageA, GRADUATED, ex.t2_10)
@@ -38,9 +37,9 @@ class TrainerTests(unittest.TestCase):
 
         # Associate mice with curriculum
         tr = ex.ExampleTrainer()
-        tr.register_subject(0, curr, stageA, INIT_STAGE)
-        tr.register_subject(1, curr, stageA, INIT_STAGE)
-        tr.register_subject(2, curr, stageA, INIT_STAGE)
+        tr.register_subject(0, curr, stageA)
+        tr.register_subject(1, curr, stageA)
+        tr.register_subject(2, curr, stageA)
 
         # Move mice through curriculum by updating metrics
         ex.MICE_METRICS[0] = ex.ExampleMetrics(theta_2=0)
@@ -58,29 +57,29 @@ class TrainerTests(unittest.TestCase):
 
         # Validate mouse histories
         M0 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=()),
+            TrainerState(stage=stageA, active_policies=()),
+            TrainerState(stage=stageB, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
         M1 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=()),
+            TrainerState(stage=stageB, active_policies=()),
+            TrainerState(stage=stageB, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
         M2 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=stageA, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
-        self.assertTrue(tr.subject_history[1] == M1)
-        self.assertTrue(tr.subject_history[2] == M2)
+        self.assertEqual(tr.subject_history[0], M0)
+        self.assertEqual(tr.subject_history[1], M1)
+        self.assertEqual(tr.subject_history[2], M2)
 
     def test_pure_policy_evaluation(self):
         """
@@ -156,9 +155,9 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
-        self.assertTrue(tr.subject_history[1] == M1)
-        self.assertTrue(tr.subject_history[2] == M2)
+        self.assertEqual(tr.subject_history[0], M0)
+        self.assertEqual(tr.subject_history[1], M1)
+        self.assertEqual(tr.subject_history[2], M2)
 
     def test_stage_policy_evaluation(self):
         """
@@ -171,6 +170,8 @@ class TrainerTests(unittest.TestCase):
         # StageA and StageB picked out from observation
         stageA = curr.see_stages()[0]
         stageB = curr.see_stages()[2]
+        stageA.set_start_policies((INIT_STAGE,))
+        stageB.set_start_policies((INIT_STAGE,))
 
         stageAA = stageA.model_copy(deep=True)
         stageAA.set_task_parameters(
@@ -181,6 +182,7 @@ class TrainerTests(unittest.TestCase):
             ex.stageA_policyB_rule(ex.ExampleMetrics(), ex.TaskAParameters())
         )
         stageBB = stageB.model_copy(deep=True)
+
         stageBB.set_task_parameters(
             ex.stageB_policyA_rule(ex.ExampleMetrics(), ex.TaskBParameters())
         )
@@ -191,9 +193,9 @@ class TrainerTests(unittest.TestCase):
 
         # Associate mice with curriculum
         tr = ex.ExampleTrainer()
-        tr.register_subject(0, curr, stageA, INIT_STAGE)
-        tr.register_subject(1, curr, stageA, INIT_STAGE)
-        tr.register_subject(2, curr, stageA, INIT_STAGE)
+        tr.register_subject(0, curr, stageA)
+        tr.register_subject(1, curr, stageA)
+        tr.register_subject(2, curr, stageA)
 
         # Move mice through curriculum by updating metrics
         ex.MICE_METRICS[0] = ex.ExampleMetrics(theta_1=8)
@@ -222,7 +224,7 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
             TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
             TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
         M1 = [
@@ -230,20 +232,20 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
             TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
             TrainerState(stage=stageBBB, active_policies=(ex.stageB_policyB,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
         M2 = [
             TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
             TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
-        self.assertTrue(tr.subject_history[1] == M1)
-        self.assertTrue(tr.subject_history[2] == M2)
+        self.assertEqual(tr.subject_history[0], M0)
+        self.assertEqual(tr.subject_history[1], M1)
+        self.assertEqual(tr.subject_history[2], M2)
 
     def test_status_override(self):
         """
@@ -286,7 +288,7 @@ class TrainerTests(unittest.TestCase):
             0, override_stage=stageAAA, override_policies=ex.stageA_policyB
         )
         tr.override_subject_status(
-            0, override_stage=GRADUATED, override_policies=INIT_STAGE
+            0, override_stage=GRADUATED, override_policies=()
         )
 
         # Validate mouse history
@@ -294,10 +296,10 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
             TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
             TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=GRADUATED, active_policies=(INIT_STAGE,)),
+            TrainerState(stage=GRADUATED, active_policies=()),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertEqual(tr.subject_history[0], M0)
 
     def test_floating_stages(self):
         """
@@ -309,8 +311,10 @@ class TrainerTests(unittest.TestCase):
         # Create Stage-only curriculum
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
-        stageA = create_empty_stage(Stage(name="StageA", task=taskA))
-        stageB = create_empty_stage(Stage(name="StageB", task=taskB))
+        stageA = Stage(name="StageA", task=taskA)
+        stageA.set_start_policies(INIT_STAGE, append_non_existing=True)
+        stageB = Stage(name="StageB", task=taskB)
+        stageB.set_start_policies(INIT_STAGE, append_non_existing=True)
 
         curr = ex.MyCurriculum(name="My Curriculum")
         curr.add_stage(stageA)
@@ -355,8 +359,8 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
-        self.assertTrue(tr.subject_history[1] == M1)
+        self.assertEqual(tr.subject_history[0], M0)
+        self.assertEqual(tr.subject_history[1], M1)
 
     def test_floating_policies(self):
         """
@@ -425,8 +429,8 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,)),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
-        self.assertTrue(tr.subject_history[1] == M1)
+        self.assertEqual(tr.subject_history[0], M0)
+        self.assertEqual(tr.subject_history[1], M1)
 
     def test_policy_tracks(self):
         """
@@ -485,7 +489,7 @@ class TrainerTests(unittest.TestCase):
             ),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertEqual(tr.subject_history[0], M0)
 
     def test_policy_tree(self):
         """
@@ -550,7 +554,7 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stage_2, active_policies=(ex2.policy_6,)),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertEqual(tr.subject_history[0], M0)
 
     def test_policy_complete_graph(self):
         """
@@ -608,7 +612,7 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stage_6, active_policies=(ex2.policy_1,)),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertEqual(tr.subject_history[0], M0)
 
     def test_stage_complete_graph(self):
         """
@@ -645,7 +649,7 @@ class TrainerTests(unittest.TestCase):
             TrainerState(stage=stage_1, active_policies=()),
         ]
 
-        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertEqual(tr.subject_history[0], M0)
 
     def test_eject_subject(self):
         """
@@ -695,7 +699,7 @@ class TrainerTests(unittest.TestCase):
             ),
             TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
         ]
-        self.assertTrue(tr.subject_history[0] == M0)
+        self.assertEqual(tr.subject_history[0], M0)
 
     def test_round_trip_trainer_state(self):
         curr = ex.construct_curriculum()
@@ -706,7 +710,7 @@ class TrainerTests(unittest.TestCase):
         instance_json = ts.model_dump_json()
         # Deserialize from Child
         recovered = TrainerState.model_validate_json(instance_json)
-        self.assertTrue(ts == recovered)
+        self.assertEqual(ts, recovered)
 
 
 class TrainerStateTests(unittest.TestCase):
