@@ -440,7 +440,7 @@ class TrainerServer:
             raise ValueError(f"Subject_id {subject_id} is already registered.")
 
         if start_policies is None:
-            start_policies = start_stage.see_policies()
+            start_policies = start_stage.start_policies
         elif isinstance(start_policies, Policy):
             start_policies = [start_policies]
 
