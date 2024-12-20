@@ -22,33 +22,25 @@ from aind_behavior_curriculum.curriculum import (
     _get_discriminator_value,
     make_task_discriminator,
 )
-from aind_behavior_curriculum.curriculum_utils import create_empty_stage
 
 
 class CurriculumTests(unittest.TestCase):
     """Unit tests for Stage/Curriculum De/Serialization"""
 
-    def test_round_trip_empty_stage(self):
+    def test_round_trip_without_policies(self):
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         stageA = Stage(name="StageA", task=taskA)
 
-        # Serialize from Child
+        # Check if the jsons produced by cross serialization are equal
         instance_json = stageA.model_dump_json()
-        # Deserialize from Child
+        # Use the generic deserializer
         recovered = Stage.model_validate_json(instance_json)
-        self.assertTrue(stageA == recovered)
+        recovered_json = recovered.model_dump_json()
+        # Compare the two jsons
+        self.assertEqual(instance_json, recovered_json)
+        self.assertEqual(stageA, recovered)
 
-        # Serialize from Child
-        instance_json = stageA.model_dump_json()
-        # Deserialize from Parent
-        instance_parent = Stage.model_validate_json(instance_json)
-        # Serialize from Parent
-        parent_json = instance_parent.model_dump_json()
-        # Deserialize from Child
-        instance_prime = Stage.model_validate_json(parent_json)
-        self.assertTrue(stageA == instance_prime)
-
-    def test_round_trip_stage(self):
+    def test_round_trip_with_policies(self):
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
         stageA = Stage(name="StageA", task=taskA)
 
@@ -62,17 +54,10 @@ class CurriculumTests(unittest.TestCase):
         instance_json = stageA.model_dump_json()
         # Deserialize from Child
         recovered = Stage.model_validate_json(instance_json)
-        self.assertTrue(stageA == recovered)
-
-        # Serialize from Child
-        instance_json = stageA.model_dump_json()
-        # Deserialize from Parent
-        instance_parent = Stage.model_validate_json(instance_json)
-        # Serialize from Parent
-        parent_json = instance_parent.model_dump_json()
-        # Deserialize from Child
-        instance_prime = Stage.model_validate_json(parent_json)
-        self.assertTrue(stageA == instance_prime)
+        recovered_json = recovered.model_dump_json()
+        self.assertEqual(instance_json, recovered_json)
+        self.assertEqual(stageA.see_policies(), recovered.see_policies())
+        self.assertEqual(stageA, recovered)
 
     def test_round_trip_empty_curriculum(self):
         ex_curr = ex.MyCurriculum(name="My Curriculum")
@@ -81,7 +66,7 @@ class CurriculumTests(unittest.TestCase):
         instance_json = ex_curr.model_dump_json()
         # Deserialize from Child
         recovered = ex.MyCurriculum.model_validate_json(instance_json)
-        self.assertTrue(ex_curr == recovered)
+        self.assertEqual(ex_curr, recovered)
 
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
@@ -91,7 +76,7 @@ class CurriculumTests(unittest.TestCase):
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
         instance_prime = ex.MyCurriculum.model_validate_json(parent_json)
-        self.assertTrue(ex_curr == instance_prime)
+        self.assertEqual(ex_curr, instance_prime)
 
     def test_round_trip_curriculum(self):
         ex_curr = ex.construct_curriculum()
@@ -101,7 +86,7 @@ class CurriculumTests(unittest.TestCase):
         # Deserialize from Child
         recovered = ex.MyCurriculum.model_validate_json(instance_json)
 
-        self.assertTrue(ex_curr == recovered)
+        self.assertEqual(ex_curr, recovered)
 
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
@@ -111,7 +96,7 @@ class CurriculumTests(unittest.TestCase):
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
         instance_prime = ex.MyCurriculum.model_validate_json(parent_json)
-        self.assertTrue(ex_curr == instance_prime)
+        self.assertEqual(ex_curr, instance_prime)
 
     def test_round_trip_edit_task_parameters(self):
         ex_curr = ex.construct_curriculum()
@@ -125,7 +110,7 @@ class CurriculumTests(unittest.TestCase):
         instance_json = ex_curr.model_dump_json()
         # Deserialize from child
         recovered = ex.MyCurriculum.model_validate_json(instance_json)
-        self.assertTrue(ex_curr == recovered)
+        self.assertEqual(ex_curr, recovered)
 
         # Serialize from Child
         instance_json = ex_curr.model_dump_json()
@@ -135,8 +120,8 @@ class CurriculumTests(unittest.TestCase):
         parent_json = instance_parent.model_dump_json()
         # Deserialize from Child
         instance_prime = ex.MyCurriculum.model_validate_json(parent_json)
-        self.assertTrue(ex_curr == instance_prime)
-        self.assertTrue(stage_0 == instance_prime.see_stages()[0])
+        self.assertEqual(ex_curr, instance_prime)
+        self.assertEqual(instance_prime.see_stages()[0], stage_0)
 
     def test_add_policies_and_policy_transitions(self):
         """
@@ -175,26 +160,26 @@ class CurriculumTests(unittest.TestCase):
             ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
         )
 
-        self.assertTrue(
-            stageA.see_policies()
-            == [ex2.policy_1, ex2.policy_2, ex2.policy_3, ex2.policy_4]
+        self.assertEqual(
+            stageA.see_policies(),
+            [ex2.policy_1, ex2.policy_2, ex2.policy_3, ex2.policy_4],
         )
-        self.assertTrue(
-            stageA.see_policy_transitions(ex2.policy_1)
-            == [
+        self.assertEqual(
+            stageA.see_policy_transitions(ex2.policy_1),
+            [
                 (ex2.m1_policy_transition, ex2.policy_2),
                 (ex2.m1_policy_transition, ex2.policy_3),
-            ]
+            ],
         )
-        self.assertTrue(
-            stageA.see_policy_transitions(ex2.policy_2)
-            == [(ex2.m1_policy_transition, ex2.policy_4)]
+        self.assertEqual(
+            stageA.see_policy_transitions(ex2.policy_2),
+            [(ex2.m1_policy_transition, ex2.policy_4)],
         )
-        self.assertTrue(
-            stageA.see_policy_transitions(ex2.policy_3)
-            == [(ex2.m1_policy_transition, ex2.policy_4)]
+        self.assertEqual(
+            stageA.see_policy_transitions(ex2.policy_3),
+            [(ex2.m1_policy_transition, ex2.policy_4)],
         )
-        self.assertTrue(stageA.see_policy_transitions(ex2.policy_4) == [])
+        self.assertEqual(stageA.see_policy_transitions(ex2.policy_4), [])
 
     def test_add_stage_and_stage_transitions(self):
         """
@@ -214,10 +199,10 @@ class CurriculumTests(unittest.TestCase):
         """
 
         dummy_task = ex2.DummyTask(task_parameters=ex2.DummyParameters())
-        stageA = create_empty_stage(Stage(name="Stage A", task=dummy_task))
-        stageB = create_empty_stage(Stage(name="Stage B", task=dummy_task))
-        stageC = create_empty_stage(Stage(name="Stage C", task=dummy_task))
-        stageD = create_empty_stage(Stage(name="Stage D", task=dummy_task))
+        stageA = Stage(name="Stage A", task=dummy_task)
+        stageB = Stage(name="Stage B", task=dummy_task)
+        stageC = Stage(name="Stage C", task=dummy_task)
+        stageD = Stage(name="Stage D", task=dummy_task)
 
         ex_curr = ex2.MyCurriculum()
         ex_curr.add_stage(stageA)
@@ -226,25 +211,25 @@ class CurriculumTests(unittest.TestCase):
         ex_curr.add_stage_transition(stageB, stageD, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageC, stageD, ex2.m1_stage_transition)
 
-        self.assertTrue(
-            ex_curr.see_stages() == [stageA, stageB, stageC, stageD]
+        self.assertEqual(
+            ex_curr.see_stages(), [stageA, stageB, stageC, stageD]
         )
-        self.assertTrue(
-            ex_curr.see_stage_transitions(stageA)
-            == [
+        self.assertEqual(
+            ex_curr.see_stage_transitions(stageA),
+            [
                 (ex2.m1_stage_transition, stageB),
                 (ex2.m1_stage_transition, stageC),
-            ]
+            ],
         )
-        self.assertTrue(
-            ex_curr.see_stage_transitions(stageB)
-            == [(ex2.m1_stage_transition, stageD)]
+        self.assertEqual(
+            ex_curr.see_stage_transitions(stageB),
+            [(ex2.m1_stage_transition, stageD)],
         )
-        self.assertTrue(
-            ex_curr.see_stage_transitions(stageC)
-            == [(ex2.m1_stage_transition, stageD)]
+        self.assertEqual(
+            ex_curr.see_stage_transitions(stageC),
+            [(ex2.m1_stage_transition, stageD)],
         )
-        self.assertTrue(ex_curr.see_stage_transitions(stageD) == [])
+        self.assertEqual(ex_curr.see_stage_transitions(stageD), [])
 
     def test_reorder_policy_transitions(self):
         """
@@ -286,8 +271,8 @@ class CurriculumTests(unittest.TestCase):
         ]
         stageA.set_policy_transition_priority(ex2.policy_1, new_priority)
 
-        self.assertTrue(
-            stageA.see_policy_transitions(ex2.policy_1) == new_priority
+        self.assertEqual(
+            stageA.see_policy_transitions(ex2.policy_1), new_priority
         )
 
     def test_remove_policies_and_policy_transitions(self):
@@ -331,19 +316,18 @@ class CurriculumTests(unittest.TestCase):
         stageA4 = stageA.model_copy(deep=True)
 
         stageA1.remove_policy(ex2.policy_1)
-        self.assertTrue(
-            stageA1.see_policies()
-            == [ex2.policy_2, ex2.policy_3, ex2.policy_4]
+        self.assertEqual(
+            stageA1.see_policies(), [ex2.policy_2, ex2.policy_3, ex2.policy_4]
         )
 
         stageA2.remove_policy(ex2.policy_4)
-        self.assertTrue(stageA2.see_policy_transitions(ex2.policy_2) == [])
-        self.assertTrue(stageA2.see_policy_transitions(ex2.policy_3) == [])
+        self.assertEqual(stageA2.see_policy_transitions(ex2.policy_2), [])
+        self.assertEqual(stageA2.see_policy_transitions(ex2.policy_3), [])
 
         stageA3.remove_policy(ex2.policy_2)
-        self.assertTrue(
-            stageA3.see_policy_transitions(ex2.policy_1)
-            == [(ex2.m1_policy_transition, ex2.policy_3)]
+        self.assertEqual(
+            stageA3.see_policy_transitions(ex2.policy_1),
+            [(ex2.m1_policy_transition, ex2.policy_3)],
         )
 
         stageA4.remove_policy_transition(
@@ -358,10 +342,10 @@ class CurriculumTests(unittest.TestCase):
         stageA4.remove_policy_transition(
             ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
         )
-        self.assertTrue(stageA4.see_policy_transitions(ex2.policy_1) == [])
-        self.assertTrue(stageA4.see_policy_transitions(ex2.policy_2) == [])
-        self.assertTrue(stageA4.see_policy_transitions(ex2.policy_3) == [])
-        self.assertTrue(stageA4.see_policy_transitions(ex2.policy_4) == [])
+        self.assertEqual(stageA4.see_policy_transitions(ex2.policy_1), [])
+        self.assertEqual(stageA4.see_policy_transitions(ex2.policy_2), [])
+        self.assertEqual(stageA4.see_policy_transitions(ex2.policy_3), [])
+        self.assertEqual(stageA4.see_policy_transitions(ex2.policy_4), [])
 
     def test_remove_stages_and_stage_transitions(self):
         """
@@ -379,10 +363,10 @@ class CurriculumTests(unittest.TestCase):
         """
 
         dummy_task = ex2.DummyTask(task_parameters=ex2.DummyParameters())
-        stageA = create_empty_stage(Stage(name="Stage A", task=dummy_task))
-        stageB = create_empty_stage(Stage(name="Stage B", task=dummy_task))
-        stageC = create_empty_stage(Stage(name="Stage C", task=dummy_task))
-        stageD = create_empty_stage(Stage(name="Stage D", task=dummy_task))
+        stageA = Stage(name="Stage A", task=dummy_task)
+        stageB = Stage(name="Stage B", task=dummy_task)
+        stageC = Stage(name="Stage C", task=dummy_task)
+        stageD = Stage(name="Stage D", task=dummy_task)
 
         ex_curr = ex2.MyCurriculum()
         ex_curr.add_stage(stageA)
@@ -397,16 +381,16 @@ class CurriculumTests(unittest.TestCase):
         ex_curr4 = ex_curr.model_copy(deep=True)
 
         ex_curr1.remove_stage(stageA)
-        self.assertTrue(ex_curr1.see_stages() == [stageB, stageC, stageD])
+        self.assertEqual(ex_curr1.see_stages(), [stageB, stageC, stageD])
 
         ex_curr2.remove_stage(stageD)
-        self.assertTrue(ex_curr2.see_stage_transitions(stageB) == [])
-        self.assertTrue(ex_curr2.see_stage_transitions(stageC) == [])
+        self.assertEqual(ex_curr2.see_stage_transitions(stageB), [])
+        self.assertEqual(ex_curr2.see_stage_transitions(stageC), [])
 
         ex_curr3.remove_stage(stageB)
-        self.assertTrue(
-            ex_curr3.see_stage_transitions(stageA)
-            == [(ex2.m1_stage_transition, stageC)]
+        self.assertEqual(
+            ex_curr3.see_stage_transitions(stageA),
+            [(ex2.m1_stage_transition, stageC)],
         )
 
         ex_curr4.remove_stage_transition(
@@ -421,10 +405,10 @@ class CurriculumTests(unittest.TestCase):
         ex_curr4.remove_stage_transition(
             stageC, stageD, ex2.m1_stage_transition
         )
-        self.assertTrue(ex_curr4.see_stage_transitions(stageA) == [])
-        self.assertTrue(ex_curr4.see_stage_transitions(stageB) == [])
-        self.assertTrue(ex_curr4.see_stage_transitions(stageC) == [])
-        self.assertTrue(ex_curr4.see_stage_transitions(stageD) == [])
+        self.assertEqual(ex_curr4.see_stage_transitions(stageA), [])
+        self.assertEqual(ex_curr4.see_stage_transitions(stageB), [])
+        self.assertEqual(ex_curr4.see_stage_transitions(stageC), [])
+        self.assertEqual(ex_curr4.see_stage_transitions(stageD), [])
 
     def test_reorder_stage_transitions(self):
         """
@@ -442,10 +426,10 @@ class CurriculumTests(unittest.TestCase):
         """
 
         dummy_task = ex2.DummyTask(task_parameters=ex2.DummyParameters())
-        stageA = create_empty_stage(Stage(name="Stage A", task=dummy_task))
-        stageB = create_empty_stage(Stage(name="Stage B", task=dummy_task))
-        stageC = create_empty_stage(Stage(name="Stage C", task=dummy_task))
-        stageD = create_empty_stage(Stage(name="Stage D", task=dummy_task))
+        stageA = Stage(name="Stage A", task=dummy_task)
+        stageB = Stage(name="Stage B", task=dummy_task)
+        stageC = Stage(name="Stage C", task=dummy_task)
+        stageD = Stage(name="Stage D", task=dummy_task)
 
         ex_curr = ex2.MyCurriculum()
         ex_curr.add_stage(stageA)
@@ -460,7 +444,7 @@ class CurriculumTests(unittest.TestCase):
         ]
         ex_curr.set_stage_transition_priority(stageA, new_priority)
 
-        self.assertTrue(ex_curr.see_stage_transitions(stageA) == new_priority)
+        self.assertEqual(ex_curr.see_stage_transitions(stageA), new_priority)
 
     def test_create_curriculum(self):
 
