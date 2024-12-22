@@ -77,6 +77,12 @@ class _Rule(Generic[_P, _R]):
     def __init__(
         self, function: Callable[_P, _R], *, skip_validation: bool = False
     ) -> None:
+
+        # Just in case people pass the _Rule instance directly
+        # Instead of the callable
+        if isinstance(function, _Rule):
+            function = function.callable
+
         if not skip_validation:
             self._validate_callable_typing(function)
         self._callable = function
