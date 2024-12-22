@@ -136,7 +136,7 @@ class _Rule(Generic[_P, _R]):
                 ]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
-                function=cls._serialize_rule
+                function=cls.serialize_rule
             ),
         )
 
@@ -153,16 +153,16 @@ class _Rule(Generic[_P, _R]):
         return handler(core_schema.str_schema())
 
     @classmethod
-    def _deserialize_rule(
-        cls, value: str | Callable[_P, _R]
-    ) -> Callable[_P, _R]:
+    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> _Rule[_P, _R]:
         """
         Custom Deserialization.
         Imports function according to package and function name.
         """
-        if callable(value):
+        callable_handle: Callable[_P, _R]
+        if callable(value) and not isinstance(value, cls):
             return cls(value)
-        else:
+
+        if isinstance(value, str):
             split = value.rsplit(".", 1)
             if not (len(split) > 0):
                 raise ValueError(
@@ -170,31 +170,49 @@ class _Rule(Generic[_P, _R]):
                     Got {value}, expected string in the format '<module>.Rule'"
                 )
 
-            module = import_module(split[0])
-            obj = getattr(module, split[1])
-            return cls(obj)
+            try:
+                module = import_module(split[0])
+                obj = getattr(module, split[1], None)
+                if obj is None:
+                    raise AttributeError(
+                        f"Callable {split[1]} not found in module {module}."
+                    )
+            except (ModuleNotFoundError, AttributeError) as e:
+                callable_handle = _NonDeserializableCallable[_P, _R](value, e)
+            else:
+                callable_handle = obj
+
+        return cls(callable_handle)
 
     @classmethod
-    def _serialize_rule(cls, value: str | _Rule) -> str:
+    def serialize_rule(cls, value: str | _Rule[_P, _R]) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
         """
-        if isinstance(value, str):
-            value = cls._deserialize_rule(value)
 
-        assert isinstance(value, _Rule)
-        return value.callable.__module__ + "." + value.callable.__name__
+        if isinstance(value, str):
+            ret = cls._deserialize_rule(value)
+        else:
+            ret = value
+        assert isinstance(ret, _Rule)
+
+        return ret.callable.__module__ + "." + ret.callable.__name__
 
     @classmethod
-    def _validate_callable_typing(
+    def _validate_callable_typing(  # noqa: C901
         cls, r: Callable[_P, _R]
-    ) -> None:  # noqa: C901
+    ) -> None:
+
         if not callable(r):
             raise ValueError("Rule must be callable.")
 
         if isinstance(r, cls):
             return
+
+        if is_non_deserializable_callable(r):
+            return
+
         # For some reason, generics do not materialize by default.
         # We fetch them manually....
         origin_bases = getattr(cls, "__orig_bases__", [])
@@ -256,6 +274,46 @@ class _Rule(Generic[_P, _R]):
         except TypeError as e:
             e.add_note(f"Expected callable type signature: {args}. Got {sig}.")
             raise e
+
+
+def is_non_deserializable_callable(value: object) -> bool:
+    return isinstance(value, _NonDeserializableCallable)
+
+
+def try_materialize_non_deserializable_callable_error(
+    value: _NonDeserializableCallable,
+) -> Optional[Exception]:
+    if not is_non_deserializable_callable(value):
+        return None
+    return value.error
+
+
+class _NonDeserializableCallable(Generic[_P, _R]):
+
+    def __init__(self, callable_repr: str, error: Exception) -> None:
+        self._callable_repr = callable_repr
+        self._error = error
+
+    @property
+    def error(self) -> Exception:
+        return self._error
+
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        raise RuntimeError(
+            f"Cannot call the non-deserializable callable reference '{self._callable_repr}'."
+        )
+
+    def __name__(self):
+        return self._callable_repr
+
+    def __hash__(self):
+        return hash(self._callable_repr)
+
+    @classmethod
+    def from_rule(
+        cls, rule_cls: _Rule[_P, _R], error: Exception
+    ) -> _NonDeserializableCallable[_P, _R]:
+        return cls(type(rule_cls).serialize_rule(rule_cls), error)
 
 
 class Policy(_Rule[[Metrics, TaskParameters], TaskParameters]):
