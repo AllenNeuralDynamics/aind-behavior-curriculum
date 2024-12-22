@@ -61,9 +61,17 @@ class Metrics(AindBehaviorModelExtra):
     """
 
 
-class Rule(Generic[_P, _R]):
+class _Rule(Generic[_P, _R]):
     """
     Custom Pydantic Type that defines de/serialization for Callables.
+    This type is not intended to be used directly, but rather subclassed
+    with explicit typing in the generics.
+
+    The _Rule type wraps a Callable with a specific signature.
+    The Callable type signature is evaluated at runtime to ensure that the
+    type hinting matches the expected _Rule (or subtype) type signature.
+    For the duck-type aficionados, this type can be skipped by calling
+    Rule(..., skip_validation=True) or by not annotating the Callable.
     """
 
     def __init__(
@@ -82,7 +90,7 @@ class Rule(Generic[_P, _R]):
         Custom equality method.
         Two instances of the same subclass type are considered equal.
         """
-        if not isinstance(other, Rule):
+        if not isinstance(other, _Rule):
             return False
         return self.__hash__() == other.__hash__()
 
@@ -131,7 +139,7 @@ class Rule(Generic[_P, _R]):
                 ]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
-                function=cls._serialize_callable
+                function=cls._serialize_rule
             ),
         )
 
@@ -169,16 +177,18 @@ class Rule(Generic[_P, _R]):
             obj = getattr(module, split[1])
             return cls(obj)
 
-    @staticmethod
-    def _serialize_callable(value: str | Callable[_P, _R]) -> str:
+    @classmethod
+    def _serialize_rule(cls, value: str | _Rule) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
         """
         if isinstance(value, str):
-            value = Rule._deserialize_callable(value)
+            value = cls._deserialize_callable(value)
 
-        return value.__module__ + "." + value.__name__
+        assert (isinstance(value, _Rule))
+        return value.__module__ + "." + value.name
+
 
     @classmethod
     def _validate_callable_typing(
@@ -203,7 +213,7 @@ class Rule(Generic[_P, _R]):
             origin = get_origin(base)
             args = get_args(base)
 
-            if origin is Rule and len(args) == 2:
+            if origin is _Rule and len(args) == 2:
                 # we assume that the constructor only takes a single
                 # callable as argument. Can always be extended
                 # partials with partial
@@ -216,45 +226,55 @@ class Rule(Generic[_P, _R]):
             )
 
         # Compare signatures
-        # Number of inputs
+
         try:
             sig = inspect.signature(r)
-            if len(sig.parameters) != len(expected_callable):
-                raise TypeError(
-                    f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
-                )
+            if not (len(sig.parameters) == 0 and expected_callable is type(None)):
+                if not (len(sig.parameters) == len(expected_callable)):
+                    raise TypeError(
+                        f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
+                    )
 
-            # Compare inputs
-            for param, expected_type in zip(
-                list(sig.parameters.values()), expected_callable
-            ):
-                if param.annotation is not param.empty:
-                    if not issubclass(param.annotation, expected_type):
-                        raise TypeError(
-                            f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
-                        )
+                # Compare inputs
+                for param, expected_type in zip(
+                    list(sig.parameters.values()), expected_callable
+                ):
+                    if param.annotation is not param.empty:
+                        if not issubclass(param.annotation, expected_type):
+                            raise TypeError(
+                                f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
+                            )
 
             # Compare returns
+            # I dont like this hack...
+            if sig.return_annotation is None and expected_return is type(None):
+                return
             if sig.return_annotation is not inspect.Signature.empty:
                 if not issubclass(sig.return_annotation, expected_return):
                     raise TypeError(
                         f"Callable return type must be {expected_return}, but {sig.return_annotation} was found."
                     )
+
         except TypeError as e:
             e.add_note(f"Expected callable type signature: {args}. Got {sig}.")
             raise e
 
 
-class Policy(Rule[[Metrics, TaskParameters], TaskParameters]):
+class Policy(_Rule[[Metrics, TaskParameters], TaskParameters]):
     """
     User-defined function that defines
     how current Task parameters change according to metrics.
+    It subclasses _Rule.
     """
-
     pass
 
 
-class PolicyTransition(Rule[[Metrics], bool]):
+class PolicyTransition(_Rule[[Metrics], bool]):
+    """
+    User-defined function that defines
+    how current Policies change during a Stage.
+    It subclasses _Rule.
+    """
     pass
 
 
@@ -580,7 +600,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, Rule):
+        if isinstance(rule, _Rule):
             rule = PolicyTransition(rule)
         if callable(rule) and not isinstance(rule, PolicyTransition):
             rule = PolicyTransition(rule)
@@ -683,10 +703,11 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         return self
 
 
-class StageTransition(Rule[[Metrics], bool]):
+class StageTransition(_Rule[[Metrics], bool]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
+    Subclasses _Rule.
     """
 
     pass
@@ -819,7 +840,7 @@ class Curriculum(AindBehaviorModel):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, Rule):
+        if isinstance(rule, _Rule):
             rule = StageTransition(rule)
         if callable(rule) and not isinstance(rule, StageTransition):
             rule = StageTransition(rule)
