@@ -67,21 +67,36 @@ class Rule(Generic[_P, _R]):
     """
 
     def __init__(
-        self, function: Callable[_P, _R], *, skip_validation: bool = False
+        self, function: Callable[_P, _R], *, name: Optional[str] = None, skip_validation: bool = False
     ) -> None:
         if not skip_validation:
             self._validate_callable_typing(function)
         self._callable = function
+        self._name = name
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         return self._callable(*args, **kwargs)
 
-    def __eq__(self, __value: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Custom equality method.
         Two instances of the same subclass type are considered equal.
         """
-        return isinstance(__value, self.__class__)
+        if not isinstance(other, Rule):
+            return False
+        return self.__hash__() == other.__hash__()
+
+    def __hash__(self):
+        return hash(hash(self.name) + hash(self._callable))
+
+    @property
+    def name(self) -> str:
+        """
+        Name of the Rule.
+        """
+        if self._name is None:
+            return self._callable.__name__
+        return self._name
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -172,6 +187,8 @@ class Rule(Generic[_P, _R]):
         if not callable(r):
             raise ValueError("Rule must be callable.")
 
+        if isinstance(r, cls):
+            return
         # For some reason, generics do not materialize by default.
         # We fetch them manually....
         origin_bases = getattr(cls, "__orig_bases__", [])
@@ -523,7 +540,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         if policy in self.graph.see_nodes():
             raise ValueError(
-                f"Policy {policy.rule.__name__} is a duplicate Policy in Stage {self.name}."
+                f"Policy {policy.name} is a duplicate Policy in Stage {self.name}."
             )
 
         self.graph.add_node(policy)
@@ -564,9 +581,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
 
         if isinstance(rule, Rule):
-            rule = PolicyTransition(rule=rule)
+            rule = PolicyTransition(rule)
         if callable(rule) and not isinstance(rule, PolicyTransition):
-            rule = PolicyTransition(rule=rule)
+            rule = PolicyTransition(rule)
 
         self.graph.add_transition(start_policy, dest_policy, rule)
 
@@ -618,10 +635,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
 
         policy_transitions_list = list(
-            (t.rule, p.rule) for (t, p) in policy_transitions
+            (t, p) for (t, p) in policy_transitions
         )
         current_list = list(
-            (t.rule, p.rule) for (t, p) in self.see_policy_transitions(policy)
+            (t, p) for (t, p) in self.see_policy_transitions(policy)
         )
 
         if len(policy_transitions_list) != len(current_list):
@@ -803,9 +820,9 @@ class Curriculum(AindBehaviorModel):
         """
 
         if isinstance(rule, Rule):
-            rule = StageTransition(rule=rule)
+            rule = StageTransition(rule)
         if callable(rule) and not isinstance(rule, StageTransition):
-            rule = StageTransition(rule=rule)
+            rule = StageTransition(rule)
 
         self.graph.add_transition(start_stage, dest_stage, rule)
 
@@ -857,10 +874,10 @@ class Curriculum(AindBehaviorModel):
         """
 
         stage_transitions_list = list(
-            (t.rule, s.name) for (t, s) in stage_transitions
+            (t, s.name) for (t, s) in stage_transitions
         )
         current_list = list(
-            (t.rule, s.name) for (t, s) in self.see_stage_transitions(stage)
+            (t, s.name) for (t, s) in self.see_stage_transitions(stage)
         )
 
         if len(stage_transitions_list) != len(current_list):
@@ -947,11 +964,11 @@ class Curriculum(AindBehaviorModel):
                 # Add color to start policies
                 if node in s.start_policies:
                     node_str = (
-                        f'{node_id} [label="{node.rule.__name__}",'
+                        f'{node_id} [label="{node.__name__}",'
                         'fillcolor="#FFEA00"]'
                     )
                 else:
-                    node_str = f'{node_id} [label="{node.rule.__name__}"]'
+                    node_str = f'{node_id} [label="{node.__name__}"]'
                 nodes.append(node_str)
 
             edges = []
@@ -963,7 +980,7 @@ class Curriculum(AindBehaviorModel):
                     # Edges must be StageTransition or PolicyTransition
                     edge_str = (
                         f'{start_id} -> {dest_id} [label="({i}) '
-                        f'{edge.rule.__name__}", minlen=2]'
+                        f'{edge.__name__}", minlen=2]'
                     )
                     edges.append(edge_str)
 
@@ -1015,7 +1032,7 @@ class Curriculum(AindBehaviorModel):
                     # Edges must be StageTransition or PolicyTransition
                     edge_str = (
                         f'{start_id} -> {dest_id} [label="({i}) '
-                        f'{edge.rule.__name__}", minlen=2]'
+                        f'{edge.__name__}", minlen=2]'
                     )
                     edges.append(edge_str)
 
