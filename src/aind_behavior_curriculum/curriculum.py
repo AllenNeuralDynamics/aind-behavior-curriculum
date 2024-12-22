@@ -80,9 +80,9 @@ class _Rule(Generic[_P, _R]):
         """
         Initializes a new instance of the class.
         Args:
-            function (Callable[_P, _R]): The function to be used. If an instance of _Rule is passed, 
+            function (Callable[_P, _R]): The function to be used. If an instance of _Rule is passed,
                                          the callable attribute of the _Rule instance will be used.
-            skip_validation (bool, optional): If set to True, skips the validation of the callable's typing. 
+            skip_validation (bool, optional): If set to True, skips the validation of the callable's typing.
                                               Defaults to False.
         Returns:
             None
