@@ -1323,8 +1323,6 @@ def make_task_discriminator(tasks: Iterable[Type[Task]]) -> Type:
                 f"Task {task} has a name field that is not a string, got {name} of type {type(name)}"
             )
 
-    if len(_candidate_discriminators) != len(set(_candidate_discriminators)):
-        raise ValueError("Duplicate task names found.")
     if len(_candidate_discriminators) != len(tasks):
         raise ValueError("One of more task names were not found.")
 
