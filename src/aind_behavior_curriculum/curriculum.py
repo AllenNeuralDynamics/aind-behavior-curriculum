@@ -77,6 +77,16 @@ class _Rule(Generic[_P, _R]):
     def __init__(
         self, function: Callable[_P, _R], *, skip_validation: bool = False
     ) -> None:
+        """
+        Initializes a new instance of the class.
+        Args:
+            function (Callable[_P, _R]): The function to be used. If an instance of _Rule is passed, 
+                                         the callable attribute of the _Rule instance will be used.
+            skip_validation (bool, optional): If set to True, skips the validation of the callable's typing. 
+                                              Defaults to False.
+        Returns:
+            None
+        """
 
         # Just in case people pass the _Rule instance directly
         # Instead of the callable
@@ -88,6 +98,7 @@ class _Rule(Generic[_P, _R]):
         self._callable = function
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        """Wraps the inner callable."""
         return self._callable(*args, **kwargs)
 
     def __eq__(self, other: object) -> bool:
@@ -100,6 +111,9 @@ class _Rule(Generic[_P, _R]):
         return self.__hash__() == other.__hash__()
 
     def __hash__(self):
+        """
+        Returns the hash value for the object.
+        """
         return hash(hash(self.name) + hash(self._callable))
 
     @property
@@ -111,6 +125,7 @@ class _Rule(Generic[_P, _R]):
 
     @property
     def callable(self) -> Callable[_P, _R]:
+        """Returns the wrapped callable."""
         return self._callable
 
     @classmethod
@@ -209,6 +224,16 @@ class _Rule(Generic[_P, _R]):
     def _validate_callable_typing(  # noqa: C901
         cls, r: Callable[_P, _R]
     ) -> None:
+        """
+        Validates that the provided callable `r` matches the expected signature
+        defined by the generic types of the class.
+        Args:
+            r (Callable[_P, _R]): The callable to validate.
+        Raises:
+            ValueError: If `r` is not callable.
+            TypeError: If the class does not define its generic types explicitly,
+                    or if the callable `r` does not match the expected signature.
+        """
 
         if not callable(r):
             raise ValueError("Rule must be callable.")
@@ -283,43 +308,78 @@ class _Rule(Generic[_P, _R]):
 
 
 def is_non_deserializable_callable(value: object) -> bool:
+    """
+    Check if the given value is an instance of _NonDeserializableCallable.
+    Args:
+        value (object): The value to check.
+    Returns:
+        bool: True if the value is an instance of _NonDeserializableCallable, False otherwise.
+    """
+
     return isinstance(value, _NonDeserializableCallable)
 
 
 def try_materialize_non_deserializable_callable_error(
     value: _NonDeserializableCallable,
 ) -> Optional[Exception]:
+    """
+    Attempts to materialize the error from a non-deserializable callable.
+
+    Args:
+        value (_NonDeserializableCallable): The value to check and potentially
+                                            extract the error from.
+
+    Returns:
+        Optional[Exception]: The error associated with the non-deserializable
+                             callable if it exists, otherwise None.
+    """
     if not is_non_deserializable_callable(value):
         return None
     return value.error
 
 
 class _NonDeserializableCallable(Generic[_P, _R]):
+    """
+    A class representing a reference to callable that could not be deserialized.
+    """
 
     def __init__(self, callable_repr: str, error: Exception) -> None:
+        """
+        Initializes the instance with a callable representation and an error.
+
+        Args:
+            callable_repr (str): A string representation of the callable.
+            error (Exception): The exception that was raised.
+
+        Returns:
+            None
+        """
         self._callable_repr = callable_repr
         self._error = error
 
     @property
     def error(self) -> Exception:
+        """
+        Property that returns the error associated with the curriculum.
+
+        Returns:
+            Exception: The error associated with the curriculum.
+        """
         return self._error
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        """Shim method to raise an error when the callable is called."""
         raise RuntimeError(
             f"Cannot call the non-deserializable callable reference '{self._callable_repr}'."
         )
 
     def __name__(self):
+        """Shim method to return the name of the callable."""
         return self._callable_repr
 
     def __hash__(self):
+        """Shim method to return the hash of the callable."""
         return hash(self._callable_repr)
-
-    @classmethod
-    def from_rule(
-        cls, rule_cls: _Rule[_P, _R], error: Exception
-    ) -> _NonDeserializableCallable[_P, _R]:
-        return cls(type(rule_cls).serialize_rule(rule_cls), error)
 
 
 class Policy(_Rule[[Metrics, TaskParameters], TaskParameters]):
