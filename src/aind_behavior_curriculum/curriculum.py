@@ -75,12 +75,11 @@ class _Rule(Generic[_P, _R]):
     """
 
     def __init__(
-        self, function: Callable[_P, _R], *, name: Optional[str] = None, skip_validation: bool = False
+        self, function: Callable[_P, _R], *, skip_validation: bool = False
     ) -> None:
         if not skip_validation:
             self._validate_callable_typing(function)
         self._callable = function
-        self._name = name
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         return self._callable(*args, **kwargs)
@@ -102,9 +101,11 @@ class _Rule(Generic[_P, _R]):
         """
         Name of the Rule.
         """
-        if self._name is None:
-            return self._callable.__name__
-        return self._name
+        return self._callable.__name__
+
+    @property
+    def callable(self) -> Callable[_P, _R]:
+        return self._callable
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -117,15 +118,11 @@ class _Rule(Generic[_P, _R]):
         https://docs.pydantic.dev/latest/concepts/types/#handling-third-party-types
         """
 
-        def validate_from_str(value: str) -> Callable:
-            """Pass string through deserialization."""
-            return cls._deserialize_callable(value)
-
         from_str_schema = core_schema.chain_schema(
             [
                 core_schema.str_schema(),
                 core_schema.no_info_plain_validator_function(
-                    validate_from_str
+                    cls._deserialize_rule
                 ),
             ]
         )
@@ -134,7 +131,7 @@ class _Rule(Generic[_P, _R]):
             json_schema=from_str_schema,
             python_schema=core_schema.union_schema(
                 [
-                    core_schema.is_instance_schema(Callable),
+                    core_schema.is_instance_schema(cls),
                     from_str_schema,
                 ]
             ),
@@ -156,7 +153,7 @@ class _Rule(Generic[_P, _R]):
         return handler(core_schema.str_schema())
 
     @classmethod
-    def _deserialize_callable(
+    def _deserialize_rule(
         cls, value: str | Callable[_P, _R]
     ) -> Callable[_P, _R]:
         """
@@ -184,11 +181,10 @@ class _Rule(Generic[_P, _R]):
         Simply exports reference to function as package + function name.
         """
         if isinstance(value, str):
-            value = cls._deserialize_callable(value)
+            value = cls._deserialize_rule(value)
 
-        assert (isinstance(value, _Rule))
-        return value.__module__ + "." + value.name
-
+        assert isinstance(value, _Rule)
+        return value.callable.__module__ + "." + value.callable.__name__
 
     @classmethod
     def _validate_callable_typing(
@@ -229,7 +225,9 @@ class _Rule(Generic[_P, _R]):
 
         try:
             sig = inspect.signature(r)
-            if not (len(sig.parameters) == 0 and expected_callable is type(None)):
+            if not (
+                len(sig.parameters) == 0 and expected_callable is type(None)
+            ):
                 if not (len(sig.parameters) == len(expected_callable)):
                     raise TypeError(
                         f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
@@ -266,6 +264,7 @@ class Policy(_Rule[[Metrics, TaskParameters], TaskParameters]):
     how current Task parameters change according to metrics.
     It subclasses _Rule.
     """
+
     pass
 
 
@@ -275,6 +274,7 @@ class PolicyTransition(_Rule[[Metrics], bool]):
     how current Policies change during a Stage.
     It subclasses _Rule.
     """
+
     pass
 
 
@@ -654,9 +654,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         in the desired priority from left -> right.
         """
 
-        policy_transitions_list = list(
-            (t, p) for (t, p) in policy_transitions
-        )
+        policy_transitions_list = list((t, p) for (t, p) in policy_transitions)
         current_list = list(
             (t, p) for (t, p) in self.see_policy_transitions(policy)
         )
