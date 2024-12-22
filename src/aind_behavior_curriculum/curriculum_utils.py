@@ -44,7 +44,7 @@ def init_stage_rule(
     return task_params
 
 
-INIT_STAGE = Policy(rule=init_stage_rule)
+INIT_STAGE = Policy(init_stage_rule)
 
 
 class Graduated(Task):
