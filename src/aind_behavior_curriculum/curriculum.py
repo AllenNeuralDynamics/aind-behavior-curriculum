@@ -20,11 +20,13 @@ from typing import (
     List,
     Literal,
     Optional,
+    ParamSpec,
     Tuple,
     Type,
     TypeVar,
     Union,
     get_args,
+    get_origin,
 )
 
 import boto3
@@ -37,7 +39,6 @@ from pydantic import (
     Tag,
     ValidationError,
     create_model,
-    field_validator,
 )
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
@@ -49,6 +50,8 @@ from aind_behavior_curriculum.base import (
 from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
 
 TTask = TypeVar("TTask", bound=Task)
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
 class Metrics(AindBehaviorModelExtra):
@@ -58,10 +61,20 @@ class Metrics(AindBehaviorModelExtra):
     """
 
 
-class Rule:
+class Rule(Generic[_P, _R]):
     """
     Custom Pydantic Type that defines de/serialization for Callables.
     """
+
+    def __init__(
+        self, function: Callable[_P, _R], *, skip_validation: bool = False
+    ) -> None:
+        if not skip_validation:
+            self._validate_callable_typing(function)
+        self._callable = function
+
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        return self._callable(*args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
         """
@@ -119,14 +132,16 @@ class Rule:
         """
         return handler(core_schema.str_schema())
 
-    @staticmethod
-    def _deserialize_callable(value: str | Callable) -> Callable:
+    @classmethod
+    def _deserialize_callable(
+        cls, value: str | Callable[_P, _R]
+    ) -> Callable[_P, _R]:
         """
         Custom Deserialization.
         Imports function according to package and function name.
         """
         if callable(value):
-            return value
+            return cls(value)
         else:
             split = value.rsplit(".", 1)
             if not (len(split) > 0):
@@ -137,10 +152,10 @@ class Rule:
 
             module = import_module(split[0])
             obj = getattr(module, split[1])
-            return obj
+            return cls(obj)
 
     @staticmethod
-    def _serialize_callable(value: str | Callable) -> str:
+    def _serialize_callable(value: str | Callable[_P, _R]) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
@@ -150,111 +165,80 @@ class Rule:
 
         return value.__module__ + "." + value.__name__
 
+    @classmethod
+    def _validate_callable_typing(
+        cls, r: Callable[_P, _R]
+    ) -> None:  # noqa: C901
+        if not callable(r):
+            raise ValueError("Rule must be callable.")
 
-class Policy(AindBehaviorModel):
+        # For some reason, generics do not materialize by default.
+        # We fetch them manually....
+        origin_bases = getattr(cls, "__orig_bases__", [])
+        if not origin_bases:
+            raise TypeError(
+                f"Class {cls.__name__} must define its generic types."
+            )
+
+        for base in origin_bases:
+            # Hopefully nobody uses multiple inheritance with Rule
+            # But just in case we grab the first Rule parent
+            origin = get_origin(base)
+            args = get_args(base)
+
+            if origin is Rule and len(args) == 2:
+                # we assume that the constructor only takes a single
+                # callable as argument. Can always be extended
+                # partials with partial
+                expected_callable = args[0]
+                expected_return = args[1]
+                break
+        else:
+            raise TypeError(
+                f"Class {cls.__name__} must define its generic types explicitly."
+            )
+
+        # Compare signatures
+        # Number of inputs
+        try:
+            sig = inspect.signature(r)
+            if len(sig.parameters) != len(expected_callable):
+                raise TypeError(
+                    f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
+                )
+
+            # Compare inputs
+            for param, expected_type in zip(
+                list(sig.parameters.values()), expected_callable
+            ):
+                if param.annotation is not param.empty:
+                    if not issubclass(param.annotation, expected_type):
+                        raise TypeError(
+                            f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
+                        )
+
+            # Compare returns
+            if sig.return_annotation is not inspect.Signature.empty:
+                if not issubclass(sig.return_annotation, expected_return):
+                    raise TypeError(
+                        f"Callable return type must be {expected_return}, but {sig.return_annotation} was found."
+                    )
+        except TypeError as e:
+            e.add_note(f"Expected callable type signature: {args}. Got {sig}.")
+            raise e
+
+
+class Policy(Rule[[Metrics, TaskParameters], TaskParameters]):
     """
     User-defined function that defines
     how current Task parameters change according to metrics.
     """
 
-    rule: Rule = Field(..., description="Callable with Serialization.")
-
-    @field_validator("rule")
-    @classmethod
-    def validate_rule(cls, r: Rule):
-        """
-        Policy Signature:
-        I:
-        - metrics: Metrics object
-        - task_parameters: TaskParameters object
-
-        O:
-        - result: TaskParameters object
-        """
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
-        # Check rule follows Transition signature
-        params = list(inspect.signature(r).parameters)
-        param_1 = inspect.signature(r).parameters[params[0]].annotation
-        param_2 = inspect.signature(r).parameters[params[1]].annotation
-        return_type = inspect.signature(r).return_annotation
-
-        module = import_module(param_1.__module__)
-        param_1_obj = getattr(module, param_1.__name__)
-        module = import_module(param_2.__module__)
-        param_2_obj = getattr(module, param_2.__name__)
-        module = import_module(return_type.__module__)
-        return_type_obj = getattr(module, return_type.__name__)
-
-        incorrect_num_params = len(inspect.signature(r).parameters) != 2
-        incorrect_input_types = not (
-            issubclass(param_1_obj, Metrics)
-            and issubclass(param_2_obj, TaskParameters)
-        )
-        incorrect_return_type = not (
-            issubclass(return_type_obj, TaskParameters)
-        )
-
-        if (
-            incorrect_num_params
-            or incorrect_input_types
-            or incorrect_return_type
-        ):
-            raise ValueError(
-                "Invalid signature." f"{Policy.validate_rule.__doc__}"
-            )
-
-        return r
+    pass
 
 
-class PolicyTransition(AindBehaviorModel):
-    """
-    User-defined function that defines
-    criteria for transitioning between policies based on metrics.
-    """
-
-    rule: Rule = Field(..., description="Callable with Serialization.")
-
-    @field_validator("rule")
-    @classmethod
-    def validate_rule(cls, r: Rule):
-        """
-        Policy Transition Signature:
-        I:
-        - metrics: Metrics object
-
-        O:
-        - result: bool
-        """
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
-        # Check rule follows Transition signature
-        params = list(inspect.signature(r).parameters)
-        param_1 = inspect.signature(r).parameters[params[0]].annotation
-        return_type = inspect.signature(r).return_annotation
-
-        module = import_module(param_1.__module__)
-        param_1_obj = getattr(module, param_1.__name__)
-        module = import_module(return_type.__module__)
-        return_type_obj = getattr(module, return_type.__name__)
-
-        incorrect_num_params = len(inspect.signature(r).parameters) != 1
-        incorrect_input_types = not (issubclass(param_1_obj, Metrics))
-        incorrect_return_type = not (issubclass(return_type_obj, bool))
-
-        if (
-            incorrect_num_params
-            or incorrect_input_types
-            or incorrect_return_type
-        ):
-            raise ValueError(
-                "Invalid signature."
-                f"{PolicyTransition.validate_rule.__doc__}"
-            )
-
-        return r
+class PolicyTransition(Rule[[Metrics], bool]):
+    pass
 
 
 NodeTypes = TypeVar("NodeTypes")
@@ -682,51 +666,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         return self
 
 
-class StageTransition(AindBehaviorModel):
+class StageTransition(Rule[[Metrics], bool]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
     """
 
-    rule: Rule = Field(..., description="Callable with Serialization.")
-
-    @field_validator("rule")
-    @classmethod
-    def validate_rule(cls, r: Rule):
-        """
-        Stage Transition Signature:
-        I:
-        - metrics: Metrics object
-
-        O:
-        - result: bool
-        """
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
-        # Check rule follows Transition signature
-        params = list(inspect.signature(r).parameters)
-        param_1 = inspect.signature(r).parameters[params[0]].annotation
-        return_type = inspect.signature(r).return_annotation
-
-        module = import_module(param_1.__module__)
-        param_1_obj = getattr(module, param_1.__name__)
-        module = import_module(return_type.__module__)
-        return_type_obj = getattr(module, return_type.__name__)
-
-        incorrect_num_params = len(inspect.signature(r).parameters) != 1
-        incorrect_input_types = not (issubclass(param_1_obj, Metrics))
-        incorrect_return_type = not (issubclass(return_type_obj, bool))
-
-        if (
-            incorrect_num_params
-            or incorrect_input_types
-            or incorrect_return_type
-        ):
-            raise ValueError(
-                "Invalid signature." f"{StageTransition.validate_rule.__doc__}"
-            )
-        return r
+    pass
 
 
 class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
