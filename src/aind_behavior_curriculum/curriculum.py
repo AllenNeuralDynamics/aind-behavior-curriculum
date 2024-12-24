@@ -4,12 +4,13 @@ Core Stage and Curriculum Primitives.
 
 from __future__ import annotations
 
+import importlib
 import inspect
 import json
 import subprocess
 import warnings
-from importlib import import_module
 from pathlib import Path
+from types import EllipsisType
 from typing import (
     Annotated,
     Any,
@@ -25,6 +26,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
     get_args,
     get_origin,
 )
@@ -101,7 +103,7 @@ class _Rule(Generic[_P, _R]):
         """Wraps the inner callable."""
         return self._callable(*args, **kwargs)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Custom equality method.
         Two instances of the same subclass type are considered equal.
@@ -114,14 +116,14 @@ class _Rule(Generic[_P, _R]):
         """
         Returns the hash value for the object.
         """
-        return hash(hash(self.name) + hash(self._callable))
+        return hash(hash(self.name) + hash(self.callable))
 
     @property
     def name(self) -> str:
         """
         Name of the Rule.
         """
-        return self._callable.__name__
+        return self.serialize_rule(self)
 
     @property
     def callable(self) -> Callable[_P, _R]:
@@ -184,24 +186,21 @@ class _Rule(Generic[_P, _R]):
             return cls(value)
 
         if isinstance(value, str):
-            split = value.rsplit(".", 1)
-            if not (len(split) > 0):
-                raise ValueError(
-                    f"Invalid rule value while attempting to deserialize callable. \
-                    Got {value}, expected string in the format '<module>.Rule'"
-                )
-
             try:
-                module = import_module(split[0])
-                obj = getattr(module, split[1], None)
-                if obj is None:
-                    raise AttributeError(
-                        f"Callable {split[1]} not found in module {module}."
-                    )
+                module_name, _, attr_path = value.partition(".")
+                while "." in attr_path:
+                    module_name += "." + attr_path.split(".", 1)[0]
+                    attr_path = attr_path.split(".", 1)[1]
+
+                module = importlib.import_module(module_name)
+                obj = module
+                for attr in attr_path.split("."):
+                    obj = getattr(obj, attr)
             except (ModuleNotFoundError, AttributeError) as e:
+                assert isinstance(value, str)
                 callable_handle = _NonDeserializableCallable[_P, _R](value, e)
             else:
-                callable_handle = obj
+                callable_handle = cast(Callable[_P, _R], obj)
 
         return cls(callable_handle)
 
@@ -218,7 +217,15 @@ class _Rule(Generic[_P, _R]):
             ret = value
         assert isinstance(ret, _Rule)
 
-        return ret.callable.__module__ + "." + ret.callable.__name__
+        if is_non_deserializable_callable(ret.callable):
+            # Python 3.13 has a better way to infer
+            # types with arbitrary clause code, but for now...
+            assert isinstance(ret.callable, _NonDeserializableCallable)
+            return ret.callable.mock_serialize()
+        else:
+            module = ret.callable.__module__
+            qualname = ret.callable.__qualname__
+            return f"{module}.{qualname}"
 
     @classmethod
     def _validate_callable_typing(  # noqa: C901
@@ -338,11 +345,11 @@ class _Rule(Generic[_P, _R]):
         )
 
 
-def is_non_deserializable_callable(value: object) -> bool:
+def is_non_deserializable_callable(value: Any) -> bool:
     """
     Check if the given value is an instance of _NonDeserializableCallable.
     Args:
-        value (object): The value to check.
+        value (Any): The value to check.
     Returns:
         bool: True if the value is an instance of _NonDeserializableCallable, False otherwise.
     """
@@ -404,10 +411,11 @@ class _NonDeserializableCallable(Generic[_P, _R]):
             f"Cannot call the non-deserializable callable reference '{self._callable_repr}'."
         )
 
-    def __name__(self):
-        """Shim method to return the name of the callable."""
+    def mock_serialize(self) -> str:
+        """Shim method to return the callable representation."""
         return self._callable_repr
 
+    @property
     def __hash__(self):
         """Shim method to return the hash of the callable."""
         return hash(self._callable_repr)
@@ -621,12 +629,12 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         n_id = self._get_node_id(node)
         self.graph[n_id] = input_transitions
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Compare this object with another for equality.
 
         Args:
-            other (object): The object to compare with.
+            other (Any): The object to compare with.
 
         Returns:
             bool: True if the objects are equal, False otherwise.
@@ -664,7 +672,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         default_factory=list, description="List of starting policies."
     )
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Custom equality method.
         Two Stage instances are only distinguished by name.

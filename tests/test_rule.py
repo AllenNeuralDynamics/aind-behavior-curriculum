@@ -15,20 +15,25 @@ from aind_behavior_curriculum.curriculum import (
 )
 
 
+def rule_update(metrics: Metrics, params: TaskParameters) -> TaskParameters:
+    return params
+
+
+def simple_rule(m, p):
+    return m + p
+
+
+def duck_type_rule_update(m, p):
+    return p
+
+
+def not_a_rule_update(metrics: int, params: BaseModel) -> BaseModel:
+    return params
+
+
 class RuleTests(unittest.TestCase):
 
     def setUp(self):
-
-        def rule_update(
-            metrics: Metrics, params: TaskParameters
-        ) -> TaskParameters:
-            return params
-
-        def duck_type_rule_update(m, p):
-            return p
-
-        def not_a_rule_update(metrics: int, params: BaseModel) -> BaseModel:
-            return params
 
         class CustomRule(_Rule[[Metrics, TaskParameters], TaskParameters]):
             pass
@@ -36,48 +41,51 @@ class RuleTests(unittest.TestCase):
         class Container(BaseModel):
             this_new_rule: CustomRule = Field(default=CustomRule(rule_update))
 
-        self.rule_update = rule_update
-        self.duck_type_rule_update = duck_type_rule_update
-        self.not_a_rule_update = not_a_rule_update
         self.container = Container
         self.custom_rule = CustomRule
 
     def test_rule_instantiation(self):
-        self.container(this_new_rule=self.custom_rule(self.rule_update))
+        self.container(this_new_rule=self.custom_rule(rule_update))
 
     def test_duck_type_rule_instantiation(self):
-        self.container(
-            this_new_rule=self.custom_rule(self.duck_type_rule_update)
-        )
+        self.container(this_new_rule=self.custom_rule(duck_type_rule_update))
 
     def test_not_a_rule_instantiation(self):
         with self.assertRaises(TypeError):
-            self.container(
-                this_new_rule=self.custom_rule(self.not_a_rule_update)
-            )
+            self.container(this_new_rule=self.custom_rule(not_a_rule_update))
 
     def test_can_serialize_rule(self):
-        container = self.container(
-            this_new_rule=self.custom_rule(self.rule_update)
-        )
+        container = self.container(this_new_rule=self.custom_rule(rule_update))
         container.model_dump()
         container.model_dump_json()
 
     def test_can_deserialize_rule(self):
-        container = self.container(
-            this_new_rule=self.custom_rule(self.rule_update)
-        )
+        container = self.container(this_new_rule=self.custom_rule(rule_update))
         dump = container.model_dump()
-        self.assertEqual(dump, container.model_validate(dump))
+        self.assertEqual(container, container.model_validate(dump))
         json_dump = container.model_dump_json()
-        self.assertEqual(json_dump, container.model_validate_json(json_dump))
+        self.assertEqual(container, container.model_validate_json(json_dump))
+
+    def test_can_deserialize_rule_callable(self):
+        container = self.container(this_new_rule=self.custom_rule(simple_rule))
+        self.assertEqual(container.this_new_rule(0, 0), 0)
+
+        dump = container.model_dump()
+        deser_dump = container.model_validate(dump)
+        self.assertEqual(container, deser_dump)
+        self.assertEqual(deser_dump.this_new_rule(0, 0), 0)
+
+        json_dump = container.model_dump_json()
+        deser_json = container.model_validate_json(json_dump)
+        self.assertEqual(container, deser_json)
+        self.assertEqual(deser_dump.this_new_rule(0, 0), 0)
 
     def test_is_non_deserializable_callable(self):
         callable_ref = _NonDeserializableCallable("test", Exception("test"))
         with self.assertRaises(RuntimeError):
             callable_ref()
         self.assertFalse(
-            is_non_deserializable_callable(self.custom_rule(self.rule_update))
+            is_non_deserializable_callable(self.custom_rule(rule_update))
         )
         self.assertTrue(is_non_deserializable_callable(callable_ref))
 
@@ -87,7 +95,7 @@ class RuleTests(unittest.TestCase):
         )
         self.assertIsNone(
             try_materialize_non_deserializable_callable_error(
-                self.custom_rule(self.rule_update)
+                self.custom_rule(rule_update)
             )
         )
 
