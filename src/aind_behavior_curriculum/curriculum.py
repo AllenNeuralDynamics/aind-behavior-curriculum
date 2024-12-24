@@ -246,10 +246,80 @@ class _Rule(Generic[_P, _R]):
 
         # For some reason, generics do not materialize by default.
         # We fetch them manually....
-        origin_bases = getattr(cls, "__orig_bases__", [])
+        if isinstance(x := cls._solve_generic_typing(cls), TypeError):
+            raise x
+        else:
+            expected_callable, expected_return = x
+
+        # Compare signatures
+        sig = inspect.signature(r)
+        try:
+            # Compare inputs
+            if (
+                _eval := cls._validate_signature_input(expected_callable, sig)
+            ) is not None:
+                raise _eval
+
+            if (
+                _eval := cls._validate_signature_output(expected_return, sig)
+            ) is not None:
+                raise _eval
+
+        except TypeError as e:
+            e.add_note(
+                f"Expected callable type signature: {expected_callable} -> {expected_return}. Got {sig}."
+            )
+            raise e
+
+    @staticmethod
+    def _validate_signature_input(
+        expected_callable: Any, sig: inspect.Signature
+    ) -> Optional[TypeError]:
+
+        if isinstance(expected_callable, EllipsisType):
+            return None
+
+        if not (len(sig.parameters) == 0 and expected_callable is type(None)):
+            if not (len(sig.parameters) == len(expected_callable)):
+                return TypeError(
+                    f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
+                )
+
+            for param, expected_type in zip(
+                list(sig.parameters.values()), expected_callable
+            ):
+                if param.annotation is not param.empty:
+                    if not issubclass(param.annotation, expected_type):
+                        return TypeError(
+                            f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
+                        )
+        return None
+
+    @staticmethod
+    def _validate_signature_output(
+        expected_return: Any, sig: inspect.Signature
+    ) -> Optional[TypeError]:
+
+        if isinstance(expected_return, EllipsisType):
+            return None
+
+        if sig.return_annotation is None and expected_return is type(None):
+            return None
+
+        if sig.return_annotation is not inspect.Signature.empty:
+            if not issubclass(sig.return_annotation, expected_return):
+                return TypeError(
+                    f"Callable return type must be {expected_return}, but {sig.return_annotation} was found."
+                )
+
+        return None
+
+    @staticmethod
+    def _solve_generic_typing(cls_: Any) -> Tuple[Any, Any] | TypeError:
+        origin_bases = getattr(cls_, "__orig_bases__", [])
         if not origin_bases:
-            raise TypeError(
-                f"Class {cls.__name__} must define its generic types."
+            return TypeError(
+                f"Class {cls_.__name__} must define its generic types."
             )
 
         for base in origin_bases:
@@ -262,49 +332,10 @@ class _Rule(Generic[_P, _R]):
                 # we assume that the constructor only takes a single
                 # callable as argument. Can always be extended
                 # partials with partial
-                expected_callable = args[0]
-                expected_return = args[1]
-                break
-        else:
-            raise TypeError(
-                f"Class {cls.__name__} must define its generic types explicitly."
-            )
-
-        # Compare signatures
-
-        try:
-            sig = inspect.signature(r)
-            if not (
-                len(sig.parameters) == 0 and expected_callable is type(None)
-            ):
-                if not (len(sig.parameters) == len(expected_callable)):
-                    raise TypeError(
-                        f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
-                    )
-
-                # Compare inputs
-                for param, expected_type in zip(
-                    list(sig.parameters.values()), expected_callable
-                ):
-                    if param.annotation is not param.empty:
-                        if not issubclass(param.annotation, expected_type):
-                            raise TypeError(
-                                f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
-                            )
-
-            # Compare returns
-            # I dont like this hack...
-            if sig.return_annotation is None and expected_return is type(None):
-                return
-            if sig.return_annotation is not inspect.Signature.empty:
-                if not issubclass(sig.return_annotation, expected_return):
-                    raise TypeError(
-                        f"Callable return type must be {expected_return}, but {sig.return_annotation} was found."
-                    )
-
-        except TypeError as e:
-            e.add_note(f"Expected callable type signature: {args}. Got {sig}.")
-            raise e
+                return (args[0], args[1])
+        return TypeError(
+            f"Class {cls_.__name__} must define its generic types explicitly."
+        )
 
 
 def is_non_deserializable_callable(value: object) -> bool:
