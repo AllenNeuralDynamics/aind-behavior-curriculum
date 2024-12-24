@@ -652,6 +652,10 @@ class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
     pass
 
 
+class MetricsProvider(_Rule[..., Metrics]):
+    pass
+
+
 class Stage(AindBehaviorModel, Generic[TTask]):
     """
     Instance of a Task.
@@ -670,6 +674,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     )
     start_policies: List[Policy] = Field(
         default_factory=list, description="List of starting policies."
+    )
+    metrics_provider: Optional[MetricsProvider] = Field(
+        default=None,
+        description="A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
     )
 
     def __eq__(self, other: Any) -> bool:

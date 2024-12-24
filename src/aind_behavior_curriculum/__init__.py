@@ -9,6 +9,7 @@ __version__ = "0.0.28"
 from .curriculum import (
     Curriculum,
     Metrics,
+    MetricsProvider,
     Policy,
     PolicyTransition,
     Stage,
