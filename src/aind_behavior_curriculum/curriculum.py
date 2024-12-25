@@ -150,12 +150,22 @@ class _Rule(Generic[_P, _R]):
             ]
         )
 
+        from_callable_schema = core_schema.chain_schema(
+            [
+                core_schema.callable_schema(),
+                core_schema.no_info_plain_validator_function(
+                    cls._deserialize_rule
+                ),
+            ]
+        )
+
         return core_schema.json_or_python_schema(
             json_schema=from_str_schema,
             python_schema=core_schema.union_schema(
                 [
                     core_schema.is_instance_schema(cls),
                     from_str_schema,
+                    from_callable_schema,
                 ]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
