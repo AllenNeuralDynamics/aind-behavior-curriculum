@@ -55,26 +55,27 @@ class TrainerTests(unittest.TestCase):
         ex.MICE_METRICS[2] = ex.ExampleMetrics(theta_2=12)
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
         # Validate mouse histories
         M0 = [
-            TrainerState(stage=stageA, active_policies=()),
-            TrainerState(stage=stageA, active_policies=()),
-            TrainerState(stage=stageB, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(stage=stageA, active_policies=[]),
+            trainer.create_trainer_state(stage=stageA, active_policies=[]),
+            trainer.create_trainer_state(stage=stageB, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         M1 = [
-            TrainerState(stage=stageA, active_policies=()),
-            TrainerState(stage=stageB, active_policies=()),
-            TrainerState(stage=stageB, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(stage=stageA, active_policies=[]),
+            trainer.create_trainer_state(stage=stageB, active_policies=[]),
+            trainer.create_trainer_state(stage=stageB, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         M2 = [
-            TrainerState(stage=stageA, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(stage=stageA, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -133,26 +134,51 @@ class TrainerTests(unittest.TestCase):
         ex.MICE_METRICS[2] = ex.ExampleMetrics(theta_1=12)
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
         # Validate mouse histories
         M0 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
-            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyB,)),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAA, active_policies=[ex.stageA_policyA]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAA, active_policies=[ex.stageA_policyB]
+            ),
         ]
 
         M1 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
-            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAA, active_policies=[ex.stageA_policyA]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAA, active_policies=[ex.stageA_policyA]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
         ]
 
         M2 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -170,8 +196,8 @@ class TrainerTests(unittest.TestCase):
         # StageA and StageB picked out from observation
         stageA = curr.see_stages()[0]
         stageB = curr.see_stages()[2]
-        stageA.set_start_policies((INIT_STAGE,))
-        stageB.set_start_policies((INIT_STAGE,))
+        stageA.set_start_policies([INIT_STAGE])
+        stageB.set_start_policies([INIT_STAGE])
 
         stageAA = stageA.model_copy(deep=True)
         stageAA.set_task_parameters(
@@ -218,29 +244,50 @@ class TrainerTests(unittest.TestCase):
         ex.MICE_METRICS[2] = ex.ExampleMetrics(theta_3=12)
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
         # Validate mouse histories
         M0 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageAA, active_policies=(ex.stageA_policyA,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAA, active_policies=[ex.stageA_policyA]
+            ),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageBB, active_policies=[ex.stageB_policyA]
+            ),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         M1 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageBBB, active_policies=(ex.stageB_policyB,)),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageBBB, active_policies=[ex.stageB_policyB]
+            ),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         M2 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=GRADUATED, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -290,13 +337,19 @@ class TrainerTests(unittest.TestCase):
         tr.override_subject_status(
             0, override_stage=GRADUATED, override_policies=()
         )
-
+        trainer = Trainer(curr)
         # Validate mouse history
         M0 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageBB, active_policies=(ex.stageB_policyA,)),
-            TrainerState(stage=stageAAA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=GRADUATED, active_policies=()),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageBB, active_policies=[ex.stageB_policyA]
+            ),
+            trainer.create_trainer_state(
+                stage=stageAAA, active_policies=[ex.stageA_policyB]
+            ),
+            trainer.create_trainer_state(stage=GRADUATED, active_policies=[]),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -344,19 +397,36 @@ class TrainerTests(unittest.TestCase):
             1, override_stage=stageB, override_policies=stageB.start_policies
         )
 
+        trainer = Trainer(curr)
         # Validate mouse history
         M0 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
         ]
 
         M1 = [
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -414,19 +484,36 @@ class TrainerTests(unittest.TestCase):
             1, override_stage=stageA, override_policies=ex.stageA_policyA
         )
 
+        trainer = Trainer(curr)
         # Validate mouse history
         M0 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,)),
-            TrainerState(stage=stageA, active_policies=(ex.stageA_policyB,)),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[ex.stageA_policyA]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[ex.stageA_policyB]
+            ),
         ]
 
         M1 = [
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(INIT_STAGE,)),
-            TrainerState(stage=stageA, active_policies=(ex.stageA_policyB,)),
-            TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,)),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[INIT_STAGE]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[ex.stageA_policyB]
+            ),
+            trainer.create_trainer_state(
+                stage=stageA, active_policies=[ex.stageA_policyA]
+            ),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -465,27 +552,29 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
+
         M0 = [
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stage_init,
-                active_policies=(
+                active_policies=[
                     ex2.policy_1,
                     ex2.policy_4,
-                ),
+                ],
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stage_1,
-                active_policies=(
+                active_policies=[
                     ex2.policy_2,
                     ex2.policy_5,
-                ),
+                ],
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stage_2,
-                active_policies=(
+                active_policies=[
                     ex2.policy_3,
                     ex2.policy_6,
-                ),
+                ],
             ),
         ]
 
@@ -528,30 +617,33 @@ class TrainerTests(unittest.TestCase):
         ex2.MICE_METRICS[0] = ex2.ExampleMetrics2(m1=10, m2=10)
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
         M0 = [
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stage_init,
-                active_policies=(
+                active_policies=[
                     ex2.policy_1,
                     ex2.policy_2,
                     ex2.policy_3,
-                ),
+                ],
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stage_1,
-                active_policies=(
+                active_policies=[
                     ex2.policy_4,
                     ex2.policy_5,
-                ),
+                ],
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stage_1,
-                active_policies=(
+                active_policies=[
                     ex2.policy_4,
                     ex2.policy_5,
-                ),
+                ],
             ),
-            TrainerState(stage=stage_2, active_policies=(ex2.policy_6,)),
+            trainer.create_trainer_state(
+                stage=stage_2, active_policies=[ex2.policy_6]
+            ),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -600,16 +692,33 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
         M0 = [
-            TrainerState(stage=stage_init, active_policies=(ex2.policy_1,)),
-            TrainerState(stage=stage_1, active_policies=(ex2.policy_2,)),
-            TrainerState(stage=stage_2, active_policies=(ex2.policy_3,)),
+            trainer.create_trainer_state(
+                stage=stage_init, active_policies=[ex2.policy_1]
+            ),
+            trainer.create_trainer_state(
+                stage=stage_1, active_policies=[ex2.policy_2]
+            ),
+            trainer.create_trainer_state(
+                stage=stage_2, active_policies=[ex2.policy_3]
+            ),
             # Return to start
-            TrainerState(stage=stage_3, active_policies=(ex2.policy_1,)),
-            TrainerState(stage=stage_3, active_policies=(ex2.policy_1,)),
-            TrainerState(stage=stage_4, active_policies=(ex2.policy_3,)),
-            TrainerState(stage=stage_5, active_policies=(ex2.policy_2,)),
-            TrainerState(stage=stage_6, active_policies=(ex2.policy_1,)),
+            trainer.create_trainer_state(
+                stage=stage_3, active_policies=[ex2.policy_1]
+            ),
+            trainer.create_trainer_state(
+                stage=stage_3, active_policies=[ex2.policy_1]
+            ),
+            trainer.create_trainer_state(
+                stage=stage_4, active_policies=[ex2.policy_3]
+            ),
+            trainer.create_trainer_state(
+                stage=stage_5, active_policies=[ex2.policy_2]
+            ),
+            trainer.create_trainer_state(
+                stage=stage_6, active_policies=[ex2.policy_1]
+            ),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -638,15 +747,18 @@ class TrainerTests(unittest.TestCase):
         tr.evaluate_subjects()
         tr.evaluate_subjects()
 
+        trainer = Trainer(curr)
         M0 = [
-            TrainerState(stage=stage_1, active_policies=()),
-            TrainerState(stage=stage_2, active_policies=()),
-            TrainerState(stage=stage_3, active_policies=()),
-            TrainerState(stage=stage_1, active_policies=()),  # Return to start
-            TrainerState(stage=stage_1, active_policies=()),
-            TrainerState(stage=stage_3, active_policies=()),
-            TrainerState(stage=stage_2, active_policies=()),
-            TrainerState(stage=stage_1, active_policies=()),
+            trainer.create_trainer_state(stage=stage_1, active_policies=[]),
+            trainer.create_trainer_state(stage=stage_2, active_policies=[]),
+            trainer.create_trainer_state(stage=stage_3, active_policies=[]),
+            trainer.create_trainer_state(
+                stage=stage_1, active_policies=[]
+            ),  # Return to start
+            trainer.create_trainer_state(stage=stage_1, active_policies=[]),
+            trainer.create_trainer_state(stage=stage_3, active_policies=[]),
+            trainer.create_trainer_state(stage=stage_2, active_policies=[]),
+            trainer.create_trainer_state(stage=stage_1, active_policies=[]),
         ]
 
         self.assertEqual(tr.subject_history[0], M0)
@@ -678,33 +790,38 @@ class TrainerTests(unittest.TestCase):
         tr.override_subject_status(
             0, override_stage=stageB, override_policies=stageB.start_policies
         )
-
+        trainer = Trainer(curr)
         # Validate mouse history
         M0 = [
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stageA,
                 is_on_curriculum=True,
-                active_policies=(INIT_STAGE,),
+                active_policies=[INIT_STAGE],
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=stageAA,
                 is_on_curriculum=True,
-                active_policies=(ex.stageA_policyA,),
+                active_policies=[ex.stageA_policyA],
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=None, is_on_curriculum=False, active_policies=None
             ),
-            TrainerState(
+            trainer.create_trainer_state(
                 stage=None, is_on_curriculum=False, active_policies=None
             ),
-            TrainerState(stage=stageB, active_policies=(INIT_STAGE,)),
+            trainer.create_trainer_state(
+                stage=stageB, active_policies=[INIT_STAGE]
+            ),
         ]
         self.assertEqual(tr.subject_history[0], M0)
 
     def test_round_trip_trainer_state(self):
         curr = ex.construct_curriculum()
         stageA = curr.see_stages()[0]
-        ts = TrainerState(stage=stageA, active_policies=(ex.stageA_policyA,))
+
+        ts = Trainer(curr).create_trainer_state(
+            stage=stageA, active_policies=[ex.stageA_policyA]
+        )
 
         # Serialize from Child
         instance_json = ts.model_dump_json()
@@ -717,8 +834,10 @@ class TrainerStateTests(unittest.TestCase):
     def setUp(self):
         self.curr = ex.construct_curriculum()
         stageA = self.curr.see_stages()[0]
-        active_policies = (INIT_STAGE,)
+        active_policies = [INIT_STAGE]
+
         self.state_from_trainer_state = TrainerState(
+            curriculum=self.curr,
             stage=stageA,
             active_policies=active_policies,
             is_on_curriculum=True,
