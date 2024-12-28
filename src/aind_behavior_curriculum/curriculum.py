@@ -30,6 +30,7 @@ from typing import (
     get_args,
     get_origin,
 )
+from typing_extensions import TypeAliasType
 
 import boto3
 from jinja2 import Template
@@ -940,7 +941,7 @@ class Curriculum(AindBehaviorModel):
         _inner_args = _generic.__dict__["__pydantic_generic_metadata__"][
             "args"
         ][0]
-        _inner_union = get_args(_inner_args)[0]
+        _inner_union = get_args(_inner_args.__value__)[0]
         if isinstance(_inner_union, type):
             _known_tasks = [_inner_union]
         else:
@@ -1452,15 +1453,18 @@ def make_task_discriminator(tasks: Iterable[Type[Task]]) -> Type:
         )
     ]
 
-    Tasks = Annotated[
-        _union,  # type: ignore
-        Field(
-            discriminator=Discriminator(
-                _get_discriminator_value,
-            )
-        ),
-    ]
-    return Tasks  # type: ignore
+    known_task_types = TypeAliasType(
+        "known_task_types",
+        Annotated[
+            _union,  # type: ignore
+            Field(
+                discriminator=Discriminator(
+                    _get_discriminator_value,
+                )
+            ),
+        ],
+    )
+    return known_task_types  # type: ignore
 
 
 def _get_discriminator_value(v: Task) -> str:
