@@ -10,9 +10,7 @@ from typing import (
     List,
     Optional,
     Self,
-    Tuple,
     Type,
-    TypeAlias,
     TypeVar,
 )
 
@@ -358,7 +356,7 @@ class TrainerServer:
         Trainer manages a list of subjects initialized here.
         NOTE: Within Trainer subclass, please call super().__init__()
         """
-        self.subject_ids = []
+        self.subject_ids: List[int] = []
 
     @abstractmethod
     def load_data(
@@ -395,9 +393,9 @@ class TrainerServer:
         self,
         s_id: int,
         curriculum: Curriculum,
-        stage: StageEntry,
+        stage: Optional[Stage],
         updated_stage_parameters: Optional[TaskParameters],
-        stage_policies: PolicyEntry,
+        stage_policies: Optional[Iterable[Policy]],
     ) -> None:
         """
         Updates subject history, which involves many steps.
@@ -415,15 +413,18 @@ class TrainerServer:
             stage = stage.model_copy(deep=True)
             stage.set_task_parameters(updated_stage_parameters)
 
+        trainer = Trainer(curriculum)
         if stage is None:
-            trainer_state = TrainerState(
+            trainer_state = trainer.create_trainer_state(
                 stage=None, is_on_curriculum=False, active_policies=None
             )
         else:
-            trainer_state = TrainerState(
+            trainer_state = trainer.create_trainer_state(
                 stage=stage,
                 is_on_curriculum=True,
-                active_policies=stage_policies,
+                active_policies=(
+                    list(stage_policies) if stage_policies else None
+                ),
             )
 
         self.write_data(s_id, curriculum, trainer_state)
@@ -462,7 +463,7 @@ class TrainerServer:
                     f"provided start_stage {start_stage.name}."
                 )
 
-        _start_policies = tuple(start_policies)
+        _start_policies = list(start_policies)
 
         initial_params = Trainer.get_net_parameter_update(
             start_stage.get_task_parameters(),
@@ -509,10 +510,10 @@ class TrainerServer:
                         "This should not happen."
                     )
                 updated_parameters = (
-                    updated_trainer_state.stage.get_task_parameters()
+                    updated_trainer_state.stage.get_task_parameters()  # pylint: disable=no-member
                 )
             else:
-                updated_trainer_state = TrainerState(
+                updated_trainer_state = trainer.create_trainer_state(
                     stage=None,
                     is_on_curriculum=False,
                     active_policies=trainer_state.active_policies,
@@ -571,7 +572,7 @@ class TrainerServer:
             curriculum,
             override_stage,
             updated_params,
-            tuple(override_policies),
+            list(override_policies),
         )
 
     def eject_subject(self, s_id: int) -> None:
