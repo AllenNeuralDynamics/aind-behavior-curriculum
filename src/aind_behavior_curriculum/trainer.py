@@ -28,17 +28,21 @@ from aind_behavior_curriculum.curriculum import (
 )
 from aind_behavior_curriculum.task import TaskParameters
 
-StageEntry: TypeAlias = Optional[Stage]
-PolicyEntry: TypeAlias = Optional[Tuple[Policy, ...]]
+TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
 
 
-class TrainerState(AindBehaviorModel):
+class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
     """
     Trainer State.
     Pydantic model for de/serialization.
     """
 
-    stage: StageEntry = Field(
+    curriculum: Optional[TCurriculum] = Field(
+        ...,
+        validate_default=True,
+        description="The curriculum used by the trainer",
+    )
+    stage: Optional[Stage] = Field(
         ...,
         validate_default=True,
         description="The output suggestion of the curriculum",
@@ -51,8 +55,8 @@ class TrainerState(AindBehaviorModel):
     # Note: This will deserialize to a base Stage object.
     # Should users require the subclass, they are incentivized to use
     # the Trainer.create_trainer_state property instead
-    active_policies: PolicyEntry = Field(
-        default=None,
+    active_policies: Optional[List[Policy]] = Field(
+        default=[],
         validate_default=True,
         description="The active policies for the current stage",
     )
@@ -65,7 +69,12 @@ class TrainerState(AindBehaviorModel):
         Returns:
             Self: An instance of the class with default parameters.
         """
-        return cls(stage=None, is_on_curriculum=False, active_policies=None)
+        return cls(
+            curriculum=None,
+            stage=None,
+            is_on_curriculum=False,
+            active_policies=None,
+        )
 
     def __eq__(self, other: object) -> bool:
         """
