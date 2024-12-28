@@ -275,10 +275,6 @@ class Trainer(Generic[TCurriculum]):
             raise ValueError(
                 "No current stage. This likely means subject is off-curriculum."
             )
-        if active_policies is None:
-            raise ValueError(
-                "No active policies. This likely means subject is off-curriculum."
-            )
 
         # 1) Evaluate stage transitions
         updated_stage = self._evaluate_stage_transition(
@@ -289,6 +285,11 @@ class Trainer(Generic[TCurriculum]):
         # If we've already transitioned stages, we don't need to check policies.
         if updated_stage is None:
             updated_stage = current_stage
+
+            active_policies = (
+                active_policies if active_policies is not None else []
+            )
+
             active_policies = self._evaluate_policy_transitions(
                 current_stage, active_policies, metrics
             )
@@ -303,10 +304,11 @@ class Trainer(Generic[TCurriculum]):
         else:
             active_policies = updated_stage.start_policies
 
-        return TrainerState(
+        return self._trainer_state_factory(
+            curriculum=self.curriculum,
             stage=updated_stage,
             is_on_curriculum=True,
-            active_policies=tuple(active_policies),
+            active_policies=active_policies,
         )
 
     @staticmethod
