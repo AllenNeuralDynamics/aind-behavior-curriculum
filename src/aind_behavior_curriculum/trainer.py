@@ -154,9 +154,9 @@ class Trainer(Generic[TCurriculum]):
     def create_trainer_state(
         self,
         *,
-        stage: StageEntry,
+        stage: Optional[Stage],
         is_on_curriculum: bool = True,
-        active_policies: PolicyEntry = None,
+        active_policies: Optional[Iterable[Policy]] = None,
     ) -> TrainerState:
         """
         Property that returns a type-aware TrainerState class.
@@ -165,9 +165,10 @@ class Trainer(Generic[TCurriculum]):
             Type[TrainerState]: type-aware TrainerState type.
         """
         return self._trainer_state_factory(
+            curriculum=self.curriculum,
             stage=stage,
             is_on_curriculum=is_on_curriculum,
-            active_policies=active_policies,
+            active_policies=list(active_policies) if active_policies else None,
         )
 
     @staticmethod
@@ -184,7 +185,7 @@ class Trainer(Generic[TCurriculum]):
             ],
         }
 
-        trainer = create_model(f"{curriculum.name}TrainerState", __base__=TrainerState, **_props)  # type: ignore
+        trainer = create_model(f"{curriculum.name}TrainerState", __base__=TrainerState[type(curriculum)], **_props)  # type: ignore
         return trainer
 
     @staticmethod
