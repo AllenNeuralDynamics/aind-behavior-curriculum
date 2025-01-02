@@ -4,9 +4,10 @@ Base Behavior Models
 
 from __future__ import annotations
 
-from typing import Optional, TypeVar
+from string import capwords
+from typing import Annotated, Literal, Optional, Type, TypeVar
 
-from pydantic import Field
+from pydantic import Field, create_model
 
 from aind_behavior_curriculum.base import (
     AindBehaviorModel,
@@ -51,3 +52,65 @@ class Task(AindBehaviorModel):
         default=None,
         description="Optional stage name the `Task` object instance represents.",
     )
+
+
+TTaskParameters = TypeVar("TTaskParameters", bound=TaskParameters)
+
+
+def create_task(
+    *,
+    name: str,
+    task_parameters: Type[TTaskParameters],
+    version: Optional[str] = None,
+    description: Optional[str] = None,
+) -> Type[TTask]:
+    """
+    Factory method for creating a Task object.
+
+    Args:
+        name: Name of the task.
+        task_parameters: Task parameters.
+        version: Task schema version.
+        description: Task description.
+        stage_name: Optional stage name the `Task` object instance represents.
+
+    Returns:
+        Task: Task object instance.
+    """
+
+    def _snake_to_pascal(v: str) -> str:
+        return "".join(map(capwords, v.split("_")))
+
+    _props = {
+        "name": Annotated[
+            Literal[name],
+            Field(default=name, frozen=True, validate_default=True),
+        ],
+        "task_parameters": Annotated[
+            task_parameters,
+            Field(
+                default=task_parameters,
+                description=(
+                    task_parameters.__doc__.strip()
+                    if task_parameters.__doc__
+                    else ""
+                ),
+                validate_default=True,
+            ),
+        ],
+        "version": Annotated[
+            Literal[version] if version else Optional[str],
+            Field(
+                default=version,
+                frozen=True,
+                pattern=SEMVER_REGEX,
+                validate_default=True,
+            ),
+        ],
+        "description": Annotated[
+            Literal[str] if description else Optional[str],
+            Field(default=description, frozen=True, validate_default=True),
+        ],
+    }
+
+    return create_model(_snake_to_pascal(name), __base__=Task, **_props)  # type: ignore
