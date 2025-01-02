@@ -4,15 +4,7 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import (
-    Annotated,
-    Generic,
-    List,
-    Optional,
-    Self,
-    Type,
-    TypeVar,
-)
+from typing import Annotated, Generic, List, Optional, Self, Type, TypeVar
 
 from pydantic import Field, create_model
 
