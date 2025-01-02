@@ -7,7 +7,12 @@ from typing import Callable, Dict
 
 import example_project_2 as ex2
 
-from aind_behavior_curriculum import Curriculum, Metrics, Trainer, TrainerState
+from aind_behavior_curriculum import (
+    Curriculum,
+    Metrics,
+    TrainerServer,
+    TrainerState,
+)
 
 # Proxy Database
 # NOTE: Trainer's concerte implementation
@@ -21,7 +26,7 @@ MICE_METRICS: dict[int, Metrics] = {
 }
 
 
-class ExampleTrainer(Trainer):
+class ExampleTrainer(TrainerServer):
     def __init__(self) -> None:
         """
         Custom init w/ super.__init__()

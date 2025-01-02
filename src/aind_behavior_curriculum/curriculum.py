@@ -16,6 +16,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -34,6 +35,7 @@ from pydantic import (
     Field,
     GetJsonSchemaHandler,
     Tag,
+    ValidationError,
     create_model,
     field_validator,
 )
@@ -443,6 +445,20 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         n_id = self._get_node_id(node)
         self.graph[n_id] = input_transitions
 
+    def __eq__(self, other: object) -> bool:
+        """
+        Compare this object with another for equality.
+
+        Args:
+            other (object): The object to compare with.
+
+        Returns:
+            bool: True if the objects are equal, False otherwise.
+        """
+        if not isinstance(other, BehaviorGraph):
+            return False
+        return self.model_dump() == other.model_dump()
+
 
 class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
     """
@@ -463,15 +479,59 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     task: TTask = Field(
         ..., description="Task in which this stage is based off of."
     )
-    graph: PolicyGraph = PolicyGraph()
-    start_policies: List[Policy] = []
+    graph: PolicyGraph = Field(
+        default_factory=PolicyGraph,
+        validate_default=True,
+        description="Policy Graph.",
+    )
+    start_policies: List[Policy] = Field(
+        default_factory=list, description="List of starting policies."
+    )
 
-    def __eq__(self, __value: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Custom equality method.
         Two Stage instances are only distinguished by name.
         """
-        return self.name == __value.name
+        # TODO. We should consider cleaning this up in the future.
+        # Since Stage is mutable at the level of the TaskParameters
+        # we cannot simply compare the model_dump() of the two instances.
+        # However, we need the __eq__ to look for nodes in the graph.
+        # The solution is probably to make our own "look_up" method
+        # This should generally be safe since the Stage name is unique,
+        # but it is a brittle solution.
+        if not isinstance(other, Stage):
+            return False
+        return self.name == other.name
+
+    def model_post_init(self, __context):
+        """Runs after model_construct to ensure that the
+        initial policies update the PolicyGraph"""
+        super().model_post_init(__context)
+        self.set_start_policies(self.start_policies, append_non_existing=True)
+
+    def set_start_policies(
+        self,
+        start_policies: Policy | Iterable[Policy],
+        append_non_existing: bool = True,
+    ) -> None:
+        """
+        Sets stage's start policies to start policies provided.
+        Input overwrites existing start policies.
+        """
+        if isinstance(start_policies, Policy):
+            start_policies = [start_policies]
+
+        for policy in start_policies:
+            if policy not in self.graph.see_nodes():
+                if append_non_existing:
+                    self.add_policy(policy)
+                else:
+                    raise ValueError(
+                        f"Policy {policy} is not in the policy graph."
+                    )
+
+        self.start_policies = list(start_policies)
 
     def add_policy(self, policy: Policy) -> None:
         """
@@ -518,6 +578,12 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
+
+        if isinstance(rule, Rule):
+            rule = PolicyTransition(rule=rule)
+        if callable(rule) and not isinstance(rule, PolicyTransition):
+            rule = PolicyTransition(rule=rule)
+
         self.graph.add_transition(start_policy, dest_policy, rule)
 
     def remove_policy_transition(
@@ -583,20 +649,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
         self.graph.set_transition_priority(policy, policy_transitions)
 
-    def set_start_policies(self, start_policies: Policy | List[Policy]):
-        """
-        Sets stage's start policies to start policies provided.
-        Input overwrites existing start policies.
-        """
-        if isinstance(start_policies, Policy):
-            start_policies = [start_policies]
-        self.start_policies = start_policies
-
     def get_task_parameters(self) -> TaskParameters:
         """
         See current task parameters of Task.
         """
-
         return self.task.task_parameters
 
     def set_task_parameters(self, task_params: TaskParameters) -> None:
@@ -608,39 +664,20 @@ class Stage(AindBehaviorModel, Generic[TTask]):
 
     def validate_stage(self) -> Stage:
         """
-        Check if stage is non-empty and specifies start policies.
+        Validates that the stage can be (de)serialized.
         """
-
-        if len(self.see_policies()) == 0:
-            raise ValueError(
-                f"Stage {self.name} in Curriculum is empty. \
-                Please add at least one policy to all Curriculum stages \
-                with Stage.add_policy(...). \
-                If you would like an empty Stage, you can use \
-                curriculum_utils.create_empty_stage(...)"
-            )
-
-        if len(self.start_policies) == 0:
-            raise ValueError(
-                f"Stage {self.name} in Curriculum does not have start_policies. \
-                Please define start_polices for all Curriculum stages \
-                with Stage.set_start_policies(...)"
-            )
 
         # Check round trip serialization
         try:
             instance_json = self.model_dump_json()
-            curr_subtype = type(self)
-            curr_subtype.model_validate_json(instance_json)
-        except Exception:
-            print(
-                (
-                    f"Pydantic cannot serialize Stage {self.name}, please use "
-                    "mypy to verify your types "
-                    "(check signatures of policy functions, etc.)."
-                )
+            self.model_validate_json(instance_json)
+        except ValidationError as e:
+            e.add_note(
+                f"Pydantic cannot serialize Stage {self.name}, please use "
+                "mypy to verify your types "
+                "(check signatures of policy functions, etc.)."
             )
-            raise
+            raise e
 
         return self
 
@@ -731,6 +768,42 @@ class Curriculum(AindBehaviorModel):
         StageGraph, Field(default=StageGraph(), validate_default=True)
     ]
 
+    @property
+    def _known_tasks(self) -> List[Type[Task]]:
+        """Get all known tasks in the curriculum."""
+
+        # We introspect into the StageGraph[T] type to get the known tasks.
+        _generic = self.model_fields["graph"].annotation
+        _inner_args = _generic.__dict__["__pydantic_generic_metadata__"][
+            "args"
+        ][0]
+        _inner_union = get_args(_inner_args)[0]
+        if isinstance(_inner_union, type):
+            _known_tasks = [_inner_union]
+        else:
+            _known_tasks = [get_args(x)[0] for x in get_args(_inner_union)]
+
+        # Since we are here, we also check if the known tasks match the nodes in the graph
+        # The tasks known to the graph type should be a super set of the known tasks in the nodes
+        _known_nodes = [type(stage.task) for stage in self.graph.see_nodes()]
+        if not set(_known_tasks).issuperset(set(_known_nodes)):
+            raise ValueError(
+                "Known tasks in the Curriculum do not match the tasks in the StageGraph. This is likely a problem with StageGraph type definition."
+            )
+        return _known_tasks
+
+    def task_discriminator_type(self) -> type:
+        """Create a Discriminated Union  type for the known tasks."""
+        return make_task_discriminator(self._known_tasks)
+
+    def _is_task_type_known(self, task_type: Task | Type[Task]) -> bool:
+        """Check if a task type is known in the curriculum."""
+        if isinstance(task_type, Task):
+            task_type = type(task_type)
+        if isinstance(task_type, type):
+            return task_type in self._known_tasks
+        raise ValueError("task_type must be a Task instance or a Task type.")
+
     @classmethod
     def default_pkg_location_factory(cls) -> str:
         """
@@ -742,6 +815,11 @@ class Curriculum(AindBehaviorModel):
         """
         Adds a floating stage to the Curriculum adjacency graph.
         """
+
+        if not self._is_task_type_known(stage.task):
+            raise ValueError(
+                f"Task {stage.task} is not a known task type in the Curriculum."
+            )
 
         if stage in self.graph.see_nodes():
             raise ValueError(
@@ -777,6 +855,11 @@ class Curriculum(AindBehaviorModel):
         NOTE: The order in which this method
         is called sets the order of transition priority.
         """
+
+        if isinstance(rule, Rule):
+            rule = StageTransition(rule=rule)
+        if callable(rule) and not isinstance(rule, StageTransition):
+            rule = StageTransition(rule=rule)
 
         self.graph.add_transition(start_stage, dest_stage, rule)
 
@@ -848,6 +931,16 @@ class Curriculum(AindBehaviorModel):
         Validate curriculum for export/serialization.
         """
 
+        if not all(
+            [
+                self._is_task_type_known(stage.task)
+                for stage in self.see_stages()
+            ]
+        ):
+            raise ValueError(
+                "Not all tasks in the curriculum are known. Please add stages with known tasks."
+            )
+
         if len(self.see_stages()) == 0:
             raise ValueError("Curriculum is empty! Please add stages.")
 
@@ -857,16 +950,15 @@ class Curriculum(AindBehaviorModel):
         # Check round trip serialization
         try:
             instance_json = self.model_dump_json()
-            curr_subtype = type(self)
-            curr_subtype.model_validate_json(instance_json)
-        except Exception:
-            print(
+            self.model_validate_json(instance_json)
+        except ValidationError as e:
+            e.add_note(
                 (
                     "Pydantic cannot serialize Curriculum, please use "
                     "mypy to verify your types (check stage transition signature, etc.)."
                 )
             )
-            raise
+            raise e
 
         return self
 
@@ -1089,19 +1181,26 @@ class Curriculum(AindBehaviorModel):
 def create_curriculum(
     name: str,
     version: str,
-    *tasks: Type[Task],
+    tasks: Iterable[Type[Task]],
     pkg_location: Optional[str] = None,
 ) -> Type[Curriculum]:
-    """_summary_
-
-    Args:
-        name (str): Name of the Curriculum.
-        version (str): Curriculum version in SemVer format.
-
-    Returns:
-        Type[Curriculum]: A curriculum class with the specified tasks.
     """
-    _tasks_tagged = _make_task_discriminator(*tasks)
+    Creates a new curriculum model with the specified name, version, and tasks.
+    Args:
+        name (str): The name of the curriculum.
+        version (str): The version of the curriculum, following semantic versioning.
+        tasks (Iterable[Type[Task]]): An iterable of Task types to be included in the curriculum.
+        pkg_location (Optional[str]): Optional package location string.
+    Returns:
+        Type[Curriculum]: A new curriculum model type.
+    Raises:
+        ValueError: If no tasks are provided.
+    """
+
+    if not any(tasks):
+        raise ValueError("At least one task must be provided.")
+
+    _tasks_tagged = make_task_discriminator(tasks)
     _props = {
         "name": Annotated[
             Literal[name],
@@ -1133,14 +1232,14 @@ def create_curriculum(
     return t_curriculum
 
 
-def _make_task_discriminator(*tasks: Type[Task]) -> Type:
+def make_task_discriminator(tasks: Iterable[Type[Task]]) -> Type:
     """
     Creates a discriminated union type for the given tasks.
     This function takes a variable number of Task types and generates a
     discriminated union type using the 'name' field of each task to create
     a valid Tag and corresponding Discriminator.
     Args:
-        *tasks (Type[Task]): A variable number of Task types.
+        tasks (Iterable[Type[Task]]): A variable number of Task types.
     Returns:
         Type: A discriminated union type of the provided tasks.
     Raises:

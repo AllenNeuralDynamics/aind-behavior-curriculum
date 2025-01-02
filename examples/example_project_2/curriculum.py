@@ -17,7 +17,6 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    create_empty_stage,
     get_task_types,
 )
 
@@ -200,9 +199,9 @@ def construct_policy_triangle_curriculum() -> MyCurriculum:
 def construct_stage_triangle_curriculum() -> MyCurriculum:
     dummy_task = DummyTask(task_parameters=DummyParameters())
 
-    test_stage_1 = create_empty_stage(Stage(name="Stage 1", task=dummy_task))
-    test_stage_2 = create_empty_stage(Stage(name="Stage 2", task=dummy_task))
-    test_stage_3 = create_empty_stage(Stage(name="Stage 3", task=dummy_task))
+    test_stage_1 = Stage(name="Stage 1", task=dummy_task)
+    test_stage_2 = Stage(name="Stage 2", task=dummy_task)
+    test_stage_3 = Stage(name="Stage 3", task=dummy_task)
 
     test_curr = MyCurriculum(name="My Curriculum")
     # Counter-clockwise, higher priority
