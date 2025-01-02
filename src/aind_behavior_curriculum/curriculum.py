@@ -4,12 +4,13 @@ Core Stage and Curriculum Primitives.
 
 from __future__ import annotations
 
+import importlib
 import inspect
 import json
 import subprocess
 import warnings
-from importlib import import_module
 from pathlib import Path
+from types import EllipsisType
 from typing import (
     Annotated,
     Any,
@@ -20,11 +21,14 @@ from typing import (
     List,
     Literal,
     Optional,
+    ParamSpec,
     Tuple,
     Type,
     TypeVar,
     Union,
+    cast,
     get_args,
+    get_origin,
 )
 
 import boto3
@@ -37,7 +41,6 @@ from pydantic import (
     Tag,
     ValidationError,
     create_model,
-    field_validator,
 )
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
@@ -49,6 +52,8 @@ from aind_behavior_curriculum.base import (
 from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
 
 TTask = TypeVar("TTask", bound=Task)
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
 class Metrics(AindBehaviorModelExtra):
@@ -58,17 +63,72 @@ class Metrics(AindBehaviorModelExtra):
     """
 
 
-class Rule:
+class _Rule(Generic[_P, _R]):
     """
     Custom Pydantic Type that defines de/serialization for Callables.
+    This type is not intended to be used directly, but rather subclassed
+    with explicit typing in the generics.
+
+    The _Rule type wraps a Callable with a specific signature.
+    The Callable type signature is evaluated at runtime to ensure that the
+    type hinting matches the expected _Rule (or subtype) type signature.
+    For the duck-type aficionados, this type can be skipped by calling
+    Rule(..., skip_validation=True) or by not annotating the Callable.
     """
 
-    def __eq__(self, __value: object) -> bool:
+    def __init__(
+        self, function: Callable[_P, _R], *, skip_validation: bool = False
+    ) -> None:
+        """
+        Initializes a new instance of the class.
+        Args:
+            function (Callable[_P, _R]): The function to be used. If an instance of _Rule is passed,
+                                         the callable attribute of the _Rule instance will be used.
+            skip_validation (bool, optional): If set to True, skips the validation of the callable's typing.
+                                              Defaults to False.
+        Returns:
+            None
+        """
+
+        # Just in case people pass the _Rule instance directly
+        # Instead of the callable
+        if isinstance(function, _Rule):
+            function = function.callable
+
+        if not skip_validation:
+            self._validate_callable_typing(function)
+        self._callable = function
+
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        """Wraps the inner callable."""
+        return self._callable(*args, **kwargs)
+
+    def __eq__(self, other: Any) -> bool:
         """
         Custom equality method.
         Two instances of the same subclass type are considered equal.
         """
-        return isinstance(__value, self.__class__)
+        if not isinstance(other, _Rule):
+            return False
+        return self.__hash__() == other.__hash__()
+
+    def __hash__(self):
+        """
+        Returns the hash value for the object.
+        """
+        return hash(hash(self.name) + hash(self.callable))
+
+    @property
+    def name(self) -> str:
+        """
+        Name of the Rule.
+        """
+        return self.serialize_rule(self)
+
+    @property
+    def callable(self) -> Callable[_P, _R]:
+        """Returns the wrapped callable."""
+        return self._callable
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -81,15 +141,11 @@ class Rule:
         https://docs.pydantic.dev/latest/concepts/types/#handling-third-party-types
         """
 
-        def validate_from_str(value: str) -> Callable:
-            """Pass string through deserialization."""
-            return cls._deserialize_callable(value)
-
         from_str_schema = core_schema.chain_schema(
             [
                 core_schema.str_schema(),
                 core_schema.no_info_plain_validator_function(
-                    validate_from_str
+                    cls._deserialize_rule
                 ),
             ]
         )
@@ -98,12 +154,12 @@ class Rule:
             json_schema=from_str_schema,
             python_schema=core_schema.union_schema(
                 [
-                    core_schema.is_instance_schema(Callable),
+                    core_schema.is_instance_schema(cls),
                     from_str_schema,
                 ]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
-                function=cls._serialize_callable
+                function=cls.serialize_rule
             ),
         )
 
@@ -119,142 +175,270 @@ class Rule:
         """
         return handler(core_schema.str_schema())
 
-    @staticmethod
-    def _deserialize_callable(value: str | Callable) -> Callable:
+    @classmethod
+    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> _Rule[_P, _R]:
         """
         Custom Deserialization.
         Imports function according to package and function name.
         """
-        if callable(value):
-            return value
-        else:
-            split = value.rsplit(".", 1)
-            if not (len(split) > 0):
-                raise ValueError(
-                    f"Invalid rule value while attempting to deserialize callable. \
-                    Got {value}, expected string in the format '<module>.Rule'"
-                )
+        callable_handle: Callable[_P, _R]
+        if callable(value) and not isinstance(value, cls):
+            return cls(value)
 
-            module = import_module(split[0])
-            obj = getattr(module, split[1])
-            return obj
+        if isinstance(value, str):
+            try:
+                module_name, _, attr_path = value.partition(".")
+                while "." in attr_path:
+                    module_name += "." + attr_path.split(".", 1)[0]
+                    attr_path = attr_path.split(".", 1)[1]
 
-    @staticmethod
-    def _serialize_callable(value: str | Callable) -> str:
+                module = importlib.import_module(module_name)
+                obj = module
+                for attr in attr_path.split("."):
+                    obj = getattr(obj, attr)
+            except (ModuleNotFoundError, AttributeError) as e:
+                assert isinstance(value, str)
+                callable_handle = _NonDeserializableCallable[_P, _R](value, e)
+            else:
+                callable_handle = cast(Callable[_P, _R], obj)
+
+        return cls(callable_handle)
+
+    @classmethod
+    def serialize_rule(cls, value: str | _Rule[_P, _R]) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
         """
+
         if isinstance(value, str):
-            value = Rule._deserialize_callable(value)
+            ret = cls._deserialize_rule(value)
+        else:
+            ret = value
+        assert isinstance(ret, _Rule)
 
-        return value.__module__ + "." + value.__name__
+        if is_non_deserializable_callable(ret.callable):
+            # Python 3.13 has a better way to infer
+            # types with arbitrary clause code, but for now...
+            assert isinstance(ret.callable, _NonDeserializableCallable)
+            return ret.callable.mock_serialize()
+        else:
+            module = ret.callable.__module__
+            qualname = ret.callable.__qualname__
+            return f"{module}.{qualname}"
+
+    @classmethod
+    def _validate_callable_typing(  # noqa: C901
+        cls, r: Callable[_P, _R]
+    ) -> None:
+        """
+        Validates that the provided callable `r` matches the expected signature
+        defined by the generic types of the class.
+        Args:
+            r (Callable[_P, _R]): The callable to validate.
+        Raises:
+            ValueError: If `r` is not callable.
+            TypeError: If the class does not define its generic types explicitly,
+                    or if the callable `r` does not match the expected signature.
+        """
+
+        if not callable(r):
+            raise ValueError("Rule must be callable.")
+
+        if isinstance(r, cls):
+            return
+
+        if is_non_deserializable_callable(r):
+            return
+
+        # For some reason, generics do not materialize by default.
+        # We fetch them manually....
+        if isinstance(x := cls._solve_generic_typing(cls), TypeError):
+            raise x
+        else:
+            expected_callable, expected_return = x
+
+        # Compare signatures
+        sig = inspect.signature(r)
+        try:
+            # Compare inputs
+            if (
+                _eval := cls._validate_signature_input(expected_callable, sig)
+            ) is not None:
+                raise _eval
+
+            if (
+                _eval := cls._validate_signature_output(expected_return, sig)
+            ) is not None:
+                raise _eval
+
+        except TypeError as e:
+            e.add_note(
+                f"Expected callable type signature: {expected_callable} -> {expected_return}. Got {sig}."
+            )
+            raise e
+
+    @staticmethod
+    def _validate_signature_input(
+        expected_callable: Any, sig: inspect.Signature
+    ) -> Optional[TypeError]:
+
+        if isinstance(expected_callable, EllipsisType):
+            return None
+
+        if not (len(sig.parameters) == 0 and expected_callable is type(None)):
+            if not (len(sig.parameters) == len(expected_callable)):
+                return TypeError(
+                    f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
+                )
+
+            for param, expected_type in zip(
+                list(sig.parameters.values()), expected_callable
+            ):
+                if param.annotation is not param.empty:
+                    if not issubclass(param.annotation, expected_type):
+                        return TypeError(
+                            f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
+                        )
+        return None
+
+    @staticmethod
+    def _validate_signature_output(
+        expected_return: Any, sig: inspect.Signature
+    ) -> Optional[TypeError]:
+
+        if isinstance(expected_return, EllipsisType):
+            return None
+
+        if sig.return_annotation is None and expected_return is type(None):
+            return None
+
+        if sig.return_annotation is not inspect.Signature.empty:
+            if not issubclass(sig.return_annotation, expected_return):
+                return TypeError(
+                    f"Callable return type must be {expected_return}, but {sig.return_annotation} was found."
+                )
+
+        return None
+
+    @staticmethod
+    def _solve_generic_typing(cls_: Any) -> Tuple[Any, Any] | TypeError:
+        origin_bases = getattr(cls_, "__orig_bases__", [])
+        if not origin_bases:
+            return TypeError(
+                f"Class {cls_.__name__} must define its generic types."
+            )
+
+        for base in origin_bases:
+            # Hopefully nobody uses multiple inheritance with Rule
+            # But just in case we grab the first Rule parent
+            origin = get_origin(base)
+            args = get_args(base)
+
+            if origin is _Rule and len(args) == 2:
+                # we assume that the constructor only takes a single
+                # callable as argument. Can always be extended
+                # partials with partial
+                return (args[0], args[1])
+        return TypeError(
+            f"Class {cls_.__name__} must define its generic types explicitly."
+        )
 
 
-class Policy(AindBehaviorModel):
+def is_non_deserializable_callable(value: Any) -> bool:
+    """
+    Check if the given value is an instance of _NonDeserializableCallable.
+    Args:
+        value (Any): The value to check.
+    Returns:
+        bool: True if the value is an instance of _NonDeserializableCallable, False otherwise.
+    """
+
+    return isinstance(value, _NonDeserializableCallable)
+
+
+def try_materialize_non_deserializable_callable_error(
+    value: _NonDeserializableCallable,
+) -> Optional[Exception]:
+    """
+    Attempts to materialize the error from a non-deserializable callable.
+
+    Args:
+        value (_NonDeserializableCallable): The value to check and potentially
+                                            extract the error from.
+
+    Returns:
+        Optional[Exception]: The error associated with the non-deserializable
+                             callable if it exists, otherwise None.
+    """
+    if not is_non_deserializable_callable(value):
+        return None
+    return value.error
+
+
+class _NonDeserializableCallable(Generic[_P, _R]):
+    """
+    A class representing a reference to callable that could not be deserialized.
+    """
+
+    def __init__(self, callable_repr: str, error: Exception) -> None:
+        """
+        Initializes the instance with a callable representation and an error.
+
+        Args:
+            callable_repr (str): A string representation of the callable.
+            error (Exception): The exception that was raised.
+
+        Returns:
+            None
+        """
+        self._callable_repr = callable_repr
+        self._error = error
+
+    @property
+    def error(self) -> Exception:
+        """
+        Property that returns the error associated with the curriculum.
+
+        Returns:
+            Exception: The error associated with the curriculum.
+        """
+        return self._error
+
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        """Shim method to raise an error when the callable is called."""
+        raise RuntimeError(
+            f"Cannot call the non-deserializable callable reference '{self._callable_repr}'."
+        )
+
+    def mock_serialize(self) -> str:
+        """Shim method to return the callable representation."""
+        return self._callable_repr
+
+    @property
+    def __hash__(self):
+        """Shim method to return the hash of the callable."""
+        return hash(self._callable_repr)
+
+
+class Policy(_Rule[[Metrics, TaskParameters], TaskParameters]):
     """
     User-defined function that defines
     how current Task parameters change according to metrics.
+    It subclasses _Rule.
     """
 
-    rule: Rule = Field(..., description="Callable with Serialization.")
-
-    @field_validator("rule")
-    @classmethod
-    def validate_rule(cls, r: Rule):
-        """
-        Policy Signature:
-        I:
-        - metrics: Metrics object
-        - task_parameters: TaskParameters object
-
-        O:
-        - result: TaskParameters object
-        """
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
-        # Check rule follows Transition signature
-        params = list(inspect.signature(r).parameters)
-        param_1 = inspect.signature(r).parameters[params[0]].annotation
-        param_2 = inspect.signature(r).parameters[params[1]].annotation
-        return_type = inspect.signature(r).return_annotation
-
-        module = import_module(param_1.__module__)
-        param_1_obj = getattr(module, param_1.__name__)
-        module = import_module(param_2.__module__)
-        param_2_obj = getattr(module, param_2.__name__)
-        module = import_module(return_type.__module__)
-        return_type_obj = getattr(module, return_type.__name__)
-
-        incorrect_num_params = len(inspect.signature(r).parameters) != 2
-        incorrect_input_types = not (
-            issubclass(param_1_obj, Metrics)
-            and issubclass(param_2_obj, TaskParameters)
-        )
-        incorrect_return_type = not (
-            issubclass(return_type_obj, TaskParameters)
-        )
-
-        if (
-            incorrect_num_params
-            or incorrect_input_types
-            or incorrect_return_type
-        ):
-            raise ValueError(
-                "Invalid signature." f"{Policy.validate_rule.__doc__}"
-            )
-
-        return r
+    pass
 
 
-class PolicyTransition(AindBehaviorModel):
+class PolicyTransition(_Rule[[Metrics], bool]):
     """
     User-defined function that defines
-    criteria for transitioning between policies based on metrics.
+    how current Policies change during a Stage.
+    It subclasses _Rule.
     """
 
-    rule: Rule = Field(..., description="Callable with Serialization.")
-
-    @field_validator("rule")
-    @classmethod
-    def validate_rule(cls, r: Rule):
-        """
-        Policy Transition Signature:
-        I:
-        - metrics: Metrics object
-
-        O:
-        - result: bool
-        """
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
-        # Check rule follows Transition signature
-        params = list(inspect.signature(r).parameters)
-        param_1 = inspect.signature(r).parameters[params[0]].annotation
-        return_type = inspect.signature(r).return_annotation
-
-        module = import_module(param_1.__module__)
-        param_1_obj = getattr(module, param_1.__name__)
-        module = import_module(return_type.__module__)
-        return_type_obj = getattr(module, return_type.__name__)
-
-        incorrect_num_params = len(inspect.signature(r).parameters) != 1
-        incorrect_input_types = not (issubclass(param_1_obj, Metrics))
-        incorrect_return_type = not (issubclass(return_type_obj, bool))
-
-        if (
-            incorrect_num_params
-            or incorrect_input_types
-            or incorrect_return_type
-        ):
-            raise ValueError(
-                "Invalid signature."
-                f"{PolicyTransition.validate_rule.__doc__}"
-            )
-
-        return r
+    pass
 
 
 NodeTypes = TypeVar("NodeTypes")
@@ -445,12 +629,12 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         n_id = self._get_node_id(node)
         self.graph[n_id] = input_transitions
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Compare this object with another for equality.
 
         Args:
-            other (object): The object to compare with.
+            other (Any): The object to compare with.
 
         Returns:
             bool: True if the objects are equal, False otherwise.
@@ -488,7 +672,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         default_factory=list, description="List of starting policies."
     )
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """
         Custom equality method.
         Two Stage instances are only distinguished by name.
@@ -539,7 +723,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         if policy in self.graph.see_nodes():
             raise ValueError(
-                f"Policy {policy.rule.__name__} is a duplicate Policy in Stage {self.name}."
+                f"Policy {policy.name} is a duplicate Policy in Stage {self.name}."
             )
 
         self.graph.add_node(policy)
@@ -579,10 +763,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, Rule):
-            rule = PolicyTransition(rule=rule)
+        if isinstance(rule, _Rule):
+            rule = PolicyTransition(rule)
         if callable(rule) and not isinstance(rule, PolicyTransition):
-            rule = PolicyTransition(rule=rule)
+            rule = PolicyTransition(rule)
 
         self.graph.add_transition(start_policy, dest_policy, rule)
 
@@ -633,11 +817,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         in the desired priority from left -> right.
         """
 
-        policy_transitions_list = list(
-            (t.rule, p.rule) for (t, p) in policy_transitions
-        )
+        policy_transitions_list = list((t, p) for (t, p) in policy_transitions)
         current_list = list(
-            (t.rule, p.rule) for (t, p) in self.see_policy_transitions(policy)
+            (t, p) for (t, p) in self.see_policy_transitions(policy)
         )
 
         if len(policy_transitions_list) != len(current_list):
@@ -682,51 +864,14 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         return self
 
 
-class StageTransition(AindBehaviorModel):
+class StageTransition(_Rule[[Metrics], bool]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
+    Subclasses _Rule.
     """
 
-    rule: Rule = Field(..., description="Callable with Serialization.")
-
-    @field_validator("rule")
-    @classmethod
-    def validate_rule(cls, r: Rule):
-        """
-        Stage Transition Signature:
-        I:
-        - metrics: Metrics object
-
-        O:
-        - result: bool
-        """
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
-        # Check rule follows Transition signature
-        params = list(inspect.signature(r).parameters)
-        param_1 = inspect.signature(r).parameters[params[0]].annotation
-        return_type = inspect.signature(r).return_annotation
-
-        module = import_module(param_1.__module__)
-        param_1_obj = getattr(module, param_1.__name__)
-        module = import_module(return_type.__module__)
-        return_type_obj = getattr(module, return_type.__name__)
-
-        incorrect_num_params = len(inspect.signature(r).parameters) != 1
-        incorrect_input_types = not (issubclass(param_1_obj, Metrics))
-        incorrect_return_type = not (issubclass(return_type_obj, bool))
-
-        if (
-            incorrect_num_params
-            or incorrect_input_types
-            or incorrect_return_type
-        ):
-            raise ValueError(
-                "Invalid signature." f"{StageTransition.validate_rule.__doc__}"
-            )
-        return r
+    pass
 
 
 class StageGraph(BehaviorGraph[Stage[TTask], StageTransition], Generic[TTask]):
@@ -856,10 +1001,10 @@ class Curriculum(AindBehaviorModel):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, Rule):
-            rule = StageTransition(rule=rule)
+        if isinstance(rule, _Rule):
+            rule = StageTransition(rule)
         if callable(rule) and not isinstance(rule, StageTransition):
-            rule = StageTransition(rule=rule)
+            rule = StageTransition(rule)
 
         self.graph.add_transition(start_stage, dest_stage, rule)
 
@@ -911,10 +1056,10 @@ class Curriculum(AindBehaviorModel):
         """
 
         stage_transitions_list = list(
-            (t.rule, s.name) for (t, s) in stage_transitions
+            (t, s.name) for (t, s) in stage_transitions
         )
         current_list = list(
-            (t.rule, s.name) for (t, s) in self.see_stage_transitions(stage)
+            (t, s.name) for (t, s) in self.see_stage_transitions(stage)
         )
 
         if len(stage_transitions_list) != len(current_list):
@@ -1001,11 +1146,11 @@ class Curriculum(AindBehaviorModel):
                 # Add color to start policies
                 if node in s.start_policies:
                     node_str = (
-                        f'{node_id} [label="{node.rule.__name__}",'
+                        f'{node_id} [label="{node.__name__}",'
                         'fillcolor="#FFEA00"]'
                     )
                 else:
-                    node_str = f'{node_id} [label="{node.rule.__name__}"]'
+                    node_str = f'{node_id} [label="{node.__name__}"]'
                 nodes.append(node_str)
 
             edges = []
@@ -1017,7 +1162,7 @@ class Curriculum(AindBehaviorModel):
                     # Edges must be StageTransition or PolicyTransition
                     edge_str = (
                         f'{start_id} -> {dest_id} [label="({i}) '
-                        f'{edge.rule.__name__}", minlen=2]'
+                        f'{edge.__name__}", minlen=2]'
                     )
                     edges.append(edge_str)
 
@@ -1069,7 +1214,7 @@ class Curriculum(AindBehaviorModel):
                     # Edges must be StageTransition or PolicyTransition
                     edge_str = (
                         f'{start_id} -> {dest_id} [label="({i}) '
-                        f'{edge.rule.__name__}", minlen=2]'
+                        f'{edge.__name__}", minlen=2]'
                     )
                     edges.append(edge_str)
 
@@ -1277,8 +1422,6 @@ def make_task_discriminator(tasks: Iterable[Type[Task]]) -> Type:
                 f"Task {task} has a name field that is not a string, got {name} of type {type(name)}"
             )
 
-    if len(_candidate_discriminators) != len(set(_candidate_discriminators)):
-        raise ValueError("Duplicate task names found.")
     if len(_candidate_discriminators) != len(tasks):
         raise ValueError("One of more task names were not found.")
 

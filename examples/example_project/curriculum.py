@@ -67,7 +67,7 @@ def stageA_policyA_rule(
     return task_params
 
 
-stageA_policyA = Policy(rule=stageA_policyA_rule)
+stageA_policyA = Policy(stageA_policyA_rule)
 
 
 def stageA_policyB_rule(
@@ -78,7 +78,7 @@ def stageA_policyB_rule(
     return task_params
 
 
-stageA_policyB = Policy(rule=stageA_policyB_rule)
+stageA_policyB = Policy(stageA_policyB_rule)
 
 
 def stageB_policyA_rule(
@@ -89,7 +89,7 @@ def stageB_policyA_rule(
     return task_params
 
 
-stageB_policyA = Policy(rule=stageB_policyA_rule)
+stageB_policyA = Policy(stageB_policyA_rule)
 
 
 def stageB_policyB_rule(
@@ -100,7 +100,7 @@ def stageB_policyB_rule(
     return task_params
 
 
-stageB_policyB = Policy(rule=stageB_policyB_rule)
+stageB_policyB = Policy(stageB_policyB_rule)
 
 
 # --- POLICY TRANSTITIONS ---
@@ -108,28 +108,28 @@ def t1_5_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_1 > 5
 
 
-t1_5 = PolicyTransition(rule=t1_5_rule)
+t1_5 = PolicyTransition(t1_5_rule)
 
 
 def t1_10_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_1 > 10
 
 
-t1_10 = PolicyTransition(rule=t1_10_rule)
+t1_10 = PolicyTransition(t1_10_rule)
 
 
 def t3_5_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_3 > 5
 
 
-t3_5 = PolicyTransition(rule=t3_5_rule)
+t3_5 = PolicyTransition(t3_5_rule)
 
 
 def t3_10_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_3 > 10
 
 
-t3_10 = PolicyTransition(rule=t3_10_rule)
+t3_10 = PolicyTransition(t3_10_rule)
 
 
 # --- STAGE TRANSITIONS ---
@@ -137,14 +137,14 @@ def t2_5_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_2 > 5
 
 
-t2_5 = StageTransition(rule=t2_5_rule)
+t2_5 = StageTransition(t2_5_rule)
 
 
 def t2_10_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_2 > 10
 
 
-t2_10 = StageTransition(rule=t2_10_rule)
+t2_10 = StageTransition(t2_10_rule)
 
 
 # --- CURRICULUM ---

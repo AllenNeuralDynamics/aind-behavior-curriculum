@@ -11,7 +11,6 @@ from .curriculum import (
     Metrics,
     Policy,
     PolicyTransition,
-    Rule,
     Stage,
     StageGraph,
     StageTransition,

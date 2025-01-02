@@ -56,7 +56,7 @@ def policy_1_rule(
     return task_params
 
 
-policy_1 = Policy(rule=policy_1_rule)
+policy_1 = Policy(policy_1_rule)
 
 
 def policy_2_rule(
@@ -67,7 +67,7 @@ def policy_2_rule(
     return task_params
 
 
-policy_2 = Policy(rule=policy_2_rule)
+policy_2 = Policy(policy_2_rule)
 
 
 def policy_3_rule(
@@ -78,7 +78,7 @@ def policy_3_rule(
     return task_params
 
 
-policy_3 = Policy(rule=policy_3_rule)
+policy_3 = Policy(policy_3_rule)
 
 
 def policy_4_rule(
@@ -89,7 +89,7 @@ def policy_4_rule(
     return task_params
 
 
-policy_4 = Policy(rule=policy_4_rule)
+policy_4 = Policy(policy_4_rule)
 
 
 def policy_5_rule(
@@ -100,7 +100,7 @@ def policy_5_rule(
     return task_params
 
 
-policy_5 = Policy(rule=policy_5_rule)
+policy_5 = Policy(policy_5_rule)
 
 
 def policy_6_rule(
@@ -111,7 +111,7 @@ def policy_6_rule(
     return task_params
 
 
-policy_6 = Policy(rule=policy_6_rule)
+policy_6 = Policy(policy_6_rule)
 
 
 # --- POLICY/STAGE TRANSTITIONS ---
@@ -119,16 +119,16 @@ def m1_rule(metrics: ExampleMetrics2) -> bool:
     return metrics.m1 > 0
 
 
-m1_policy_transition = PolicyTransition(rule=m1_rule)
-m1_stage_transition = StageTransition(rule=m1_rule)
+m1_policy_transition = PolicyTransition(m1_rule)
+m1_stage_transition = StageTransition(m1_rule)
 
 
 def m2_rule(metrics: ExampleMetrics2) -> bool:
     return metrics.m2 > 0
 
 
-m2_policy_transition = PolicyTransition(rule=m2_rule)
-m2_stage_transition = StageTransition(rule=m2_rule)
+m2_policy_transition = PolicyTransition(m2_rule)
+m2_stage_transition = StageTransition(m2_rule)
 
 
 # --- CURRICULUM ---
