@@ -150,12 +150,22 @@ class _Rule(Generic[_P, _R]):
             ]
         )
 
+        from_callable_schema = core_schema.chain_schema(
+            [
+                core_schema.callable_schema(),
+                core_schema.no_info_plain_validator_function(
+                    cls._deserialize_rule
+                ),
+            ]
+        )
+
         return core_schema.json_or_python_schema(
             json_schema=from_str_schema,
             python_schema=core_schema.union_schema(
                 [
                     core_schema.is_instance_schema(cls),
                     from_str_schema,
+                    from_callable_schema,
                 ]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
@@ -652,6 +662,10 @@ class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
     pass
 
 
+class MetricsProvider(_Rule[..., Metrics]):
+    pass
+
+
 class Stage(AindBehaviorModel, Generic[TTask]):
     """
     Instance of a Task.
@@ -670,6 +684,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     )
     start_policies: List[Policy] = Field(
         default_factory=list, description="List of starting policies."
+    )
+    metrics_provider: Optional[MetricsProvider] = Field(
+        default=None,
+        description="A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
     )
 
     def __eq__(self, other: Any) -> bool:
