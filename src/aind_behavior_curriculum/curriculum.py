@@ -17,15 +17,24 @@ from typing import (
     Dict,
     Generic,
     List,
+    Literal,
+    Optional,
     Tuple,
+    Type,
     TypeVar,
+    Union,
+    get_args,
 )
 
 import boto3
 from jinja2 import Template
 from pydantic import (
+    BaseModel,
+    Discriminator,
     Field,
     GetJsonSchemaHandler,
+    Tag,
+    create_model,
     field_validator,
 )
 from pydantic.json_schema import JsonSchemaValue
@@ -1075,3 +1084,147 @@ class Curriculum(AindBehaviorModel):
         curr = cls.model_validate_json(json_string)
 
         return curr
+
+
+def create_curriculum(
+    name: str,
+    version: str,
+    *tasks: Type[Task],
+    pkg_location: Optional[str] = None,
+) -> Type[Curriculum]:
+    """_summary_
+
+    Args:
+        name (str): Name of the Curriculum.
+        version (str): Curriculum version in SemVer format.
+
+    Returns:
+        Type[Curriculum]: A curriculum class with the specified tasks.
+    """
+    _tasks_tagged = _make_task_discriminator(*tasks)
+    _props = {
+        "name": Annotated[
+            Literal[name],
+            Field(default=name, frozen=True, validate_default=True),
+        ],
+        "version": Annotated[
+            Literal[version],
+            Field(
+                default=version,
+                frozen=True,
+                pattern=SEMVER_REGEX,
+                validate_default=True,
+            ),
+        ],
+        "graph": Annotated[
+            StageGraph[_tasks_tagged],
+            Field(default_factory=StageGraph, validate_default=True),
+        ],
+    }
+
+    if pkg_location is not None:
+        _props["pkg_location"] = Annotated[
+            str,
+            Field(default=pkg_location, frozen=False, validate_default=True),
+        ]
+
+    t_curriculum = create_model(name, __base__=Curriculum, **_props)  # type: ignore
+
+    return t_curriculum
+
+
+def _make_task_discriminator(*tasks: Type[Task]) -> Type:
+    """
+    Creates a discriminated union type for the given tasks.
+    This function takes a variable number of Task types and generates a
+    discriminated union type using the 'name' field of each task to create
+    a valid Tag and corresponding Discriminator.
+    Args:
+        *tasks (Type[Task]): A variable number of Task types.
+    Returns:
+        Type: A discriminated union type of the provided tasks.
+    Raises:
+        ValueError: If a task does not have a 'name' field defined as
+                    Literal[name] or with a default value.
+        ValueError: If a task has a 'name' field that is not a string.
+        ValueError: If duplicate task names are found.
+        ValueError: If one or more task names are not found.
+    """
+
+    # https://docs.pydantic.dev/2.10/concepts/unions/#discriminated-unions-with-callable-discriminator
+    tasks = tuple(set(tasks))
+    _candidate_discriminators: List[str] = []
+    for task in tasks:
+        name: Optional[str] = None
+        try:  # Use reflection to try to get the name from the type annotation, i.e. Literal[T]
+            name = get_args(task.model_fields["name"].annotation)[0]
+        except (
+            IndexError,
+            KeyError,
+        ):  # If we don't find it, keep going, while throwing any other errors
+            pass
+        if name is None:
+            try:
+                name = task.model_fields["name"].default
+            except KeyError as exc:
+                raise ValueError(
+                    f"Task {task} does not have a name field defined as "
+                    f"Literal[name] or with a default value."
+                ) from exc
+        if isinstance(name, str):
+            _candidate_discriminators.append(name)
+        else:
+            raise ValueError(
+                f"Task {task} has a name field that is not a string, got {name} of type {type(name)}"
+            )
+
+    if len(_candidate_discriminators) != len(set(_candidate_discriminators)):
+        raise ValueError("Duplicate task names found.")
+    if len(_candidate_discriminators) != len(tasks):
+        raise ValueError("One of more task names were not found.")
+
+    _union = Union[  # type: ignore
+        tuple(
+            [
+                Annotated[task, Tag(task_name)]
+                for task, task_name in zip(tasks, _candidate_discriminators)
+            ]
+        )
+    ]
+
+    Tasks = Annotated[
+        _union,  # type: ignore
+        Field(
+            discriminator=Discriminator(
+                _get_discriminator_value,
+            )
+        ),
+    ]
+    return Tasks  # type: ignore
+
+
+def _get_discriminator_value(v: Task) -> str:
+    """
+    Retrieves the discriminator value from the given task.
+    The discriminator value is extracted from the 'name' attribute of the input,
+    which can be either a dictionary or an instance of BaseModel.
+    Args:
+        v (Task): The task from which to extract the discriminator value. This can
+                  be either a dictionary or an instance of BaseModel.
+    Returns:
+        str: The discriminator value extracted from the input.
+    Raises:
+        ValueError: If the discriminator field is not found, is null, or is not of
+                    string type.
+    """
+
+    _discriminator: Any = None
+    if isinstance(v, dict):
+        _discriminator = v.get("name", None)
+    if isinstance(v, BaseModel):
+        _discriminator = getattr(v, "name", None)
+    if isinstance(_discriminator, str):
+        return _discriminator
+    raise ValueError(
+        f"Discriminator field not found, null or not string type. Got {_discriminator}."
+    )

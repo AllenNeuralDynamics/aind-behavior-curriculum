@@ -3,11 +3,24 @@ Curriculum Test Suite
 """
 
 import unittest
+from typing import Annotated, Literal, Union
 
 import example_project as ex
 import example_project_2 as ex2
+from pydantic import BaseModel, Field
 
-from aind_behavior_curriculum import INIT_STAGE, Curriculum, Stage
+from aind_behavior_curriculum import (
+    INIT_STAGE,
+    Curriculum,
+    Stage,
+    StageGraph,
+    create_curriculum,
+)
+from aind_behavior_curriculum.curriculum import (
+    Task,
+    TaskParameters,
+    _get_discriminator_value,
+)
 from aind_behavior_curriculum.curriculum_utils import create_empty_stage
 
 
@@ -447,6 +460,104 @@ class CurriculumTests(unittest.TestCase):
         ex_curr.set_stage_transition_priority(stageA, new_priority)
 
         self.assertTrue(ex_curr.see_stage_transitions(stageA) == new_priority)
+
+    def test_create_curriculum(self):
+
+        _ = create_curriculum("test_curriculum", "1.2.3", ex.TaskA, ex.TaskB)
+        _ = create_curriculum(
+            "test_curriculum", "1.2.3", ex.TaskA, ex.TaskB, ex.TaskB
+        )
+        _ = create_curriculum(
+            "test_curriculum",
+            "1.2.3",
+            ex.TaskA,
+            ex.TaskB,
+            pkg_location="example_project",
+        )
+
+    def test_create_curriculum_equivalence(self):
+
+        class TestCurriculum(Curriculum):
+            name: str = "test_curriculum"
+            version: str = "1.2.3"
+            graph: StageGraph[
+                Annotated[
+                    Union[ex.TaskA, ex.TaskB], Field(discriminator="name")
+                ]
+            ] = Field(default_factory=StageGraph)
+            pkg_location: str = "test"
+
+        taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
+        taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
+        expected_curriculum = TestCurriculum()
+        expected_curriculum.add_stage(
+            create_empty_stage(Stage(name="Stage 0", task=taskA))
+        )
+        expected_curriculum.add_stage(
+            create_empty_stage(Stage(name="Stage 1", task=taskB))
+        )
+
+        created_curriculum = create_curriculum(
+            "TestCurriculum", "1.2.3", ex.TaskA, ex.TaskB, pkg_location="test"
+        )()
+        created_curriculum.add_stage(
+            create_empty_stage(Stage(name="Stage 0", task=taskA))
+        )
+        created_curriculum.add_stage(
+            create_empty_stage(Stage(name="Stage 1", task=taskB))
+        )
+
+        # TODO This needs to be enabled after #49
+        # self.assertEqual(expected_curriculum, created_curriculum)
+        # self.assertEqual(
+        #     expected_curriculum.model_dump_json(),
+        #     created_curriculum.model_dump_json(),
+        # )
+        # self.assertEqual(
+        #     expected_curriculum.model_validate_json(
+        #         expected_curriculum.model_dump_json()
+        #     ),
+        #     expected_curriculum.model_validate_json(
+        #         expected_curriculum.model_dump_json()
+        #     ),
+        # )
+
+    def test_create_curriculum_with_invalid_tagged_union(self):
+        class NotATask(BaseModel):
+            not_name: str = "Not a Task"
+
+        with self.assertRaises(ValueError) as _:
+            _ = create_curriculum(
+                "test_curriculum", "1.2.3", ex.TaskA, ex.TaskB, NotATask
+            )
+
+    def test_get_discriminator_value(self):
+        class TaskDefault(Task):
+            name: str = Field(default="Task")
+            task_parameters: TaskParameters = Field(
+                TaskParameters(), validate_default=True
+            )
+
+        class TaskLiteral(Task):
+            name: Literal["Task"] = "Task"
+            task_parameters: TaskParameters = Field(
+                TaskParameters(), validate_default=True
+            )
+
+        self.assertEqual(_get_discriminator_value(TaskDefault()), "Task")
+        self.assertEqual(_get_discriminator_value(TaskLiteral()), "Task")
+        self.assertEqual(
+            _get_discriminator_value(TaskDefault().model_dump()), "Task"
+        )
+        self.assertEqual(
+            _get_discriminator_value(TaskLiteral().model_dump()), "Task"
+        )
+        self.assertIsInstance(_get_discriminator_value(TaskDefault()), str)
+
+        with self.assertRaises(ValueError):
+            _get_discriminator_value("123")
+        with self.assertRaises(ValueError):
+            _get_discriminator_value(123)
 
 
 if __name__ == "__main__":
