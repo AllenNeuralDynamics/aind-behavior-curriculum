@@ -1157,11 +1157,11 @@ class Curriculum(AindBehaviorModel):
                 # Add color to start policies
                 if node in s.start_policies:
                     node_str = (
-                        f'{node_id} [label="{node.__name__}",'
+                        f'{node_id} [label="{node.name}",'
                         'fillcolor="#FFEA00"]'
                     )
                 else:
-                    node_str = f'{node_id} [label="{node.__name__}"]'
+                    node_str = f'{node_id} [label="{node.name}"]'
                 nodes.append(node_str)
 
             edges = []
@@ -1173,7 +1173,7 @@ class Curriculum(AindBehaviorModel):
                     # Edges must be StageTransition or PolicyTransition
                     edge_str = (
                         f'{start_id} -> {dest_id} [label="({i}) '
-                        f'{edge.__name__}", minlen=2]'
+                        f'{edge.name}", minlen=2]'
                     )
                     edges.append(edge_str)
 
@@ -1225,7 +1225,7 @@ class Curriculum(AindBehaviorModel):
                     # Edges must be StageTransition or PolicyTransition
                     edge_str = (
                         f'{start_id} -> {dest_id} [label="({i}) '
-                        f'{edge.__name__}", minlen=2]'
+                        f'{edge.name}", minlen=2]'
                     )
                     edges.append(edge_str)
 
