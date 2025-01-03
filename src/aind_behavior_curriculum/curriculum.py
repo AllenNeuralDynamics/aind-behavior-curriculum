@@ -937,8 +937,15 @@ class Curriculum(AindBehaviorModel):
         _generic = self.model_fields["graph"].annotation
         _inner_args = _generic.__dict__["__pydantic_generic_metadata__"][
             "args"
-        ][0]
-        _inner_union = get_args(_inner_args.__value__)[0]
+        ]
+
+        _inner_union: Type
+        if len(_inner_args) == 0:
+            _inner_union = Task
+        else:
+            _inner_args = _inner_args[0]
+            _inner_union = get_args(_inner_args.__value__)[0]
+
         if isinstance(_inner_union, type):
             _known_tasks = [_inner_union]
         else:
