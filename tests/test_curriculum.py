@@ -3,11 +3,10 @@ Curriculum Test Suite
 """
 
 import unittest
-from typing import Literal
 
 import example_project as ex
 import example_project_2 as ex2
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PydanticUserError
 
 from aind_behavior_curriculum import (
     INIT_STAGE,
@@ -17,9 +16,6 @@ from aind_behavior_curriculum import (
     create_curriculum,
 )
 from aind_behavior_curriculum.curriculum import (
-    Task,
-    TaskParameters,
-    _get_discriminator_value,
     make_task_discriminator,
 )
 
@@ -504,38 +500,10 @@ class CurriculumTests(unittest.TestCase):
         class NotATask(BaseModel):
             not_name: str = "Not a Task"
 
-        with self.assertRaises(ValueError) as _:
+        with self.assertRaises(PydanticUserError) as _:
             _ = create_curriculum(
                 "test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, NotATask)
             )
-
-    def test_get_discriminator_value(self):
-        class TaskDefault(Task):
-            name: str = Field(default="Task")
-            task_parameters: TaskParameters = Field(
-                TaskParameters(), validate_default=True
-            )
-
-        class TaskLiteral(Task):
-            name: Literal["Task"] = "Task"
-            task_parameters: TaskParameters = Field(
-                TaskParameters(), validate_default=True
-            )
-
-        self.assertEqual(_get_discriminator_value(TaskDefault()), "Task")
-        self.assertEqual(_get_discriminator_value(TaskLiteral()), "Task")
-        self.assertEqual(
-            _get_discriminator_value(TaskDefault().model_dump()), "Task"
-        )
-        self.assertEqual(
-            _get_discriminator_value(TaskLiteral().model_dump()), "Task"
-        )
-        self.assertIsInstance(_get_discriminator_value(TaskDefault()), str)
-
-        with self.assertRaises(ValueError):
-            _get_discriminator_value("123")
-        with self.assertRaises(ValueError):
-            _get_discriminator_value(123)
 
 
 if __name__ == "__main__":
