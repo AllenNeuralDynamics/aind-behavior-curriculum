@@ -18,6 +18,6 @@ from .curriculum import (
     create_curriculum,
     make_task_discriminator,
 )
-from .curriculum_utils import *
-from .task import Task, TaskParameters
+from .curriculum_utils import GRADUATED, Graduated
+from .task import Task, TaskParameters, create_task
 from .trainer import Trainer, TrainerServer, TrainerState
