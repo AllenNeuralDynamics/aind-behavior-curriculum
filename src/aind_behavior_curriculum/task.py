@@ -79,6 +79,7 @@ def create_task(
     """
 
     def _snake_to_pascal(v: str) -> str:
+        """Converts a string from snake_case to PascalCase"""
         return "".join(map(capwords, v.split("_")))
 
     _props = {

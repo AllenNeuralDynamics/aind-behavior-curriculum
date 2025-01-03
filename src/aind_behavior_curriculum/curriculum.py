@@ -285,6 +285,8 @@ class _Rule(Generic[_P, _R]):
     def _validate_signature_input(
         expected_callable: Any, sig: inspect.Signature
     ) -> Optional[TypeError]:
+        """Validates the input signature of the incoming callable against
+        the expected input type."""
 
         if isinstance(expected_callable, EllipsisType):
             return None
@@ -309,6 +311,8 @@ class _Rule(Generic[_P, _R]):
     def _validate_signature_output(
         expected_return: Any, sig: inspect.Signature
     ) -> Optional[TypeError]:
+        """Validates the output signature of the incoming callable against
+        the expected output type."""
 
         if isinstance(expected_return, EllipsisType):
             return None
@@ -326,6 +330,7 @@ class _Rule(Generic[_P, _R]):
 
     @staticmethod
     def _solve_generic_typing(cls_: Any) -> Tuple[Any, Any] | TypeError:
+        """Returns an inner generic type's type hint information"""
         origin_bases = getattr(cls_, "__orig_bases__", [])
         if not origin_bases:
             return TypeError(
@@ -656,6 +661,7 @@ class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
 
 
 class MetricsProvider(_Rule[..., Metrics]):
+    """A type for a callable that is able to produce Metrics"""
     pass
 
 
