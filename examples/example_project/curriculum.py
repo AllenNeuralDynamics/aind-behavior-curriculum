@@ -8,8 +8,8 @@ from typing import Literal
 from pydantic import Field
 
 from aind_behavior_curriculum import (
+    Graduated,
     GRADUATED,
-    INIT_STAGE,
     Curriculum,
     Metrics,
     Policy,
@@ -19,8 +19,20 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    get_task_types,
+    make_task_discriminator,
 )
+
+
+def init_stage_rule(
+    metrics: Metrics, task_params: TaskParameters
+) -> TaskParameters:
+    """
+    Trivially pass the default
+    """
+    return task_params
+
+
+INIT_STAGE = Policy(init_stage_rule)
 
 
 # --- TASKS ---
@@ -148,12 +160,11 @@ t2_10 = StageTransition(t2_10_rule)
 
 
 # --- CURRICULUM ---
-Tasks = get_task_types()
+Tasks = make_task_discriminator(tasks=[TaskA, TaskB, Graduated])
 
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    # graph: StageGraph[Union[TaskA, TaskB, Graduated]] = Field(default=StageGraph())
     graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())  # type: ignore
 
 

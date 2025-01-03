@@ -9,15 +9,27 @@ import example_project_2 as ex2
 from pydantic import BaseModel, Field, PydanticUserError
 
 from aind_behavior_curriculum import (
-    INIT_STAGE,
     Curriculum,
+    Metrics,
+    Policy,
     Stage,
     StageGraph,
+    TaskParameters,
     create_curriculum,
 )
-from aind_behavior_curriculum.curriculum import (
-    make_task_discriminator,
-)
+from aind_behavior_curriculum.curriculum import make_task_discriminator
+
+
+def init_stage_rule(
+    metrics: Metrics, task_params: TaskParameters
+) -> TaskParameters:
+    """
+    Trivially pass the default
+    """
+    return task_params
+
+
+INIT_STAGE = Policy(init_stage_rule)
 
 
 class CurriculumTests(unittest.TestCase):

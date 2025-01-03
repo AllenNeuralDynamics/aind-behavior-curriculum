@@ -17,7 +17,7 @@ from aind_behavior_curriculum import (
     StageTransition,
     Task,
     TaskParameters,
-    get_task_types,
+    make_task_discriminator,
 )
 
 
@@ -132,7 +132,7 @@ m2_stage_transition = StageTransition(m2_rule)
 
 
 # --- CURRICULUM ---
-Tasks = get_task_types()
+Tasks = make_task_discriminator(tasks=[DummyTask])
 
 
 class MyCurriculum(Curriculum):

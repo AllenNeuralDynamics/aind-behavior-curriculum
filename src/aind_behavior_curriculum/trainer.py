@@ -377,7 +377,6 @@ class TrainerServer:
         - subject Curriculum
         - subject Trainer State
 
-        For Curriculums with no internal policies, insert tacit INIT_STAGE
         """
         raise NotImplementedError
 
