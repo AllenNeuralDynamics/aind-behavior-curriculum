@@ -612,9 +612,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
         node_id = self._get_node_id(node)
         node_list = self.graph[node_id]
-        node_list = [(rule, self.nodes[p_id]) for (rule, p_id) in node_list]
-
-        return node_list
+        return [(rule, self.nodes[p_id]) for (rule, p_id) in node_list]
 
     def set_transition_priority(
         self,
@@ -955,7 +953,7 @@ class Curriculum(AindBehaviorModel):
             )
         return _known_tasks
 
-    def task_discriminator_type(self) -> type:
+    def task_discriminator_type(self) -> TypeAliasType:
         """Create a Discriminated Union  type for the known tasks."""
         return make_task_discriminator(self._known_tasks)
 

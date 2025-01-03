@@ -19,6 +19,7 @@ from aind_behavior_curriculum.curriculum import (
 from aind_behavior_curriculum.task import TaskParameters
 
 TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
+TMetrics = TypeVar("TMetrics", bound=Metrics)
 
 
 class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
@@ -93,10 +94,6 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
         other_rules = [p for p in other.active_policies]
 
         return set(self_rules) == set(other_rules)
-
-
-TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
-TMetrics = TypeVar("TMetrics", bound=Metrics)
 
 
 class Trainer(Generic[TCurriculum]):
