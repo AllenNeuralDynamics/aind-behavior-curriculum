@@ -33,12 +33,7 @@ from typing import (
 
 import boto3
 from jinja2 import Template
-from pydantic import (
-    Field,
-    GetJsonSchemaHandler,
-    ValidationError,
-    create_model,
-)
+from pydantic import Field, GetJsonSchemaHandler, ValidationError, create_model
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from typing_extensions import TypeAliasType
