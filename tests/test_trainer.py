@@ -7,12 +7,7 @@ import unittest
 import example_project as ex
 import example_project_2 as ex2
 
-from aind_behavior_curriculum import (
-    GRADUATED,
-    Stage,
-    Trainer,
-    TrainerState,
-)
+from aind_behavior_curriculum import GRADUATED, Stage, Trainer, TrainerState
 
 
 class TrainerTests(unittest.TestCase):

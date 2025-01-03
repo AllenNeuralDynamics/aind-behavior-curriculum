@@ -662,6 +662,7 @@ class PolicyGraph(BehaviorGraph[Policy, PolicyTransition]):
 
 class MetricsProvider(_Rule[..., Metrics]):
     """A type for a callable that is able to produce Metrics"""
+
     pass
 
 
