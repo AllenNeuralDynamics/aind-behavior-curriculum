@@ -68,17 +68,17 @@ class RuleTests(unittest.TestCase):
 
     def test_can_deserialize_rule_callable(self):
         container = self.container(this_new_rule=self.custom_rule(simple_rule))
-        self.assertEqual(container.this_new_rule(0, 0), 0)
+        self.assertEqual(container.this_new_rule.invoke(0, 0), 0)
 
         dump = container.model_dump()
         deser_dump = container.model_validate(dump)
         self.assertEqual(container, deser_dump)
-        self.assertEqual(deser_dump.this_new_rule(0, 0), 0)
+        self.assertEqual(deser_dump.this_new_rule.invoke(0, 0), 0)
 
         json_dump = container.model_dump_json()
         deser_json = container.model_validate_json(json_dump)
         self.assertEqual(container, deser_json)
-        self.assertEqual(deser_dump.this_new_rule(0, 0), 0)
+        self.assertEqual(deser_dump.this_new_rule.invoke(0, 0), 0)
 
     def test_is_non_deserializable_callable(self):
         callable_ref = _NonDeserializableCallable("test", Exception("test"))
