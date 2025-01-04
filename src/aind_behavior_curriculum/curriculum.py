@@ -19,6 +19,7 @@ from typing import (
     Literal,
     Optional,
     ParamSpec,
+    Self,
     Tuple,
     Type,
     TypeVar,
@@ -172,6 +173,18 @@ class _Rule(Generic[_P, _R]):
         https://docs.pydantic.dev/latest/concepts/types/#as-a-method-on-a-custom-type
         """
         return handler(core_schema.str_schema())
+
+    @classmethod
+    def normalize_rule_or_callable(cls, rule: Callable | _Rule) -> Self:
+        """Ensures the outgoing type is normalized from a Callable or _Rule."""
+        if isinstance(rule, cls):
+            return rule
+        if isinstance(rule, _Rule):
+            return cls(rule.callable)
+        if callable(rule):
+            return cls(rule)
+        else:
+            raise TypeError("rule must be a Callable or _Rule type.")
 
     @classmethod
     def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> _Rule[_P, _R]:
@@ -774,12 +787,11 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, _Rule):
-            rule = PolicyTransition(rule.callable)
-        if callable(rule):
-            rule = PolicyTransition(rule)
-
-        self.graph.add_transition(start_policy, dest_policy, rule)
+        self.graph.add_transition(
+            Policy.normalize_rule_or_callable(start_policy),
+            Policy.normalize_rule_or_callable(dest_policy),
+            PolicyTransition.normalize_rule_or_callable(rule),
+        )
 
     def remove_policy_transition(
         self,
@@ -1019,12 +1031,11 @@ class Curriculum(AindBehaviorModel):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, _Rule):
-            rule = StageTransition(rule.callable)
-        if callable(rule):
-            rule = StageTransition(rule)
-
-        self.graph.add_transition(start_stage, dest_stage, rule)
+        self.graph.add_transition(
+            start_stage,
+            dest_stage,
+            StageTransition.normalize_rule_or_callable(rule),
+        )
 
     def remove_stage_transition(
         self,
