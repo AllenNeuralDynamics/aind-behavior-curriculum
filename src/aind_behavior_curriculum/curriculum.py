@@ -87,7 +87,7 @@ class _Rule(Generic[_P, _R]):
             self._validate_callable_typing(function)
         self._callable = function
 
-    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+    def invoke(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         """Wraps the inner callable."""
         return self._callable(*args, **kwargs)
 
@@ -180,7 +180,7 @@ class _Rule(Generic[_P, _R]):
         Imports function according to package and function name.
         """
         callable_handle: Callable[_P, _R]
-        if callable(value) and not isinstance(value, cls):
+        if callable(value):
             return cls(value)
 
         if isinstance(value, str):
@@ -240,14 +240,14 @@ class _Rule(Generic[_P, _R]):
                     or if the callable `r` does not match the expected signature.
         """
 
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
         if isinstance(r, cls):
             return
 
         if is_non_deserializable_callable(r):
             return
+
+        if not callable(r):
+            raise ValueError("Rule must be callable.")
 
         # For some reason, generics do not materialize by default.
         # We fetch them manually....
@@ -775,8 +775,8 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
 
         if isinstance(rule, _Rule):
-            rule = PolicyTransition(rule)
-        if callable(rule) and not isinstance(rule, PolicyTransition):
+            rule = PolicyTransition(rule.callable)
+        if callable(rule):
             rule = PolicyTransition(rule)
 
         self.graph.add_transition(start_policy, dest_policy, rule)
@@ -1020,8 +1020,8 @@ class Curriculum(AindBehaviorModel):
         """
 
         if isinstance(rule, _Rule):
-            rule = StageTransition(rule)
-        if callable(rule) and not isinstance(rule, StageTransition):
+            rule = StageTransition(rule.callable)
+        if callable(rule):
             rule = StageTransition(rule)
 
         self.graph.add_transition(start_stage, dest_stage, rule)
