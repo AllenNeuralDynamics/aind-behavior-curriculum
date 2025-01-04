@@ -196,7 +196,7 @@ class Trainer(Generic[TCurriculum]):
         stage_transitions = curriculum.see_stage_transitions(current_stage)
         for stage_eval, dest_stage in stage_transitions:
             # On the first (and only first) true evaluation we transition.
-            if stage_eval(metrics):  # type: ignore
+            if stage_eval.invoke(metrics):  # type: ignore
                 updated_stage = dest_stage
                 break
         return updated_stage
@@ -229,7 +229,7 @@ class Trainer(Generic[TCurriculum]):
             for policy_eval, dest_policy in policy_transitions:
                 # On first true evaluation, add to buffers
                 # and evaluate next active_policy.
-                if policy_eval(metrics):  # type: ignore
+                if policy_eval.invoke(metrics):  # type: ignore
                     dest_policies.append(dest_policy)
                     _has_transitioned = True
                     break  # onto next active policy
@@ -311,7 +311,7 @@ class Trainer(Generic[TCurriculum]):
 
         updated_params = stage_parameters.model_copy(deep=True)
         for p in stage_policies:
-            updated_params = p(curr_metrics, updated_params)
+            updated_params = p.invoke(curr_metrics, updated_params)
 
         return updated_params
 
