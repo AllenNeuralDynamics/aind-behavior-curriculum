@@ -727,10 +727,11 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         Sets stage's start policies to start policies provided.
         Input overwrites existing start policies.
         """
-        if isinstance(start_policies, Policy):
+        if not isinstance(start_policies, Iterable):
             start_policies = [start_policies]
 
         for policy in start_policies:
+            policy = Policy.normalize_rule_or_callable(policy)
             if policy not in self.graph.see_nodes():
                 if append_non_existing:
                     self.add_policy(policy)
@@ -745,6 +746,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         Adds a floating policy to the Stage adjacency graph.
         """
+        policy = Policy.normalize_rule_or_callable(policy)
         if policy in self.graph.see_nodes():
             raise ValueError(
                 f"Policy {policy.name} is a duplicate Policy in Stage {self.name}."
@@ -759,6 +761,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
+        policy = Policy.normalize_rule_or_callable(policy)
         self.graph.remove_node(policy)
 
         # Also remove reference to policy in start_policies if applicable.
@@ -808,9 +811,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         of changing transition priority.
         """
         self.graph.remove_node_transition(
-            start_policy,
-            dest_policy,
-            rule,
+            Policy.normalize_rule_or_callable(start_policy),
+            Policy.normalize_rule_or_callable(dest_policy),
+            PolicyTransition.normalize_rule_or_callable(rule),
             remove_start_policy,
             remove_dest_policy,
         )
@@ -827,7 +830,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """TTask
         See transitions of stage in policy graph.
         """
-        return self.graph.see_node_transitions(policy)
+
+        return self.graph.see_node_transitions(
+            Policy.normalize_rule_or_callable(policy)
+        )
 
     def set_policy_transition_priority(
         self,
@@ -839,13 +845,19 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         To use, call see_policy_transitions() and order the transitions
         in the desired priority from left -> right.
         """
-
-        policy_transitions_list = list((t, p) for (t, p) in policy_transitions)
-        current_list = list(
+        policy = Policy.normalize_rule_or_callable(policy)
+        policy_transitions = [
+            (
+                PolicyTransition.normalize_rule_or_callable(t),
+                Policy.normalize_rule_or_callable(p),
+            )
+            for (t, p) in policy_transitions
+        ]
+        current_list = [
             (t, p) for (t, p) in self.see_policy_transitions(policy)
-        )
+        ]
 
-        if len(policy_transitions_list) != len(current_list):
+        if len(policy_transitions) != len(current_list):
             raise ValueError(
                 f"Number of input node transitions {policy_transitions} does not \
                 match the number of elements under this node: {self.see_policy_transitions(policy)}.\
@@ -1054,7 +1066,7 @@ class Curriculum(AindBehaviorModel):
         self.graph.remove_node_transition(
             start_stage,
             dest_stage,
-            rule,
+            StageTransition.normalize_rule_or_callable(rule),
             remove_start_stage,
             remove_dest_stage,
         )
@@ -1084,14 +1096,12 @@ class Curriculum(AindBehaviorModel):
         in the desired priority from left -> right.
         """
 
-        stage_transitions_list = list(
-            (t, s.name) for (t, s) in stage_transitions
-        )
-        current_list = list(
-            (t, s.name) for (t, s) in self.see_stage_transitions(stage)
-        )
+        stage_transitions = [
+            (StageTransition.normalize_rule_or_callable(t), s)
+            for (t, s) in stage_transitions
+        ]
 
-        if len(stage_transitions_list) != len(current_list):
+        if len(stage_transitions) != len(self.see_stage_transitions(stage)):
             raise ValueError(
                 f"Elements of input node transitions {stage_transitions} does not \
                     match the elements under this node: {self.see_stage_transitions(stage)}. \

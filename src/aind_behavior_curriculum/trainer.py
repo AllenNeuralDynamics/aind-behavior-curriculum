@@ -311,6 +311,7 @@ class Trainer(Generic[TCurriculum]):
 
         updated_params = stage_parameters.model_copy(deep=True)
         for p in stage_policies:
+            p = Policy.normalize_rule_or_callable(p)
             updated_params = p.invoke(curr_metrics, updated_params)
 
         return updated_params
@@ -529,21 +530,22 @@ class TrainerServer:
 
         (Soft Rejection-- send mouse to Stage/Policy w/in Curriculum)
         """
-        if not (s_id in self.subject_ids):
+        if s_id not in self.subject_ids:
             raise ValueError(f"subject id {s_id} not in self.subject_ids.")
 
         curriculum, _, curr_metrics = self.load_data(s_id)
 
-        if not (override_stage in curriculum.see_stages()):
+        if override_stage not in curriculum.see_stages():
             raise ValueError(
                 f"Override stage {override_stage.name} not in curriculum.\
                 curriculum stages for subject id {s_id}."
             )
 
-        if isinstance(override_policies, Policy):
+        if not isinstance(override_policies, Iterable):
             override_policies = [override_policies]
         for o_policy in override_policies:
-            if not (o_policy in override_stage.see_policies()):
+            o_policy = Policy.normalize_rule_or_callable(o_policy)
+            if o_policy not in override_stage.see_policies():
                 raise ValueError(
                     f"Override policy {o_policy} not in \
                     given override stage {override_stage.name}."
