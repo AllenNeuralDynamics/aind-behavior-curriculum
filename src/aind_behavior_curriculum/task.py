@@ -54,16 +54,13 @@ class Task(AindBehaviorModel):
     )
 
 
-TTaskParameters = TypeVar("TTaskParameters", bound=TaskParameters)
-
-
 def create_task(
     *,
     name: str,
-    task_parameters: Type[TTaskParameters],
+    task_parameters: Type[TaskParameters],
     version: Optional[str] = None,
     description: str = "",
-) -> Type[TTask]:
+) -> Type[Task]:
     """
     Factory method for creating a Task object.
 

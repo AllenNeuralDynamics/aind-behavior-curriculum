@@ -2,8 +2,6 @@
 Core Stage and Curriculum Primitives.
 """
 
-from __future__ import annotations
-
 import importlib
 import inspect
 import warnings
@@ -175,7 +173,7 @@ class _Rule(Generic[_P, _R]):
         return handler(core_schema.str_schema())
 
     @classmethod
-    def normalize_rule_or_callable(cls, rule: Callable | _Rule) -> Self:
+    def normalize_rule_or_callable(cls, rule: Callable | "_Rule") -> Self:
         """Ensures the outgoing type is normalized from a Callable or _Rule."""
         if isinstance(rule, cls):
             return rule
@@ -187,7 +185,9 @@ class _Rule(Generic[_P, _R]):
             raise TypeError("rule must be a Callable or _Rule type.")
 
     @classmethod
-    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> _Rule[_P, _R]:
+    def _deserialize_rule(
+        cls, value: str | Callable[_P, _R]
+    ) -> "_Rule[_P, _R]":
         """
         Custom Deserialization.
         Imports function according to package and function name.
@@ -216,7 +216,7 @@ class _Rule(Generic[_P, _R]):
         return cls(callable_handle)
 
     @classmethod
-    def serialize_rule(cls, value: str | _Rule[_P, _R]) -> str:
+    def serialize_rule(cls, value: Union[str, "_Rule[_P, _R]"]) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
@@ -271,6 +271,7 @@ class _Rule(Generic[_P, _R]):
 
         # Compare signatures
         sig = inspect.signature(r)
+
         try:
             # Compare inputs
             if (
@@ -374,7 +375,7 @@ def is_non_deserializable_callable(value: Any) -> bool:
 
 
 def try_materialize_non_deserializable_callable_error(
-    value: _NonDeserializableCallable,
+    value: "_NonDeserializableCallable",
 ) -> Optional[Exception]:
     """
     Attempts to materialize the error from a non-deserializable callable.
@@ -879,7 +880,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         self.task.task_parameters = task_params
 
-    def validate_stage(self) -> Stage:
+    def validate_stage(self) -> Self:
         """
         Validates that the stage can be (de)serialized.
         """
@@ -1110,7 +1111,7 @@ class Curriculum(AindBehaviorModel):
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
-    def validate_curriculum(self) -> Curriculum:
+    def validate_curriculum(self) -> Self:
         """
         Validate curriculum for export/serialization.
         """
@@ -1185,7 +1186,7 @@ def create_curriculum(
             ),
         ],
         "graph": Annotated[
-            StageGraph[_tasks_tagged],
+            StageGraph[_tasks_tagged],  # type: ignore
             Field(default_factory=StageGraph, validate_default=True),
         ],
     }
