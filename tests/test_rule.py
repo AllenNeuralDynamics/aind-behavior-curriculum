@@ -32,9 +32,7 @@ def not_a_rule_update(metrics: int, params: BaseModel) -> BaseModel:
 
 
 class RuleTests(unittest.TestCase):
-
     def setUp(self):
-
         class CustomRule(_Rule[[Metrics, TaskParameters], TaskParameters]):
             pass
 
@@ -84,35 +82,23 @@ class RuleTests(unittest.TestCase):
         callable_ref = _NonDeserializableCallable("test", Exception("test"))
         with self.assertRaises(RuntimeError):
             callable_ref()
-        self.assertFalse(
-            is_non_deserializable_callable(self.custom_rule(rule_update))
-        )
+        self.assertFalse(is_non_deserializable_callable(self.custom_rule(rule_update)))
         self.assertTrue(is_non_deserializable_callable(callable_ref))
 
         self.assertIsInstance(
             try_materialize_non_deserializable_callable_error(callable_ref),
             Exception,
         )
-        self.assertIsNone(
-            try_materialize_non_deserializable_callable_error(
-                self.custom_rule(rule_update)
-            )
-        )
+        self.assertIsNone(try_materialize_non_deserializable_callable_error(self.custom_rule(rule_update)))
 
     def test_can_deserialize_rule_reference(self):
-        def rule_update_to_be_deleted(
-            metrics: Metrics, params: TaskParameters
-        ) -> TaskParameters:
+        def rule_update_to_be_deleted(metrics: Metrics, params: TaskParameters) -> TaskParameters:
             return params
 
-        def back_rule_update(
-            metrics: Metrics, params: TaskParameters
-        ) -> TaskParameters:
+        def back_rule_update(metrics: Metrics, params: TaskParameters) -> TaskParameters:
             return params
 
-        container = self.container(
-            this_new_rule=self.custom_rule(rule_update_to_be_deleted)
-        )
+        container = self.container(this_new_rule=self.custom_rule(rule_update_to_be_deleted))
         dump = container.model_dump()
         json_dump = container.model_dump_json()
 
@@ -121,12 +107,8 @@ class RuleTests(unittest.TestCase):
         deser = container.model_validate(dump)
         deser_json = container.model_validate_json(json_dump)
 
-        self.assertTrue(
-            is_non_deserializable_callable(deser.this_new_rule.callable)
-        )
-        self.assertTrue(
-            is_non_deserializable_callable(deser_json.this_new_rule.callable)
-        )
+        self.assertTrue(is_non_deserializable_callable(deser.this_new_rule.callable))
+        self.assertTrue(is_non_deserializable_callable(deser_json.this_new_rule.callable))
 
     def rule_from_callable(self):
         container = self.container(this_new_rule=rule_update)

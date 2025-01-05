@@ -20,9 +20,7 @@ from aind_behavior_curriculum import (
 from aind_behavior_curriculum.curriculum import make_task_discriminator
 
 
-def init_stage_rule(
-    metrics: Metrics, task_params: TaskParameters
-) -> TaskParameters:
+def init_stage_rule(metrics: Metrics, task_params: TaskParameters) -> TaskParameters:
     """
     Trivially pass the default
     """
@@ -54,9 +52,7 @@ class CurriculumTests(unittest.TestCase):
 
         stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyB, ex.t1_10)
         stageA.add_policy_transition(INIT_STAGE, ex.stageA_policyA, ex.t1_5)
-        stageA.add_policy_transition(
-            ex.stageA_policyA, ex.stageA_policyB, ex.t1_10
-        )
+        stageA.add_policy_transition(ex.stageA_policyA, ex.stageA_policyB, ex.t1_10)
 
         # Serialize from Child
         instance_json = stageA.model_dump_json()
@@ -154,19 +150,11 @@ class CurriculumTests(unittest.TestCase):
         stageA.add_policy(ex2.policy_1)
         stageA.set_start_policies(ex2.policy_1)
 
-        stageA.add_policy_transition(
-            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
-        )
-        stageA.add_policy_transition(
-            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
-        )
+        stageA.add_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
+        stageA.add_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
 
-        stageA.add_policy_transition(
-            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
-        )
-        stageA.add_policy_transition(
-            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
-        )
+        stageA.add_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
+        stageA.add_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
 
         self.assertEqual(
             stageA.see_policies(),
@@ -219,9 +207,7 @@ class CurriculumTests(unittest.TestCase):
         ex_curr.add_stage_transition(stageB, stageD, ex2.m1_stage_transition)
         ex_curr.add_stage_transition(stageC, stageD, ex2.m1_stage_transition)
 
-        self.assertEqual(
-            ex_curr.see_stages(), [stageA, stageB, stageC, stageD]
-        )
+        self.assertEqual(ex_curr.see_stages(), [stageA, stageB, stageC, stageD])
         self.assertEqual(
             ex_curr.see_stage_transitions(stageA),
             [
@@ -259,19 +245,11 @@ class CurriculumTests(unittest.TestCase):
         stageA.add_policy(ex2.policy_1)
         stageA.set_start_policies(ex2.policy_1)
 
-        stageA.add_policy_transition(
-            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
-        )
-        stageA.add_policy_transition(
-            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
-        )
+        stageA.add_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
+        stageA.add_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
 
-        stageA.add_policy_transition(
-            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
-        )
-        stageA.add_policy_transition(
-            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
-        )
+        stageA.add_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
+        stageA.add_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
 
         new_priority = [
             (ex2.m1_policy_transition, ex2.policy_3),
@@ -279,9 +257,7 @@ class CurriculumTests(unittest.TestCase):
         ]
         stageA.set_policy_transition_priority(ex2.policy_1, new_priority)
 
-        self.assertEqual(
-            stageA.see_policy_transitions(ex2.policy_1), new_priority
-        )
+        self.assertEqual(stageA.see_policy_transitions(ex2.policy_1), new_priority)
 
     def test_remove_policies_and_policy_transitions(self):
         """
@@ -304,19 +280,11 @@ class CurriculumTests(unittest.TestCase):
         stageA.add_policy(ex2.policy_1)
         stageA.set_start_policies(ex2.policy_1)
 
-        stageA.add_policy_transition(
-            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
-        )
-        stageA.add_policy_transition(
-            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
-        )
+        stageA.add_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
+        stageA.add_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
 
-        stageA.add_policy_transition(
-            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
-        )
-        stageA.add_policy_transition(
-            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
-        )
+        stageA.add_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
+        stageA.add_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
 
         stageA1 = stageA.model_copy(deep=True)
         stageA2 = stageA.model_copy(deep=True)
@@ -324,9 +292,7 @@ class CurriculumTests(unittest.TestCase):
         stageA4 = stageA.model_copy(deep=True)
 
         stageA1.remove_policy(ex2.policy_1)
-        self.assertEqual(
-            stageA1.see_policies(), [ex2.policy_2, ex2.policy_3, ex2.policy_4]
-        )
+        self.assertEqual(stageA1.see_policies(), [ex2.policy_2, ex2.policy_3, ex2.policy_4])
 
         stageA2.remove_policy(ex2.policy_4)
         self.assertEqual(stageA2.see_policy_transitions(ex2.policy_2), [])
@@ -338,18 +304,10 @@ class CurriculumTests(unittest.TestCase):
             [(ex2.m1_policy_transition, ex2.policy_3)],
         )
 
-        stageA4.remove_policy_transition(
-            ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition
-        )
-        stageA4.remove_policy_transition(
-            ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition
-        )
-        stageA4.remove_policy_transition(
-            ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition
-        )
-        stageA4.remove_policy_transition(
-            ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition
-        )
+        stageA4.remove_policy_transition(ex2.policy_1, ex2.policy_2, ex2.m1_policy_transition)
+        stageA4.remove_policy_transition(ex2.policy_1, ex2.policy_3, ex2.m1_policy_transition)
+        stageA4.remove_policy_transition(ex2.policy_2, ex2.policy_4, ex2.m1_policy_transition)
+        stageA4.remove_policy_transition(ex2.policy_3, ex2.policy_4, ex2.m1_policy_transition)
         self.assertEqual(stageA4.see_policy_transitions(ex2.policy_1), [])
         self.assertEqual(stageA4.see_policy_transitions(ex2.policy_2), [])
         self.assertEqual(stageA4.see_policy_transitions(ex2.policy_3), [])
@@ -401,18 +359,10 @@ class CurriculumTests(unittest.TestCase):
             [(ex2.m1_stage_transition, stageC)],
         )
 
-        ex_curr4.remove_stage_transition(
-            stageA, stageB, ex2.m1_stage_transition
-        )
-        ex_curr4.remove_stage_transition(
-            stageA, stageC, ex2.m1_stage_transition
-        )
-        ex_curr4.remove_stage_transition(
-            stageB, stageD, ex2.m1_stage_transition
-        )
-        ex_curr4.remove_stage_transition(
-            stageC, stageD, ex2.m1_stage_transition
-        )
+        ex_curr4.remove_stage_transition(stageA, stageB, ex2.m1_stage_transition)
+        ex_curr4.remove_stage_transition(stageA, stageC, ex2.m1_stage_transition)
+        ex_curr4.remove_stage_transition(stageB, stageD, ex2.m1_stage_transition)
+        ex_curr4.remove_stage_transition(stageC, stageD, ex2.m1_stage_transition)
         self.assertEqual(ex_curr4.see_stage_transitions(stageA), [])
         self.assertEqual(ex_curr4.see_stage_transitions(stageB), [])
         self.assertEqual(ex_curr4.see_stage_transitions(stageC), [])
@@ -455,11 +405,8 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(ex_curr.see_stage_transitions(stageA), new_priority)
 
     def test_create_curriculum(self):
-
         _ = create_curriculum("test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB))
-        _ = create_curriculum(
-            "test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, ex.TaskB)
-        )
+        _ = create_curriculum("test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, ex.TaskB))
         _ = create_curriculum(
             "test_curriculum",
             "1.2.3",
@@ -468,13 +415,10 @@ class CurriculumTests(unittest.TestCase):
         )
 
     def test_create_curriculum_equivalence(self):
-
         class TestCurriculum(Curriculum):
             name: str = "TestCurriculum"
             version: str = "1.2.3"
-            graph: StageGraph[
-                make_task_discriminator((ex.TaskA, ex.TaskB))
-            ] = Field(default_factory=StageGraph)
+            graph: StageGraph[make_task_discriminator((ex.TaskA, ex.TaskB))] = Field(default_factory=StageGraph)
             pkg_location: str = "test"
 
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
@@ -492,20 +436,14 @@ class CurriculumTests(unittest.TestCase):
         created_curriculum.add_stage(Stage(name="Stage 0", task=taskA))
         created_curriculum.add_stage(Stage(name="Stage 1", task=taskB))
 
-        self.assertEqual(
-            expected_curriculum.model_dump(), created_curriculum.model_dump()
-        )
+        self.assertEqual(expected_curriculum.model_dump(), created_curriculum.model_dump())
         self.assertEqual(
             expected_curriculum.model_dump_json(),
             created_curriculum.model_dump_json(),
         )
         self.assertEqual(
-            expected_curriculum.model_validate_json(
-                expected_curriculum.model_dump_json()
-            ),
-            expected_curriculum.model_validate_json(
-                expected_curriculum.model_dump_json()
-            ),
+            expected_curriculum.model_validate_json(expected_curriculum.model_dump_json()),
+            expected_curriculum.model_validate_json(expected_curriculum.model_dump_json()),
         )
 
     def test_create_curriculum_with_invalid_tagged_union(self):
@@ -513,9 +451,7 @@ class CurriculumTests(unittest.TestCase):
             not_name: str = "Not a Task"
 
         with self.assertRaises(PydanticUserError) as _:
-            _ = create_curriculum(
-                "test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, NotATask)
-            )
+            _ = create_curriculum("test_curriculum", "1.2.3", (ex.TaskA, ex.TaskB, NotATask))
 
 
 if __name__ == "__main__":

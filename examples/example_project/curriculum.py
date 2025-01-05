@@ -24,9 +24,7 @@ from aind_behavior_curriculum.curriculum_utils import (
 )
 
 
-def init_stage_rule(
-    metrics: Metrics, task_params: TaskParameters
-) -> TaskParameters:
+def init_stage_rule(metrics: Metrics, task_params: TaskParameters) -> TaskParameters:
     """
     Trivially pass the default
     """
@@ -64,9 +62,7 @@ class ExampleMetrics(Metrics):
 
 
 # --- POLICIES ---
-def stageA_policyA_rule(
-    metrics: ExampleMetrics, task_params: TaskAParameters
-) -> TaskAParameters:
+def stageA_policyA_rule(metrics: ExampleMetrics, task_params: TaskAParameters) -> TaskAParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_a = 8
     return task_params
@@ -75,9 +71,7 @@ def stageA_policyA_rule(
 stageA_policyA = Policy(stageA_policyA_rule)
 
 
-def stageA_policyB_rule(
-    metrics: ExampleMetrics, task_params: TaskAParameters
-) -> TaskAParameters:
+def stageA_policyB_rule(metrics: ExampleMetrics, task_params: TaskAParameters) -> TaskAParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_a = 16
     return task_params
@@ -86,9 +80,7 @@ def stageA_policyB_rule(
 stageA_policyB = Policy(stageA_policyB_rule)
 
 
-def stageB_policyA_rule(
-    metrics: ExampleMetrics, task_params: TaskBParameters
-) -> TaskBParameters:
+def stageB_policyA_rule(metrics: ExampleMetrics, task_params: TaskBParameters) -> TaskBParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_b = 8
     return task_params
@@ -97,9 +89,7 @@ def stageB_policyA_rule(
 stageB_policyA = Policy(stageB_policyA_rule)
 
 
-def stageB_policyB_rule(
-    metrics: ExampleMetrics, task_params: TaskBParameters
-) -> TaskBParameters:
+def stageB_policyB_rule(metrics: ExampleMetrics, task_params: TaskBParameters) -> TaskBParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_b = 16
     return task_params
@@ -108,7 +98,7 @@ def stageB_policyB_rule(
 stageB_policyB = Policy(stageB_policyB_rule)
 
 
-# --- POLICY TRANSTITIONS ---
+# --- POLICY TRANSITIONS ---
 def t1_5_rule(metrics: ExampleMetrics) -> bool:
     return metrics.theta_1 > 5
 
@@ -155,18 +145,13 @@ t2_10 = StageTransition(t2_10_rule)
 # --- CURRICULUM ---
 
 
-MyCurriculum = create_curriculum(
-    name="My Curriculum", version="0.1.0", tasks=(TaskA, TaskB, Graduated)
-)
+MyCurriculum = create_curriculum(name="My Curriculum", version="0.1.0", tasks=(TaskA, TaskB, Graduated))
 
 
 def construct_curriculum():
     """
     Useful for testing.
     """
-
-    with open("examples/example_project/jsons/schema.json", "w") as f:
-        f.write(json.dumps(MyCurriculum.model_json_schema(), indent=4))
 
     # Init Stages
     taskA = TaskA(task_parameters=TaskAParameters())

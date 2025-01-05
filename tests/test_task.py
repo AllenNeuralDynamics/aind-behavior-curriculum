@@ -31,13 +31,13 @@ class TaskTests(unittest.TestCase):
             ex_parameters = ex.ExampleTaskParameters(field_1="20")
             ex_task = ex.ExampleTask(  # noqa: F841
                 task_parameters=ex_parameters
-            )  # noqa: F841
+            )
 
         def invalid_field():
             ex_parameters = ex.ExampleTaskParameters(field_4=5)
             ex_task = ex.ExampleTask(  # noqa: F841
                 task_parameters=ex_parameters
-            )  # noqa: F841
+            )
 
         self.assertRaises(Exception, invalid_type)
         self.assertRaises(Exception, invalid_field)

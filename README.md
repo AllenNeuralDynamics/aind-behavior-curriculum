@@ -1,8 +1,10 @@
 # aind-behavior-curriculum
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-![Code Style](https://img.shields.io/badge/code%20style-black-black)
-[![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
+![CI](https://github.com/AllenNeuralDynamics/AllenNeuralDynamics/aind-behavior-curriculum/actions/workflows/test_and_lint.yml/badge.svg)
+[![PyPI - Version](https://img.shields.io/pypi/v/aind-behavior-curriculum)](https://pypi.org/project/aind-behavior-curriculum/)
+[![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 ![Interrogate](https://img.shields.io/badge/interrogate-100.0%25-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?logo=codecov)
 ![Python](https://img.shields.io/badge/python->=3.11-blue?logo=python)
@@ -53,7 +55,7 @@ $~$
 
 **Any hypergraph is supported!**
 
-Here are some examples of the possibilities. The high-level stage graph are shown to the left and the inidividual policy graphs are shown to the right.
+Here are some examples of the possibilities. The high-level stage graph are shown to the left and the individual policy graphs are shown to the right.
 
 
 | ![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title") | 

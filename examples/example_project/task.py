@@ -39,9 +39,7 @@ class ExampleTask(Task):
     name: Literal["TaskName"] = "TaskName"
     description: str = Field(default="Ex description of task")
 
-    task_parameters: ExampleTaskParameters = Field(
-        ..., description=ExampleTaskParameters.__doc__.strip()
-    )
+    task_parameters: ExampleTaskParameters = Field(..., description=ExampleTaskParameters.__doc__.strip())
 
 
 if __name__ == "__main__":

@@ -72,15 +72,10 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
         TrainerState Equality
         """
         if not isinstance(other, TrainerState):
-            raise NotImplementedError(
-                "Equality comparison only implemented for _TrainerState objects."
-            )
+            raise NotImplementedError("Equality comparison only implemented for _TrainerState objects.")
 
         # Compare 'stage' and 'is_on_curriculum' attributes
-        if (
-            self.stage != other.stage
-            or self.is_on_curriculum != other.is_on_curriculum
-        ):
+        if self.stage != other.stage or self.is_on_curriculum != other.is_on_curriculum:
             return False
 
         # Compare active_policies using set equality
@@ -124,9 +119,7 @@ class Trainer(Generic[TCurriculum]):
         """
 
         self._curriculum = curriculum
-        self._trainer_state_factory = (
-            self._construct_trainer_state_type_from_curriculum(curriculum)
-        )
+        self._trainer_state_factory = self._construct_trainer_state_type_from_curriculum(curriculum)
 
     @property
     def curriculum(self) -> TCurriculum:
@@ -176,9 +169,7 @@ class Trainer(Generic[TCurriculum]):
         return trainer
 
     @staticmethod
-    def _evaluate_stage_transition(
-        curriculum: Curriculum, current_stage: Stage, metrics: TMetrics
-    ) -> Optional[Stage]:
+    def _evaluate_stage_transition(curriculum: Curriculum, current_stage: Stage, metrics: TMetrics) -> Optional[Stage]:
         """
         Evaluates whether a transition to a new stage is needed based on the given metrics.
 
@@ -221,9 +212,7 @@ class Trainer(Generic[TCurriculum]):
         dest_policies: list[Policy] = []
 
         for active_policy in active_policies:
-            policy_transitions = current_stage.see_policy_transitions(
-                active_policy
-            )
+            policy_transitions = current_stage.see_policy_transitions(active_policy)
 
             _has_transitioned = False
             for policy_eval, dest_policy in policy_transitions:
@@ -233,16 +222,12 @@ class Trainer(Generic[TCurriculum]):
                     dest_policies.append(dest_policy)
                     _has_transitioned = True
                     break  # onto next active policy
-            if (
-                not _has_transitioned
-            ):  # if no policy transition keep the current one
+            if not _has_transitioned:  # if no policy transition keep the current one
                 dest_policies.append(active_policy)
 
         return cls._get_unique_policies(dest_policies)
 
-    def evaluate(
-        self, trainer_state: TrainerState, metrics: TMetrics
-    ) -> TrainerState:
+    def evaluate(self, trainer_state: TrainerState, metrics: TMetrics) -> TrainerState:
         """
         Evaluates the current state of the trainer and updates the stage and policies based on the provided metrics.
         Args:
@@ -254,32 +239,22 @@ class Trainer(Generic[TCurriculum]):
             ValueError: If the current stage or active policies are not set in the trainer state.
         """
         current_stage = trainer_state.stage
-        active_policies: Optional[Iterable[Policy]] = (
-            trainer_state.active_policies
-        )
+        active_policies: Optional[Iterable[Policy]] = trainer_state.active_policies
 
         if current_stage is None:
-            raise ValueError(
-                "No current stage. This likely means subject is off-curriculum."
-            )
+            raise ValueError("No current stage. This likely means subject is off-curriculum.")
 
         # 1) Evaluate stage transitions
-        updated_stage = self._evaluate_stage_transition(
-            self.curriculum, current_stage, metrics
-        )
+        updated_stage = self._evaluate_stage_transition(self.curriculum, current_stage, metrics)
 
         # 2) Evaluate policy transitions
         # If we've already transitioned stages, we don't need to check policies.
         if updated_stage is None:
             updated_stage = current_stage
 
-            active_policies = (
-                active_policies if active_policies is not None else []
-            )
+            active_policies = active_policies if active_policies is not None else []
 
-            active_policies = self._evaluate_policy_transitions(
-                current_stage, active_policies, metrics
-            )
+            active_policies = self._evaluate_policy_transitions(current_stage, active_policies, metrics)
             # 3) Bootstrap updated parameters with new policies
             updated_task_parameters = self.get_net_parameter_update(
                 updated_stage.get_task_parameters(), active_policies, metrics
@@ -349,9 +324,7 @@ class TrainerServer:
         self.subject_ids: List[int] = []
 
     @abstractmethod
-    def load_data(
-        self, subject_id: int
-    ) -> tuple[Curriculum, TrainerState, Metrics]:
+    def load_data(self, subject_id: int) -> tuple[Curriculum, TrainerState, Metrics]:
         """
         User-defined.
         Loads 3 pieces of data in the following format:
@@ -394,26 +367,18 @@ class TrainerServer:
         If any of {stage, updated_stage_parameters, stage_policies} are None,
         all of the elements are expected to be None.
         """
-        if not (
-            stage is None
-            or updated_stage_parameters is None
-            or stage_policies is None
-        ):
+        if not (stage is None or updated_stage_parameters is None or stage_policies is None):
             stage = stage.model_copy(deep=True)
             stage.set_task_parameters(updated_stage_parameters)
 
         trainer = Trainer(curriculum)
         if stage is None:
-            trainer_state = trainer.create_trainer_state(
-                stage=None, is_on_curriculum=False, active_policies=None
-            )
+            trainer_state = trainer.create_trainer_state(stage=None, is_on_curriculum=False, active_policies=None)
         else:
             trainer_state = trainer.create_trainer_state(
                 stage=stage,
                 is_on_curriculum=True,
-                active_policies=(
-                    list(stage_policies) if stage_policies else None
-                ),
+                active_policies=(list(stage_policies) if stage_policies else None),
             )
 
         self.write_data(s_id, curriculum, trainer_state)
@@ -433,10 +398,8 @@ class TrainerServer:
 
         curriculum = curriculum.validate_curriculum()
 
-        if not (start_stage in curriculum.see_stages()):
-            raise ValueError(
-                "Provided start_stage is not in provided curriculum."
-            )
+        if start_stage not in curriculum.see_stages():
+            raise ValueError("Provided start_stage is not in provided curriculum.")
         if subject_id in self.subject_ids:
             raise ValueError(f"Subject_id {subject_id} is already registered.")
 
@@ -446,10 +409,9 @@ class TrainerServer:
             start_policies = [start_policies]
 
         for s_policy in start_policies:
-            if not (s_policy in start_stage.see_policies()):
+            if s_policy not in start_stage.see_policies():
                 raise ValueError(
-                    f"Provided start_policy {s_policy} not in "
-                    f"provided start_stage {start_stage.name}."
+                    f"Provided start_policy {s_policy} not in " f"provided start_stage {start_stage.name}."
                 )
 
         _start_policies = list(start_policies)
@@ -470,7 +432,7 @@ class TrainerServer:
         # Add to trainer's local list!
         self.subject_ids.append(subject_id)
 
-    def evaluate_subjects(self) -> None:  # noqa: C901
+    def evaluate_subjects(self) -> None:
         """
         Calls user-defined functions to automatically update
         subject stage along curriculum.
@@ -490,14 +452,9 @@ class TrainerServer:
             trainer = Trainer(curriculum)
 
             if trainer_state.stage is not None:
-                updated_trainer_state = trainer.evaluate(
-                    trainer_state, curr_metrics
-                )
+                updated_trainer_state = trainer.evaluate(trainer_state, curr_metrics)
                 if updated_trainer_state.stage is None:
-                    raise ValueError(
-                        "Trainer.evaluate() returned None stage. "
-                        "This should not happen."
-                    )
+                    raise ValueError("Trainer.evaluate() returned None stage. " "This should not happen.")
                 updated_parameters = (
                     updated_trainer_state.stage.get_task_parameters()  # pylint: disable=no-member
                 )
