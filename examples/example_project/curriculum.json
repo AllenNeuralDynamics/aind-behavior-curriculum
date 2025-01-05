@@ -1,0 +1,128 @@
+{
+   "pkg_location": "aind_behavior_curriculum.curriculum.ModelMetaclass",
+   "name": "My Curriculum",
+   "version": "0.1.0",
+   "graph": {
+      "nodes": {
+         "0": {
+            "name": "StageA",
+            "task": {
+               "name": "Task A",
+               "description": "",
+               "task_parameters": {
+                  "field_a": 0
+               },
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {
+                  "0": "__main__.init_stage_rule",
+                  "1": "__main__.stageA_policyB_rule",
+                  "2": "__main__.stageA_policyA_rule"
+               },
+               "graph": {
+                  "0": [
+                     [
+                        "__main__.t1_10_rule",
+                        1
+                     ],
+                     [
+                        "__main__.t1_5_rule",
+                        2
+                     ]
+                  ],
+                  "1": [],
+                  "2": [
+                     [
+                        "__main__.t1_10_rule",
+                        1
+                     ]
+                  ]
+               }
+            },
+            "start_policies": [
+               "__main__.init_stage_rule"
+            ],
+            "metrics_provider": null
+         },
+         "1": {
+            "name": "GRADUATED",
+            "task": {
+               "name": "Graduated",
+               "description": "",
+               "task_parameters": {},
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {},
+               "graph": {}
+            },
+            "start_policies": [],
+            "metrics_provider": null
+         },
+         "2": {
+            "name": "StageB",
+            "task": {
+               "name": "Task B",
+               "description": "",
+               "task_parameters": {
+                  "field_b": 0.0
+               },
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {
+                  "0": "__main__.init_stage_rule",
+                  "1": "__main__.stageB_policyB_rule",
+                  "2": "__main__.stageB_policyA_rule"
+               },
+               "graph": {
+                  "0": [
+                     [
+                        "__main__.t3_10_rule",
+                        1
+                     ],
+                     [
+                        "__main__.t3_5_rule",
+                        2
+                     ]
+                  ],
+                  "1": [],
+                  "2": [
+                     [
+                        "__main__.t3_10_rule",
+                        1
+                     ]
+                  ]
+               }
+            },
+            "start_policies": [
+               "__main__.init_stage_rule"
+            ],
+            "metrics_provider": null
+         }
+      },
+      "graph": {
+         "0": [
+            [
+               "__main__.t2_10_rule",
+               1
+            ],
+            [
+               "__main__.t2_5_rule",
+               2
+            ]
+         ],
+         "1": [],
+         "2": [
+            [
+               "__main__.t2_10_rule",
+               1
+            ]
+         ]
+      }
+   }
+}

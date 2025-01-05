@@ -54,16 +54,13 @@ class Task(AindBehaviorModel):
     )
 
 
-TTaskParameters = TypeVar("TTaskParameters", bound=TaskParameters)
-
-
 def create_task(
     *,
     name: str,
-    task_parameters: Type[TTaskParameters],
+    task_parameters: Type[TaskParameters],
     version: Optional[str] = None,
-    description: Optional[str] = None,
-) -> Type[TTask]:
+    description: str = "",
+) -> Type[Task]:
     """
     Factory method for creating a Task object.
 
@@ -90,13 +87,11 @@ def create_task(
         "task_parameters": Annotated[
             task_parameters,
             Field(
-                default=task_parameters,
                 description=(
                     task_parameters.__doc__.strip()
                     if task_parameters.__doc__
                     else ""
                 ),
-                validate_default=True,
             ),
         ],
         "version": Annotated[
@@ -109,7 +104,7 @@ def create_task(
             ),
         ],
         "description": Annotated[
-            Literal[str] if description else Optional[str],
+            str,
             Field(default=description, frozen=True, validate_default=True),
         ],
     }

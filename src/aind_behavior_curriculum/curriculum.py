@@ -2,8 +2,6 @@
 Core Stage and Curriculum Primitives.
 """
 
-from __future__ import annotations
-
 import importlib
 import inspect
 import warnings
@@ -19,6 +17,7 @@ from typing import (
     Literal,
     Optional,
     ParamSpec,
+    Self,
     Tuple,
     Type,
     TypeVar,
@@ -87,7 +86,7 @@ class _Rule(Generic[_P, _R]):
             self._validate_callable_typing(function)
         self._callable = function
 
-    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+    def invoke(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         """Wraps the inner callable."""
         return self._callable(*args, **kwargs)
 
@@ -174,13 +173,27 @@ class _Rule(Generic[_P, _R]):
         return handler(core_schema.str_schema())
 
     @classmethod
-    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> _Rule[_P, _R]:
+    def normalize_rule_or_callable(cls, rule: Callable | "_Rule") -> Self:
+        """Ensures the outgoing type is normalized from a Callable or _Rule."""
+        if isinstance(rule, cls):
+            return rule
+        if isinstance(rule, _Rule):
+            return cls(rule.callable)
+        if callable(rule):
+            return cls(rule)
+        else:
+            raise TypeError("rule must be a Callable or _Rule type.")
+
+    @classmethod
+    def _deserialize_rule(
+        cls, value: str | Callable[_P, _R]
+    ) -> "_Rule[_P, _R]":
         """
         Custom Deserialization.
         Imports function according to package and function name.
         """
         callable_handle: Callable[_P, _R]
-        if callable(value) and not isinstance(value, cls):
+        if callable(value):
             return cls(value)
 
         if isinstance(value, str):
@@ -203,7 +216,7 @@ class _Rule(Generic[_P, _R]):
         return cls(callable_handle)
 
     @classmethod
-    def serialize_rule(cls, value: str | _Rule[_P, _R]) -> str:
+    def serialize_rule(cls, value: Union[str, "_Rule[_P, _R]"]) -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
@@ -240,14 +253,14 @@ class _Rule(Generic[_P, _R]):
                     or if the callable `r` does not match the expected signature.
         """
 
-        if not callable(r):
-            raise ValueError("Rule must be callable.")
-
         if isinstance(r, cls):
             return
 
         if is_non_deserializable_callable(r):
             return
+
+        if not callable(r):
+            raise ValueError("Rule must be callable.")
 
         # For some reason, generics do not materialize by default.
         # We fetch them manually....
@@ -258,6 +271,7 @@ class _Rule(Generic[_P, _R]):
 
         # Compare signatures
         sig = inspect.signature(r)
+
         try:
             # Compare inputs
             if (
@@ -361,7 +375,7 @@ def is_non_deserializable_callable(value: Any) -> bool:
 
 
 def try_materialize_non_deserializable_callable_error(
-    value: _NonDeserializableCallable,
+    value: "_NonDeserializableCallable",
 ) -> Optional[Exception]:
     """
     Attempts to materialize the error from a non-deserializable callable.
@@ -714,10 +728,11 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         Sets stage's start policies to start policies provided.
         Input overwrites existing start policies.
         """
-        if isinstance(start_policies, Policy):
+        if not isinstance(start_policies, Iterable):
             start_policies = [start_policies]
 
         for policy in start_policies:
+            policy = Policy.normalize_rule_or_callable(policy)
             if policy not in self.graph.see_nodes():
                 if append_non_existing:
                     self.add_policy(policy)
@@ -732,6 +747,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         Adds a floating policy to the Stage adjacency graph.
         """
+        policy = Policy.normalize_rule_or_callable(policy)
         if policy in self.graph.see_nodes():
             raise ValueError(
                 f"Policy {policy.name} is a duplicate Policy in Stage {self.name}."
@@ -746,6 +762,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
+        policy = Policy.normalize_rule_or_callable(policy)
         self.graph.remove_node(policy)
 
         # Also remove reference to policy in start_policies if applicable.
@@ -774,12 +791,11 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, _Rule):
-            rule = PolicyTransition(rule)
-        if callable(rule) and not isinstance(rule, PolicyTransition):
-            rule = PolicyTransition(rule)
-
-        self.graph.add_transition(start_policy, dest_policy, rule)
+        self.graph.add_transition(
+            Policy.normalize_rule_or_callable(start_policy),
+            Policy.normalize_rule_or_callable(dest_policy),
+            PolicyTransition.normalize_rule_or_callable(rule),
+        )
 
     def remove_policy_transition(
         self,
@@ -796,9 +812,9 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         of changing transition priority.
         """
         self.graph.remove_node_transition(
-            start_policy,
-            dest_policy,
-            rule,
+            Policy.normalize_rule_or_callable(start_policy),
+            Policy.normalize_rule_or_callable(dest_policy),
+            PolicyTransition.normalize_rule_or_callable(rule),
             remove_start_policy,
             remove_dest_policy,
         )
@@ -815,7 +831,10 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """TTask
         See transitions of stage in policy graph.
         """
-        return self.graph.see_node_transitions(policy)
+
+        return self.graph.see_node_transitions(
+            Policy.normalize_rule_or_callable(policy)
+        )
 
     def set_policy_transition_priority(
         self,
@@ -827,13 +846,19 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         To use, call see_policy_transitions() and order the transitions
         in the desired priority from left -> right.
         """
-
-        policy_transitions_list = list((t, p) for (t, p) in policy_transitions)
-        current_list = list(
+        policy = Policy.normalize_rule_or_callable(policy)
+        policy_transitions = [
+            (
+                PolicyTransition.normalize_rule_or_callable(t),
+                Policy.normalize_rule_or_callable(p),
+            )
+            for (t, p) in policy_transitions
+        ]
+        current_list = [
             (t, p) for (t, p) in self.see_policy_transitions(policy)
-        )
+        ]
 
-        if len(policy_transitions_list) != len(current_list):
+        if len(policy_transitions) != len(current_list):
             raise ValueError(
                 f"Number of input node transitions {policy_transitions} does not \
                 match the number of elements under this node: {self.see_policy_transitions(policy)}.\
@@ -855,7 +880,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         self.task.task_parameters = task_params
 
-    def validate_stage(self) -> Stage:
+    def validate_stage(self) -> Self:
         """
         Validates that the stage can be (de)serialized.
         """
@@ -1019,12 +1044,11 @@ class Curriculum(AindBehaviorModel):
         is called sets the order of transition priority.
         """
 
-        if isinstance(rule, _Rule):
-            rule = StageTransition(rule)
-        if callable(rule) and not isinstance(rule, StageTransition):
-            rule = StageTransition(rule)
-
-        self.graph.add_transition(start_stage, dest_stage, rule)
+        self.graph.add_transition(
+            start_stage,
+            dest_stage,
+            StageTransition.normalize_rule_or_callable(rule),
+        )
 
     def remove_stage_transition(
         self,
@@ -1043,7 +1067,7 @@ class Curriculum(AindBehaviorModel):
         self.graph.remove_node_transition(
             start_stage,
             dest_stage,
-            rule,
+            StageTransition.normalize_rule_or_callable(rule),
             remove_start_stage,
             remove_dest_stage,
         )
@@ -1073,14 +1097,12 @@ class Curriculum(AindBehaviorModel):
         in the desired priority from left -> right.
         """
 
-        stage_transitions_list = list(
-            (t, s.name) for (t, s) in stage_transitions
-        )
-        current_list = list(
-            (t, s.name) for (t, s) in self.see_stage_transitions(stage)
-        )
+        stage_transitions = [
+            (StageTransition.normalize_rule_or_callable(t), s)
+            for (t, s) in stage_transitions
+        ]
 
-        if len(stage_transitions_list) != len(current_list):
+        if len(stage_transitions) != len(self.see_stage_transitions(stage)):
             raise ValueError(
                 f"Elements of input node transitions {stage_transitions} does not \
                     match the elements under this node: {self.see_stage_transitions(stage)}. \
@@ -1089,7 +1111,7 @@ class Curriculum(AindBehaviorModel):
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
-    def validate_curriculum(self) -> Curriculum:
+    def validate_curriculum(self) -> Self:
         """
         Validate curriculum for export/serialization.
         """
@@ -1164,7 +1186,7 @@ def create_curriculum(
             ),
         ],
         "graph": Annotated[
-            StageGraph[_tasks_tagged],
+            StageGraph[_tasks_tagged],  # type: ignore
             Field(default_factory=StageGraph, validate_default=True),
         ],
     }

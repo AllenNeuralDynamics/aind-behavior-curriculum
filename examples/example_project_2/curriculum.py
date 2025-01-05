@@ -19,6 +19,10 @@ from aind_behavior_curriculum import (
     TaskParameters,
     make_task_discriminator,
 )
+from aind_behavior_curriculum.curriculum_utils import (
+    export_diagram,
+    export_json,
+)
 
 
 # --- TASKS ---
@@ -231,28 +235,11 @@ def construct_stage_triangle_curriculum() -> MyCurriculum:
 
 if __name__ == "__main__":
     ex_curr = construct_track_curriculum()
-    # ex_curr = construct_tree_curriculum()
-    # ex_curr = construct_policy_triangle_curriculum()
-    # ex_curr = construct_stage_triangle_curriculum()
-
-    # with open("examples/example_project/jsons/stage_instance.json", "w") as f:
-    #     stageA = ex_curr.see_stages()[0]
-    #     json_dict = stageA.model_dump()
-    #     json_string = json.dumps(json_dict, indent=4)
-    #     f.write(json_string)
-
-    # with open("examples/example_project/jsons/curr_instance.json", "w") as f:
-    #     json_dict = ex_curr.model_dump()
-    #     json_string = json.dumps(json_dict, indent=4)
-    #     f.write(json_string)
-
-    # with open("examples/example_project/jsons/curr_instance.json", "r") as f:
-    #     ex_curr = MyCurriculum.model_validate_json(f.read())
-    #     print(ex_curr)
-
-    ex_curr.export_diagram(
-        "examples/example_project_2/diagrams/track_curr_diagram.png"
-    )
-    # ex_curr.export_diagram("examples/example_project_2/diagrams/tree_curr_diagram.png")
-    # ex_curr.export_diagram("examples/example_project_2/diagrams/p_triangle_curr_diagram.png")
-    # ex_curr.export_diagram("examples/example_project_2/diagrams/s_triangle_curr_diagram.png")
+    with open(
+        "./examples/example_project_2/curriculum_schema.json",
+        "w+",
+        encoding="utf-8",
+    ) as f:
+        f.write(json.dumps(ex_curr.model_json_schema(), indent=4))
+    export_json(ex_curr, path="./examples/example_project_2/curriculum.json")
+    _ = export_diagram(ex_curr, "./examples/example_project_2/diagram.svg")

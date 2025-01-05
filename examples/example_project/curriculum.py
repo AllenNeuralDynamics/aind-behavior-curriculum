@@ -3,23 +3,24 @@ Example of Curriculum creation
 """
 
 import json
-from typing import Literal
 
 from pydantic import Field
 
 from aind_behavior_curriculum import (
-    Graduated,
     GRADUATED,
-    Curriculum,
+    Graduated,
     Metrics,
     Policy,
     PolicyTransition,
     Stage,
-    StageGraph,
     StageTransition,
-    Task,
     TaskParameters,
-    make_task_discriminator,
+    create_curriculum,
+    create_task,
+)
+from aind_behavior_curriculum.curriculum_utils import (
+    export_diagram,
+    export_json,
 )
 
 
@@ -40,22 +41,14 @@ class TaskAParameters(TaskParameters):
     field_a: int = Field(default=0, validate_default=True)
 
 
-class TaskA(Task):
-    name: Literal["Task A"] = "Task A"
-    task_parameters: TaskAParameters = Field(
-        ..., description="Fill w/ Parameter Defaults", validate_default=True
-    )
+TaskA = create_task(name="Task A", task_parameters=TaskAParameters)
 
 
 class TaskBParameters(TaskParameters):
     field_b: float = Field(default=0.0)
 
 
-class TaskB(Task):
-    name: Literal["Task B"] = "Task B"
-    task_parameters: TaskBParameters = Field(
-        ..., description="Fill w/ Parameter Defaults"
-    )
+TaskB = create_task(name="Task B", task_parameters=TaskBParameters)
 
 
 # --- METRICS ---
@@ -160,15 +153,14 @@ t2_10 = StageTransition(t2_10_rule)
 
 
 # --- CURRICULUM ---
-Tasks = make_task_discriminator(tasks=[TaskA, TaskB, Graduated])
 
 
-class MyCurriculum(Curriculum):
-    name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())  # type: ignore
+MyCurriculum = create_curriculum(
+    name="My Curriculum", version="0.1.0", tasks=(TaskA, TaskB, Graduated)
+)
 
 
-def construct_curriculum() -> MyCurriculum:
+def construct_curriculum():
     """
     Useful for testing.
     """
@@ -203,22 +195,11 @@ def construct_curriculum() -> MyCurriculum:
 
 if __name__ == "__main__":
     ex_curr = construct_curriculum()
-
-    with open("examples/example_project/jsons/stage_instance.json", "w") as f:
-        stageA = ex_curr.see_stages()[0]
-        json_dict = stageA.model_dump()
-        json_string = json.dumps(json_dict, indent=4)
-        f.write(json_string)
-
-    with open("examples/example_project/jsons/curr_instance.json", "w") as f:
-        json_dict = ex_curr.model_dump()
-        json_string = json.dumps(json_dict, indent=4)
-        f.write(json_string)
-
-    # with open("examples/example_project/jsons/curr_instance.json", "r") as f:
-    #     ex_curr = MyCurriculum.model_validate_json(f.read())
-    #     print(ex_curr)
-
-    ex_curr.export_diagram(
-        "examples/example_project/diagrams/my_curr_diagram.png"
-    )
+    with open(
+        "./examples/example_project/curriculum_schema.json",
+        "w+",
+        encoding="utf-8",
+    ) as f:
+        f.write(json.dumps(ex_curr.model_json_schema(), indent=4))
+    export_json(ex_curr, path="./examples/example_project/curriculum.json")
+    _ = export_diagram(ex_curr, "./examples/example_project/diagram.svg")

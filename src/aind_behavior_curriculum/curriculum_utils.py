@@ -80,6 +80,9 @@ def export_diagram(
     dot_process_output, _ = dot_process.communicate(
         input=gvpack_output.decode()
     )
+    if path:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(dot_process_output)
     return dot_process_output
 
 
@@ -207,4 +210,5 @@ def export_json(curriculum: Curriculum, path: os.PathLike) -> None:
     curriculum.validate_curriculum()
 
     with open(path, "w", encoding="utf-8") as f:
+        print(path)
         f.write(curriculum.model_dump_json(indent=3))
