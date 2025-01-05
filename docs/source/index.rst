@@ -245,12 +245,12 @@ reused/modified similar to Github commits.
 As of (5/9/2024), a Metrics database has yet to be defined, therefore a
 Trainer cannot be defined.
 
-.. |High-Level Curriculum| image:: ../../examples/example_project/diagrams/high_level_curr_diagram.png
-.. |Full Curriculum| image:: ../../examples/example_project/diagrams/my_curr_diagram.png
-.. |Tree Curriculum| image:: ../../examples/example_project_2/diagrams/tree_curr_diagram.png
-.. |Track Curriculum| image:: ../../examples/example_project_2/diagrams/track_curr_diagram.png
-.. |Policy Triangle Curriculum| image:: ../../examples/example_project_2/diagrams/p_triangle_curr_diagram.png
-.. |Stage Triangle Curriculum| image:: ../../examples/example_project_2/diagrams/s_triangle_curr_diagram.png
+.. |High-Level Curriculum| image:: ../../assets/high_level_curr_diagram.png
+.. |Full Curriculum| image:: ../../examples/example_project/assets/curriculum.svg
+.. |Tree Curriculum| image:: ../../examples/example_project_2/assets/tree_curriculum.svg
+.. |Track Curriculum| image:: ../../examples/example_project_2/assets/track_curriculum.svg
+.. |Policy Triangle Curriculum| image:: ../../examples/example_project_2/assets/policy_triangle_curriculum.svg
+.. |Stage Triangle Curriculum| image:: ../../examples/example_project_2/assets/stage_triangle_curriculum.svg
 
 
 .. toctree::

@@ -180,11 +180,12 @@ def construct_curriculum():
 
 if __name__ == "__main__":
     ex_curr = construct_curriculum()
+    name = "curriculum"
     with open(
-        "./examples/example_project/curriculum_schema.json",
+        f"./examples/example_project/assets/{name}_schema.json",
         "w+",
         encoding="utf-8",
     ) as f:
         f.write(json.dumps(ex_curr.model_json_schema(), indent=4))
-    export_json(ex_curr, path="./examples/example_project/curriculum.json")
-    _ = export_diagram(ex_curr, "./examples/example_project/diagram.svg")
+    export_json(ex_curr, path=f"./examples/example_project/assets/{name}.json")
+    _ = export_diagram(ex_curr, f"./examples/example_project/assets/{name}.svg")

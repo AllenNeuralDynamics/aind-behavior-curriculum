@@ -1,12 +1,28 @@
 {
     "$defs": {
-        "Graduated": {
+        "DummyParameters": {
+            "additionalProperties": true,
+            "properties": {
+                "field_1": {
+                    "default": 0,
+                    "title": "Field 1",
+                    "type": "integer"
+                },
+                "field_2": {
+                    "default": 0,
+                    "title": "Field 2",
+                    "type": "integer"
+                }
+            },
+            "title": "DummyParameters",
+            "type": "object"
+        },
+        "DummyTask": {
             "additionalProperties": false,
-            "description": "Utility Final Task.",
             "properties": {
                 "name": {
-                    "const": "Graduated",
-                    "default": "Graduated",
+                    "const": "DummyTask",
+                    "default": "DummyTask",
                     "title": "Name",
                     "type": "string"
                 },
@@ -17,8 +33,7 @@
                     "type": "string"
                 },
                 "task_parameters": {
-                    "$ref": "#/$defs/TaskParameters",
-                    "default": {},
+                    "$ref": "#/$defs/DummyParameters",
                     "description": "Fill w/ Parameter Defaults"
                 },
                 "version": {
@@ -49,7 +64,10 @@
                     "title": "Stage Name"
                 }
             },
-            "title": "Graduated",
+            "required": [
+                "task_parameters"
+            ],
+            "title": "DummyTask",
             "type": "object"
         },
         "PolicyGraph": {
@@ -134,8 +152,19 @@
                     "type": "string"
                 },
                 "task": {
-                    "$ref": "#/$defs/known_task_types",
-                    "description": "Task in which this stage is based off of."
+                    "description": "Task in which this stage is based off of.",
+                    "discriminator": {
+                        "mapping": {
+                            "DummyTask": "#/$defs/known_task_types"
+                        },
+                        "propertyName": "name"
+                    },
+                    "oneOf": [
+                        {
+                            "$ref": "#/$defs/known_task_types"
+                        }
+                    ],
+                    "title": "Task"
                 },
                 "graph": {
                     "$ref": "#/$defs/PolicyGraph",
@@ -170,159 +199,8 @@
             "title": "Stage[known_task_types]",
             "type": "object"
         },
-        "TaskAParameters": {
-            "additionalProperties": true,
-            "properties": {
-                "field_a": {
-                    "default": 0,
-                    "title": "Field A",
-                    "type": "integer"
-                }
-            },
-            "title": "TaskAParameters",
-            "type": "object"
-        },
-        "TaskBParameters": {
-            "additionalProperties": true,
-            "properties": {
-                "field_b": {
-                    "default": 0.0,
-                    "title": "Field B",
-                    "type": "number"
-                }
-            },
-            "title": "TaskBParameters",
-            "type": "object"
-        },
-        "TaskParameters": {
-            "additionalProperties": true,
-            "description": "Set of parameters associated with a subject task.\nSubclass with Task Parameters.",
-            "properties": {},
-            "title": "TaskParameters",
-            "type": "object"
-        },
-        "Task_A": {
-            "additionalProperties": false,
-            "properties": {
-                "name": {
-                    "const": "Task A",
-                    "default": "Task A",
-                    "title": "Name",
-                    "type": "string"
-                },
-                "description": {
-                    "default": "",
-                    "title": "Description",
-                    "type": "string"
-                },
-                "task_parameters": {
-                    "$ref": "#/$defs/TaskAParameters",
-                    "description": ""
-                },
-                "version": {
-                    "anyOf": [
-                        {
-                            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                            "type": "string"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "default": null,
-                    "title": "Version"
-                },
-                "stage_name": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "default": null,
-                    "description": "Optional stage name the `Task` object instance represents.",
-                    "title": "Stage Name"
-                }
-            },
-            "required": [
-                "task_parameters"
-            ],
-            "title": "Task A",
-            "type": "object"
-        },
-        "Task_B": {
-            "additionalProperties": false,
-            "properties": {
-                "name": {
-                    "const": "Task B",
-                    "default": "Task B",
-                    "title": "Name",
-                    "type": "string"
-                },
-                "description": {
-                    "default": "",
-                    "title": "Description",
-                    "type": "string"
-                },
-                "task_parameters": {
-                    "$ref": "#/$defs/TaskBParameters",
-                    "description": ""
-                },
-                "version": {
-                    "anyOf": [
-                        {
-                            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                            "type": "string"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "default": null,
-                    "title": "Version"
-                },
-                "stage_name": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "default": null,
-                    "description": "Optional stage name the `Task` object instance represents.",
-                    "title": "Stage Name"
-                }
-            },
-            "required": [
-                "task_parameters"
-            ],
-            "title": "Task B",
-            "type": "object"
-        },
         "known_task_types": {
-            "discriminator": {
-                "mapping": {
-                    "Graduated": "#/$defs/Graduated",
-                    "Task A": "#/$defs/Task_A",
-                    "Task B": "#/$defs/Task_B"
-                },
-                "propertyName": "name"
-            },
-            "oneOf": [
-                {
-                    "$ref": "#/$defs/Task_A"
-                },
-                {
-                    "$ref": "#/$defs/Graduated"
-                },
-                {
-                    "$ref": "#/$defs/Task_B"
-                }
-            ]
+            "$ref": "#/$defs/DummyTask"
         }
     },
     "additionalProperties": false,
@@ -339,15 +217,20 @@
             "type": "string"
         },
         "version": {
-            "const": "0.1.0",
-            "default": "0.1.0",
+            "default": "0.0.0",
+            "description": "Curriculum version.",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
             "title": "Version",
             "type": "string"
         },
         "graph": {
-            "$ref": "#/$defs/StageGraph_known_task_types_"
+            "$ref": "#/$defs/StageGraph_known_task_types_",
+            "default": {
+                "nodes": {},
+                "graph": {}
+            }
         }
     },
-    "title": "My Curriculum",
+    "title": "MyCurriculum",
     "type": "object"
 }

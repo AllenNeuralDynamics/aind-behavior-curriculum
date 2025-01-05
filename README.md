@@ -28,7 +28,7 @@ Stages are connected by **``Stage Transitions``**, which are directed edges asso
 With this structure alone, a user can define a basic curriculum with the flexibility of defining skip connections and regressions. For nodes with multiple ongoing edges, edges are labelled by priority, set by the user.
 
 
-| ![High-Level Curriculum](./examples/example_project/diagrams/high_level_curr_diagram.png "Title") | 
+| ![High-Level Curriculum](./assets/high_level_curr_diagram.png "Title") | 
 |:--:| 
 |*An example curriculum consisting of purely stages and stage transitions. This **``Curriculum``** consists of a skip connection between **``Stage``** 'StageA' and **``Stage``** 'Graduated'. **``Stage Transitions``** are triggered on a parameter 't2' and the skip transition is ordered before the transition going to **``Stage``** StageB.* |
 
@@ -41,7 +41,7 @@ In this situation, the user may define a graph of **``Policies``** and **``Polic
 A **``Policy``**, changes the task parameters of a **``Stage``**, as described above. A **``Policy Transition``** acts just like a **``Stage Transition``**, and defines transitions between **``Policies``** on a trigger condition. Like **``Stage Transitions``**, **``Policy Transitions``**  can connect any two arbitrary **``Policies``** and are ordered by priority set by the user.
 
 
-| ![Full Curriculum](./examples/example_project/diagrams/my_curr_diagram.png "Title") | 
+| ![Full Curriculum](./examples/example_project/assets/curriculum.svg "Title") | 
 |:--:| 
 |*An example **``Curriculum``** consisting of **``Stage``** and  **``Policy``** graphs. Left: The high level policy graph. Right: Internal policy graphs.* |
 
@@ -58,19 +58,19 @@ $~$
 Here are some examples of the possibilities. The high-level stage graph are shown to the left and the individual policy graphs are shown to the right.
 
 
-| ![Tree Curriculum](./examples/example_project_2/diagrams/tree_curr_diagram.png "Title") | 
+| ![Tree Curriculum](./examples/example_project_2/assets/tree_curriculum.svg "Title") | 
 |:--:| 
 |*A 'Tree' **``Curriculum``*** |
 
-| ![Track Curriculum](./examples/example_project_2/diagrams/track_curr_diagram.png "Title") | 
+| ![Track Curriculum](./examples/example_project_2/assets/track_curriculum.svg "Title") | 
 |:--:| 
 |*A 'Train Track' **``Curriculum``*** |
 
-| ![Policy Triangle Curriculum](./examples/example_project_2/diagrams/p_triangle_curr_diagram.png "Title") | 
+| ![Policy Triangle Curriculum](./examples/example_project_2/assets/policy_triangle_curriculum.svg "Title") | 
 |:--:| 
 |*A 'Policy Triangle' **``Curriculum``*** |
 
-| ![Stage Triangle Curriculum](./examples/example_project_2/diagrams/s_triangle_curr_diagram.png "Title") | 
+| ![Stage Triangle Curriculum](./examples/example_project_2/assets/stage_triangle_curriculum.svg "Title") | 
 |:--:| 
 |*A 'Stage Triangle' **``Curriculum``*** |
 

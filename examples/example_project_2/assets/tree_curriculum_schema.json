@@ -1,0 +1,236 @@
+{
+    "$defs": {
+        "DummyParameters": {
+            "additionalProperties": true,
+            "properties": {
+                "field_1": {
+                    "default": 0,
+                    "title": "Field 1",
+                    "type": "integer"
+                },
+                "field_2": {
+                    "default": 0,
+                    "title": "Field 2",
+                    "type": "integer"
+                }
+            },
+            "title": "DummyParameters",
+            "type": "object"
+        },
+        "DummyTask": {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "const": "DummyTask",
+                    "default": "DummyTask",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "description": "Description of the task.",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "$ref": "#/$defs/DummyParameters",
+                    "description": "Fill w/ Parameter Defaults"
+                },
+                "version": {
+                    "anyOf": [
+                        {
+                            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "task schema version",
+                    "title": "Version"
+                },
+                "stage_name": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "Optional stage name the `Task` object instance represents.",
+                    "title": "Stage Name"
+                }
+            },
+            "required": [
+                "task_parameters"
+            ],
+            "title": "DummyTask",
+            "type": "object"
+        },
+        "PolicyGraph": {
+            "additionalProperties": false,
+            "description": "Graph for Stage.",
+            "properties": {
+                "nodes": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "default": {},
+                    "title": "Nodes",
+                    "type": "object"
+                },
+                "graph": {
+                    "additionalProperties": {
+                        "items": {
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "prefixItems": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ],
+                            "type": "array"
+                        },
+                        "type": "array"
+                    },
+                    "default": {},
+                    "title": "Graph",
+                    "type": "object"
+                }
+            },
+            "title": "PolicyGraph",
+            "type": "object"
+        },
+        "StageGraph_known_task_types_": {
+            "additionalProperties": false,
+            "properties": {
+                "nodes": {
+                    "additionalProperties": {
+                        "$ref": "#/$defs/Stage_known_task_types_"
+                    },
+                    "default": {},
+                    "title": "Nodes",
+                    "type": "object"
+                },
+                "graph": {
+                    "additionalProperties": {
+                        "items": {
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "prefixItems": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ],
+                            "type": "array"
+                        },
+                        "type": "array"
+                    },
+                    "default": {},
+                    "title": "Graph",
+                    "type": "object"
+                }
+            },
+            "title": "StageGraph[known_task_types]",
+            "type": "object"
+        },
+        "Stage_known_task_types_": {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "description": "Stage name.",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "task": {
+                    "description": "Task in which this stage is based off of.",
+                    "discriminator": {
+                        "mapping": {
+                            "DummyTask": "#/$defs/known_task_types"
+                        },
+                        "propertyName": "name"
+                    },
+                    "oneOf": [
+                        {
+                            "$ref": "#/$defs/known_task_types"
+                        }
+                    ],
+                    "title": "Task"
+                },
+                "graph": {
+                    "$ref": "#/$defs/PolicyGraph",
+                    "description": "Policy Graph."
+                },
+                "start_policies": {
+                    "description": "List of starting policies.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "Start Policies",
+                    "type": "array"
+                },
+                "metrics_provider": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
+                    "title": "Metrics Provider"
+                }
+            },
+            "required": [
+                "name",
+                "task"
+            ],
+            "title": "Stage[known_task_types]",
+            "type": "object"
+        },
+        "known_task_types": {
+            "$ref": "#/$defs/DummyTask"
+        }
+    },
+    "additionalProperties": false,
+    "properties": {
+        "pkg_location": {
+            "description": "Location of the python package                                 that instantiated the Curriculum.",
+            "title": "Pkg Location",
+            "type": "string"
+        },
+        "name": {
+            "const": "My Curriculum",
+            "default": "My Curriculum",
+            "title": "Name",
+            "type": "string"
+        },
+        "version": {
+            "default": "0.0.0",
+            "description": "Curriculum version.",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+            "title": "Version",
+            "type": "string"
+        },
+        "graph": {
+            "$ref": "#/$defs/StageGraph_known_task_types_",
+            "default": {
+                "nodes": {},
+                "graph": {}
+            }
+        }
+    },
+    "title": "MyCurriculum",
+    "type": "object"
+}

@@ -208,12 +208,19 @@ def construct_stage_triangle_curriculum() -> MyCurriculum:
 
 
 if __name__ == "__main__":
-    ex_curr = construct_track_curriculum()
-    with open(
-        "./examples/example_project_2/curriculum_schema.json",
-        "w+",
-        encoding="utf-8",
-    ) as f:
-        f.write(json.dumps(ex_curr.model_json_schema(), indent=4))
-    export_json(ex_curr, path="./examples/example_project_2/curriculum.json")
-    _ = export_diagram(ex_curr, "./examples/example_project_2/diagram.svg")
+    for h in [
+        construct_track_curriculum,
+        construct_tree_curriculum,
+        construct_policy_triangle_curriculum,
+        construct_stage_triangle_curriculum,
+    ]:
+        curriculum = h()
+        name = h.__name__.removeprefix("construct_")
+        with open(
+            f"./examples/example_project_2/assets/{name}_schema.json",
+            "w+",
+            encoding="utf-8",
+        ) as f:
+            f.write(json.dumps(curriculum.model_json_schema(), indent=4))
+        export_json(curriculum, path=f"./examples/example_project_2/assets/{name}.json")
+        _ = export_diagram(curriculum, f"./examples/example_project_2/assets/{name}.svg")
