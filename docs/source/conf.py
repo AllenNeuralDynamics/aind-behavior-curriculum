@@ -13,7 +13,7 @@ from pathlib import Path
 from aind_behavior_curriculum import __version__ as package_version
 
 INSTITUTE_NAME = "Allen Institute for Neural Dynamics"
-SOURCE_ROOT = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/tree/main/src/"  # noqa: E501
+SOURCE_ROOT = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/tree/main/src/"
 
 current_year = date.today().year
 

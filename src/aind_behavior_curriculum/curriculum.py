@@ -63,9 +63,7 @@ class _Rule(Generic[_P, _R]):
     Rule(..., skip_validation=True) or by not annotating the Callable.
     """
 
-    def __init__(
-        self, function: Callable[_P, _R], *, skip_validation: bool = False
-    ) -> None:
+    def __init__(self, function: Callable[_P, _R], *, skip_validation: bool = False) -> None:
         """
         Initializes a new instance of the class.
         Args:
@@ -131,18 +129,14 @@ class _Rule(Generic[_P, _R]):
         from_str_schema = core_schema.chain_schema(
             [
                 core_schema.str_schema(),
-                core_schema.no_info_plain_validator_function(
-                    cls._deserialize_rule
-                ),
+                core_schema.no_info_plain_validator_function(cls._deserialize_rule),
             ]
         )
 
         from_callable_schema = core_schema.chain_schema(
             [
                 core_schema.callable_schema(),
-                core_schema.no_info_plain_validator_function(
-                    cls._deserialize_rule
-                ),
+                core_schema.no_info_plain_validator_function(cls._deserialize_rule),
             ]
         )
 
@@ -155,9 +149,7 @@ class _Rule(Generic[_P, _R]):
                     from_callable_schema,
                 ]
             ),
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                function=cls.serialize_rule
-            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(function=cls.serialize_rule),
         )
 
     @classmethod
@@ -185,9 +177,7 @@ class _Rule(Generic[_P, _R]):
             raise TypeError("rule must be a Callable or _Rule type.")
 
     @classmethod
-    def _deserialize_rule(
-        cls, value: str | Callable[_P, _R]
-    ) -> "_Rule[_P, _R]":
+    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> "_Rule[_P, _R]":
         """
         Custom Deserialization.
         Imports function according to package and function name.
@@ -239,9 +229,7 @@ class _Rule(Generic[_P, _R]):
             return f"{module}.{qualname}"
 
     @classmethod
-    def _validate_callable_typing(  # noqa: C901
-        cls, r: Callable[_P, _R]
-    ) -> None:
+    def _validate_callable_typing(cls, r: Callable[_P, _R]) -> None:
         """
         Validates that the provided callable `r` matches the expected signature
         defined by the generic types of the class.
@@ -274,26 +262,18 @@ class _Rule(Generic[_P, _R]):
 
         try:
             # Compare inputs
-            if (
-                _eval := cls._validate_signature_input(expected_callable, sig)
-            ) is not None:
+            if (_eval := cls._validate_signature_input(expected_callable, sig)) is not None:
                 raise _eval
 
-            if (
-                _eval := cls._validate_signature_output(expected_return, sig)
-            ) is not None:
+            if (_eval := cls._validate_signature_output(expected_return, sig)) is not None:
                 raise _eval
 
         except TypeError as e:
-            e.add_note(
-                f"Expected callable type signature: {expected_callable} -> {expected_return}. Got {sig}."
-            )
+            e.add_note(f"Expected callable type signature: {expected_callable} -> {expected_return}. Got {sig}.")
             raise e
 
     @staticmethod
-    def _validate_signature_input(
-        expected_callable: Any, sig: inspect.Signature
-    ) -> Optional[TypeError]:
+    def _validate_signature_input(expected_callable: Any, sig: inspect.Signature) -> Optional[TypeError]:
         """Validates the input signature of the incoming callable against
         the expected input type."""
 
@@ -306,9 +286,7 @@ class _Rule(Generic[_P, _R]):
                     f"Callable must have {len(expected_callable)} parameters, but {len(sig.parameters)} were found."
                 )
 
-            for param, expected_type in zip(
-                list(sig.parameters.values()), expected_callable
-            ):
+            for param, expected_type in zip(list(sig.parameters.values()), expected_callable):
                 if param.annotation is not param.empty:
                     if not issubclass(param.annotation, expected_type):
                         return TypeError(
@@ -317,9 +295,7 @@ class _Rule(Generic[_P, _R]):
         return None
 
     @staticmethod
-    def _validate_signature_output(
-        expected_return: Any, sig: inspect.Signature
-    ) -> Optional[TypeError]:
+    def _validate_signature_output(expected_return: Any, sig: inspect.Signature) -> Optional[TypeError]:
         """Validates the output signature of the incoming callable against
         the expected output type."""
 
@@ -342,9 +318,7 @@ class _Rule(Generic[_P, _R]):
         """Returns an inner generic type's type hint information"""
         origin_bases = getattr(cls_, "__orig_bases__", [])
         if not origin_bases:
-            return TypeError(
-                f"Class {cls_.__name__} must define its generic types."
-            )
+            return TypeError(f"Class {cls_.__name__} must define its generic types.")
 
         for base in origin_bases:
             # Hopefully nobody uses multiple inheritance with Rule
@@ -357,9 +331,7 @@ class _Rule(Generic[_P, _R]):
                 # callable as argument. Can always be extended
                 # partials with partial
                 return (args[0], args[1])
-        return TypeError(
-            f"Class {cls_.__name__} must define its generic types explicitly."
-        )
+        return TypeError(f"Class {cls_.__name__} must define its generic types explicitly.")
 
 
 def is_non_deserializable_callable(value: Any) -> bool:
@@ -424,9 +396,7 @@ class _NonDeserializableCallable(Generic[_P, _R]):
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         """Shim method to raise an error when the callable is called."""
-        raise RuntimeError(
-            f"Cannot call the non-deserializable callable reference '{self._callable_repr}'."
-        )
+        raise RuntimeError(f"Cannot call the non-deserializable callable reference '{self._callable_repr}'.")
 
     def mock_serialize(self) -> str:
         """Shim method to return the callable representation."""
@@ -468,9 +438,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     """
 
     nodes: Dict[int, NodeTypes] = Field(default={}, validate_default=True)
-    graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(
-        default={}, validate_default=True
-    )
+    graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(default={}, validate_default=True)
 
     def _get_node_id(self, node: NodeTypes) -> int:
         """
@@ -508,7 +476,7 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         NOTE: Removed nodes and transitions have the side effect
         of changing transition priority.
         """
-        if not (node in self.nodes.values()):
+        if node not in self.nodes.values():
             raise ValueError(f"Node {node} is not in the graph to be removed.")
 
         # Resolve node id
@@ -546,14 +514,14 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         """
 
         # Resolve id of start_node
-        if not (start_node in self.nodes.values()):
+        if start_node not in self.nodes.values():
             new_id = self._create_node_id()
             self.nodes[new_id] = start_node
             self.graph[new_id] = []
         start_id = self._get_node_id(start_node)
 
         # Resolve id of dest_node
-        if not (dest_node in self.nodes.values()):
+        if dest_node not in self.nodes.values():
             new_id = self._create_node_id()
             self.nodes[new_id] = dest_node
             self.graph[new_id] = []
@@ -577,22 +545,16 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         of changing transition priority.
         """
 
-        if not (start_node in self.nodes.values()):
-            raise ValueError(
-                f"Node {start_node} is not in the behavior graph to be removed."
-            )
+        if start_node not in self.nodes.values():
+            raise ValueError(f"Node {start_node} is not in the behavior graph to be removed.")
 
-        if not (dest_node in self.nodes.values()):
-            raise ValueError(
-                f"Node {dest_node} is not in the behavior graph to be removed."
-            )
+        if dest_node not in self.nodes.values():
+            raise ValueError(f"Node {dest_node} is not in the behavior graph to be removed.")
 
         start_id = self._get_node_id(start_node)
         dest_id = self._get_node_id(dest_node)
-        if not ((rule, dest_id) in self.graph[start_id]):
-            raise ValueError(
-                f"Node {start_node} does not transition into Node {dest_node} with Rule {rule}."
-            )
+        if (rule, dest_id) not in self.graph[start_id]:
+            raise ValueError(f"Node {start_node} does not transition into Node {dest_node} with Rule {rule}.")
 
         # Optionally remove nodes
         if remove_start_node:
@@ -609,14 +571,12 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         """
         return list(self.nodes.values())
 
-    def see_node_transitions(
-        self, node: NodeTypes
-    ) -> List[Tuple[EdgeType, NodeTypes]]:
+    def see_node_transitions(self, node: NodeTypes) -> List[Tuple[EdgeType, NodeTypes]]:
         """
         See transitions of node in behavior graph.
         """
 
-        if not (node in self.nodes.values()):
+        if node not in self.nodes.values():
             raise ValueError(f"Node {node} is not in the behavior graph.")
 
         node_id = self._get_node_id(node)
@@ -635,10 +595,8 @@ class BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
 
         input_transitions = []
         for rule, n in node_transitions:
-            if not (n in self.nodes.values()):
-                raise ValueError(
-                    f"Node {n} is not a node inside the behavior graph."
-                )
+            if n not in self.nodes.values():
+                raise ValueError(f"Node {n} is not a node inside the behavior graph.")
             input_transitions.append((rule, self._get_node_id(n)))
 
         n_id = self._get_node_id(node)
@@ -681,17 +639,13 @@ class Stage(AindBehaviorModel, Generic[TTask]):
     """
 
     name: str = Field(..., description="Stage name.")
-    task: TTask = Field(
-        ..., description="Task in which this stage is based off of."
-    )
+    task: TTask = Field(..., description="Task in which this stage is based off of.")
     graph: PolicyGraph = Field(
         default_factory=PolicyGraph,
         validate_default=True,
         description="Policy Graph.",
     )
-    start_policies: List[Policy] = Field(
-        default_factory=list, description="List of starting policies."
-    )
+    start_policies: List[Policy] = Field(default_factory=list, description="List of starting policies.")
     metrics_provider: Optional[MetricsProvider] = Field(
         default=None,
         description="A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
@@ -737,9 +691,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
                 if append_non_existing:
                     self.add_policy(policy)
                 else:
-                    raise ValueError(
-                        f"Policy {policy} is not in the policy graph."
-                    )
+                    raise ValueError(f"Policy {policy} is not in the policy graph.")
 
         self.start_policies = list(start_policies)
 
@@ -749,9 +701,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         policy = Policy.normalize_rule_or_callable(policy)
         if policy in self.graph.see_nodes():
-            raise ValueError(
-                f"Policy {policy.name} is a duplicate Policy in Stage {self.name}."
-            )
+            raise ValueError(f"Policy {policy.name} is a duplicate Policy in Stage {self.name}.")
 
         self.graph.add_node(policy)
 
@@ -825,16 +775,12 @@ class Stage(AindBehaviorModel, Generic[TTask]):
         """
         return self.graph.see_nodes()
 
-    def see_policy_transitions(
-        self, policy: Policy
-    ) -> List[Tuple[PolicyTransition, Policy]]:
+    def see_policy_transitions(self, policy: Policy) -> List[Tuple[PolicyTransition, Policy]]:
         """TTask
         See transitions of stage in policy graph.
         """
 
-        return self.graph.see_node_transitions(
-            Policy.normalize_rule_or_callable(policy)
-        )
+        return self.graph.see_node_transitions(Policy.normalize_rule_or_callable(policy))
 
     def set_policy_transition_priority(
         self,
@@ -854,9 +800,7 @@ class Stage(AindBehaviorModel, Generic[TTask]):
             )
             for (t, p) in policy_transitions
         ]
-        current_list = [
-            (t, p) for (t, p) in self.see_policy_transitions(policy)
-        ]
+        current_list = [(t, p) for (t, p) in self.see_policy_transitions(policy)]
 
         if len(policy_transitions) != len(current_list):
             raise ValueError(
@@ -945,9 +889,7 @@ class Curriculum(AindBehaviorModel):
         validate_default=True,
         description="Curriculum version.",
     )
-    graph: Annotated[
-        StageGraph, Field(default=StageGraph(), validate_default=True)
-    ]
+    graph: Annotated[StageGraph, Field(default=StageGraph(), validate_default=True)]
 
     @property
     def _known_tasks(self) -> List[Type[Task]]:
@@ -955,9 +897,7 @@ class Curriculum(AindBehaviorModel):
 
         # We introspect into the StageGraph[T] type to get the known tasks.
         _generic = self.model_fields["graph"].annotation
-        _inner_args = _generic.__dict__["__pydantic_generic_metadata__"][
-            "args"
-        ]
+        _inner_args = _generic.__dict__["__pydantic_generic_metadata__"]["args"]
 
         _inner_union: Type
         if len(_inner_args) == 0:
@@ -1005,14 +945,10 @@ class Curriculum(AindBehaviorModel):
         """
 
         if not self._is_task_type_known(stage.task):
-            raise ValueError(
-                f"Task {stage.task} is not a known task type in the Curriculum."
-            )
+            raise ValueError(f"Task {stage.task} is not a known task type in the Curriculum.")
 
         if stage in self.graph.see_nodes():
-            raise ValueError(
-                f"Stage {stage.name} is a duplicate stage in Curriculum."
-            )
+            raise ValueError(f"Stage {stage.name} is a duplicate stage in Curriculum.")
 
         self.graph.add_node(stage)
 
@@ -1036,7 +972,7 @@ class Curriculum(AindBehaviorModel):
         Stage_A -> Stage_B.
 
         If Stage_A has been added to stage before, this method starts a transition
-            from the exisiting Stage_A.
+            from the existing Stage_A.
         If Stage_B has been added to stage before, this method creates a transition
             into the existing Stage_B.
 
@@ -1078,9 +1014,7 @@ class Curriculum(AindBehaviorModel):
         """
         return self.graph.see_nodes()
 
-    def see_stage_transitions(
-        self, stage: Stage
-    ) -> List[Tuple[StageTransition, Stage]]:
+    def see_stage_transitions(self, stage: Stage) -> List[Tuple[StageTransition, Stage]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -1097,10 +1031,7 @@ class Curriculum(AindBehaviorModel):
         in the desired priority from left -> right.
         """
 
-        stage_transitions = [
-            (StageTransition.normalize_rule_or_callable(t), s)
-            for (t, s) in stage_transitions
-        ]
+        stage_transitions = [(StageTransition.normalize_rule_or_callable(t), s) for (t, s) in stage_transitions]
 
         if len(stage_transitions) != len(self.see_stage_transitions(stage)):
             raise ValueError(
@@ -1116,15 +1047,8 @@ class Curriculum(AindBehaviorModel):
         Validate curriculum for export/serialization.
         """
 
-        if not all(
-            [
-                self._is_task_type_known(stage.task)
-                for stage in self.see_stages()
-            ]
-        ):
-            raise ValueError(
-                "Not all tasks in the curriculum are known. Please add stages with known tasks."
-            )
+        if not all([self._is_task_type_known(stage.task) for stage in self.see_stages()]):
+            raise ValueError("Not all tasks in the curriculum are known. Please add stages with known tasks.")
 
         if len(self.see_stages()) == 0:
             raise ValueError("Curriculum is empty! Please add stages.")

@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Dict
 
 import example_project as ex
-
 from aind_behavior_curriculum import (
     Curriculum,
     Metrics,
@@ -15,7 +14,7 @@ from aind_behavior_curriculum import (
 )
 
 # Proxy Database
-# NOTE: Trainer's concerte implementation
+# NOTE: Trainer's concrete implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
 MICE_SUBJECT_HISTORY: dict[int, list[TrainerState]] = defaultdict(list)
@@ -36,9 +35,7 @@ class ExampleTrainer(TrainerServer):
 
         self.subject_history: Dict[int, TrainerState] = defaultdict(list)
 
-    def load_data(
-        self, subject_id: int
-    ) -> tuple[Curriculum, TrainerState, Metrics]:
+    def load_data(self, subject_id: int) -> tuple[Curriculum, TrainerState, Metrics]:
         """
         Read from proxy database.
         """

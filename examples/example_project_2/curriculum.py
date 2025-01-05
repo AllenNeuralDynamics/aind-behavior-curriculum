@@ -33,9 +33,7 @@ class DummyParameters(TaskParameters):
 
 class DummyTask(Task):
     name: Literal["DummyTask"] = "DummyTask"
-    task_parameters: DummyParameters = Field(
-        ..., description="Fill w/ Parameter Defaults", validate_default=True
-    )
+    task_parameters: DummyParameters = Field(..., description="Fill w/ Parameter Defaults", validate_default=True)
 
 
 # --- METRICS ---
@@ -52,9 +50,7 @@ class ExampleMetrics2(Metrics):
 # --- POLICIES ---
 # Policies 1-3 do the same thing
 # Policies 4-6 do the same thing
-def policy_1_rule(
-    metrics: ExampleMetrics2, task_params: DummyParameters
-) -> DummyParameters:
+def policy_1_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_1 += 5
     return task_params
@@ -63,9 +59,7 @@ def policy_1_rule(
 policy_1 = Policy(policy_1_rule)
 
 
-def policy_2_rule(
-    metrics: ExampleMetrics2, task_params: DummyParameters
-) -> DummyParameters:
+def policy_2_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_1 += 5
     return task_params
@@ -74,9 +68,7 @@ def policy_2_rule(
 policy_2 = Policy(policy_2_rule)
 
 
-def policy_3_rule(
-    metrics: ExampleMetrics2, task_params: DummyParameters
-) -> DummyParameters:
+def policy_3_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_1 += 5
     return task_params
@@ -85,9 +77,7 @@ def policy_3_rule(
 policy_3 = Policy(policy_3_rule)
 
 
-def policy_4_rule(
-    metrics: ExampleMetrics2, task_params: DummyParameters
-) -> DummyParameters:
+def policy_4_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_2 += 5
     return task_params
@@ -96,9 +86,7 @@ def policy_4_rule(
 policy_4 = Policy(policy_4_rule)
 
 
-def policy_5_rule(
-    metrics: ExampleMetrics2, task_params: DummyParameters
-) -> DummyParameters:
+def policy_5_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_2 += 5
     return task_params
@@ -107,9 +95,7 @@ def policy_5_rule(
 policy_5 = Policy(policy_5_rule)
 
 
-def policy_6_rule(
-    metrics: ExampleMetrics2, task_params: DummyParameters
-) -> DummyParameters:
+def policy_6_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
     task_params = task_params.model_copy(deep=True)
     task_params.field_2 += 5
     return task_params
@@ -118,7 +104,7 @@ def policy_6_rule(
 policy_6 = Policy(policy_6_rule)
 
 
-# --- POLICY/STAGE TRANSTITIONS ---
+# --- POLICY/STAGE TRANSITIONS ---
 def m1_rule(metrics: ExampleMetrics2) -> bool:
     return metrics.m1 > 0
 
@@ -209,26 +195,14 @@ def construct_stage_triangle_curriculum() -> MyCurriculum:
 
     test_curr = MyCurriculum(name="My Curriculum")
     # Counter-clockwise, higher priority
-    test_curr.add_stage_transition(
-        test_stage_1, test_stage_2, m1_stage_transition
-    )
-    test_curr.add_stage_transition(
-        test_stage_2, test_stage_3, m1_stage_transition
-    )
-    test_curr.add_stage_transition(
-        test_stage_3, test_stage_1, m1_stage_transition
-    )
+    test_curr.add_stage_transition(test_stage_1, test_stage_2, m1_stage_transition)
+    test_curr.add_stage_transition(test_stage_2, test_stage_3, m1_stage_transition)
+    test_curr.add_stage_transition(test_stage_3, test_stage_1, m1_stage_transition)
 
     # Clockwise
-    test_curr.add_stage_transition(
-        test_stage_1, test_stage_3, m2_stage_transition
-    )
-    test_curr.add_stage_transition(
-        test_stage_3, test_stage_2, m2_stage_transition
-    )
-    test_curr.add_stage_transition(
-        test_stage_2, test_stage_1, m2_stage_transition
-    )
+    test_curr.add_stage_transition(test_stage_1, test_stage_3, m2_stage_transition)
+    test_curr.add_stage_transition(test_stage_3, test_stage_2, m2_stage_transition)
+    test_curr.add_stage_transition(test_stage_2, test_stage_1, m2_stage_transition)
 
     return test_curr
 
