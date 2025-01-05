@@ -7,16 +7,16 @@ import json
 from pydantic import Field
 
 from aind_behavior_curriculum import (
-    Graduated,
     GRADUATED,
+    Graduated,
     Metrics,
     Policy,
     PolicyTransition,
     Stage,
     StageTransition,
     TaskParameters,
-    create_task,
     create_curriculum,
+    create_task,
 )
 from aind_behavior_curriculum.curriculum_utils import (
     export_diagram,
