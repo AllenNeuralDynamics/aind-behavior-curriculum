@@ -34,11 +34,13 @@ With this structure alone, a user can define a basic curriculum with the flexibi
 
 $~$
 
-This library also supports **``Curriculum``** **hypergraphs**. 
+Stages are intended to represent 'checkpoint learning objectives', which wrap independent sets of parameters,
+for example, Stage1 = {P1, P2, P3} -> Stage2 = {P4, P5, P6}.
 
-Conceptually, a user may want to change the rig parameters associated with a stage, but this set of rig parameters would be unnatural to classify as a new training stage altogether.
-In this situation, the user may define a graph of **``Policies``** and **``Policy Transitions``** within a **``Stage``**.
-A **``Policy``**, changes the task parameters of a **``Stage``**, as described above. A **``Policy Transition``** acts just like a **``Stage Transition``**, and defines transitions between **``Policies``** on a trigger condition. Like **``Stage Transitions``**, **``Policy Transitions``**  can connect any two arbitrary **``Policies``** and are ordered by priority set by the user.
+If a curriculum demands changing the same set of parameters,
+for example, Stage1 = {P1, P2, P3} -> Stage1' = {P1', P2', P3}, it is a good idea to use PolicyGraphs.
+
+A PolicyGraph is a **parallel programming interface** for changing **``Stage``** parameters.
 
 
 | ![Full Curriculum](./examples/example_project/assets/curriculum.svg "Title") | 
