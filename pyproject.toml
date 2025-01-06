@@ -27,15 +27,16 @@ dependencies = [
 [project.optional-dependencies]
 
 linters = [
-    'ruff',
-    'codespell',
-    'coverage',
-    'interrogate'
+    "ruff",
+    "codespell",
+    "coverage",
+    "interrogate"
 ]
 docs = [
-    'Sphinx',
-    'furo',
-    'autodoc_pydantic'
+    "Sphinx",
+    "furo",
+    "sphinx-jinja",
+    "sphinx_mdinclude",
 ]
 
 
@@ -60,7 +61,7 @@ mccabe = { max-complexity = 14 }
 pydocstyle = { convention = "google" }
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,uv.lock,./docs,./build,./htmlcov'
+skip = ".git,*.pdf,*.svg,uv.lock,./docs,./build,./htmlcov"
 
 ignore-words-list = "nd, assertIn"
 
