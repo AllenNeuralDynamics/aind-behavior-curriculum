@@ -10,14 +10,15 @@ class AindBehaviorModel(BaseModel):
     Defines Pydantic configurations applied to all behavior models.
     BaseModel: Validate arguments on initialization.
     Configurations:
-        - extra='forbid':
-            Do not allow a model to be initialized with undocumented parameters.
-        - validate_assignment=True:
-            Revalidate fields against schema on any change to model instance.
-        - validate_default=True:
-            Validate default fields on subclasses.
-        - strict=True:
-            Enforce strict typing.
+
+    - **extra**: 'forbid'
+        Do not allow a model to be initialized with undocumented parameters.
+    - **validate_assignment**: True
+        Revalidate fields against schema on any change to model instance.
+    - **validate_default**: True
+        Validate default fields on subclasses.
+    - **strict**: True
+        Enforce strict typing.
     """
 
     model_config = ConfigDict(
