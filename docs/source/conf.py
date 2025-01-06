@@ -32,17 +32,17 @@ extensions = [
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
-    "sphinxcontrib.autodoc_pydantic",
-    # "autoapi.extension",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
     "sphinx.ext.linkcode",
+    "sphinx_mdinclude",
 ]
 
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+autosummary_generate = True
 
 # autoapi_dirs = ['../../src']
 
