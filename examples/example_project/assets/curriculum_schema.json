@@ -1,0 +1,353 @@
+{
+    "$defs": {
+        "Graduated": {
+            "additionalProperties": false,
+            "description": "Utility Final Task.",
+            "properties": {
+                "name": {
+                    "const": "Graduated",
+                    "default": "Graduated",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "description": "Description of the task.",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "$ref": "#/$defs/TaskParameters",
+                    "default": {},
+                    "description": "Fill w/ Parameter Defaults"
+                },
+                "version": {
+                    "anyOf": [
+                        {
+                            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "task schema version",
+                    "title": "Version"
+                },
+                "stage_name": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "Optional stage name the `Task` object instance represents.",
+                    "title": "Stage Name"
+                }
+            },
+            "title": "Graduated",
+            "type": "object"
+        },
+        "PolicyGraph": {
+            "additionalProperties": false,
+            "description": "Graph for Stage.",
+            "properties": {
+                "nodes": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "default": {},
+                    "title": "Nodes",
+                    "type": "object"
+                },
+                "graph": {
+                    "additionalProperties": {
+                        "items": {
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "prefixItems": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ],
+                            "type": "array"
+                        },
+                        "type": "array"
+                    },
+                    "default": {},
+                    "title": "Graph",
+                    "type": "object"
+                }
+            },
+            "title": "PolicyGraph",
+            "type": "object"
+        },
+        "StageGraph_known_task_types_": {
+            "additionalProperties": false,
+            "properties": {
+                "nodes": {
+                    "additionalProperties": {
+                        "$ref": "#/$defs/Stage_known_task_types_"
+                    },
+                    "default": {},
+                    "title": "Nodes",
+                    "type": "object"
+                },
+                "graph": {
+                    "additionalProperties": {
+                        "items": {
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "prefixItems": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ],
+                            "type": "array"
+                        },
+                        "type": "array"
+                    },
+                    "default": {},
+                    "title": "Graph",
+                    "type": "object"
+                }
+            },
+            "title": "StageGraph[known_task_types]",
+            "type": "object"
+        },
+        "Stage_known_task_types_": {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "description": "Stage name.",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "task": {
+                    "$ref": "#/$defs/known_task_types",
+                    "description": "Task in which this stage is based off of."
+                },
+                "graph": {
+                    "$ref": "#/$defs/PolicyGraph",
+                    "description": "Policy Graph."
+                },
+                "start_policies": {
+                    "description": "List of starting policies.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "Start Policies",
+                    "type": "array"
+                },
+                "metrics_provider": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
+                    "title": "Metrics Provider"
+                }
+            },
+            "required": [
+                "name",
+                "task"
+            ],
+            "title": "Stage[known_task_types]",
+            "type": "object"
+        },
+        "TaskAParameters": {
+            "additionalProperties": true,
+            "properties": {
+                "field_a": {
+                    "default": 0,
+                    "title": "Field A",
+                    "type": "integer"
+                }
+            },
+            "title": "TaskAParameters",
+            "type": "object"
+        },
+        "TaskBParameters": {
+            "additionalProperties": true,
+            "properties": {
+                "field_b": {
+                    "default": 0.0,
+                    "title": "Field B",
+                    "type": "number"
+                }
+            },
+            "title": "TaskBParameters",
+            "type": "object"
+        },
+        "TaskParameters": {
+            "additionalProperties": true,
+            "description": "Set of parameters associated with a subject task.\nSubclass with Task Parameters.",
+            "properties": {},
+            "title": "TaskParameters",
+            "type": "object"
+        },
+        "Task_A": {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "const": "Task A",
+                    "default": "Task A",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "$ref": "#/$defs/TaskAParameters",
+                    "description": ""
+                },
+                "version": {
+                    "anyOf": [
+                        {
+                            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "title": "Version"
+                },
+                "stage_name": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "Optional stage name the `Task` object instance represents.",
+                    "title": "Stage Name"
+                }
+            },
+            "required": [
+                "task_parameters"
+            ],
+            "title": "Task A",
+            "type": "object"
+        },
+        "Task_B": {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "const": "Task B",
+                    "default": "Task B",
+                    "title": "Name",
+                    "type": "string"
+                },
+                "description": {
+                    "default": "",
+                    "title": "Description",
+                    "type": "string"
+                },
+                "task_parameters": {
+                    "$ref": "#/$defs/TaskBParameters",
+                    "description": ""
+                },
+                "version": {
+                    "anyOf": [
+                        {
+                            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "title": "Version"
+                },
+                "stage_name": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "Optional stage name the `Task` object instance represents.",
+                    "title": "Stage Name"
+                }
+            },
+            "required": [
+                "task_parameters"
+            ],
+            "title": "Task B",
+            "type": "object"
+        },
+        "known_task_types": {
+            "discriminator": {
+                "mapping": {
+                    "Graduated": "#/$defs/Graduated",
+                    "Task A": "#/$defs/Task_A",
+                    "Task B": "#/$defs/Task_B"
+                },
+                "propertyName": "name"
+            },
+            "oneOf": [
+                {
+                    "$ref": "#/$defs/Task_A"
+                },
+                {
+                    "$ref": "#/$defs/Task_B"
+                },
+                {
+                    "$ref": "#/$defs/Graduated"
+                }
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "properties": {
+        "pkg_location": {
+            "description": "Location of the python package                                 that instantiated the Curriculum.",
+            "title": "Pkg Location",
+            "type": "string"
+        },
+        "name": {
+            "const": "My Curriculum",
+            "default": "My Curriculum",
+            "title": "Name",
+            "type": "string"
+        },
+        "version": {
+            "const": "0.1.0",
+            "default": "0.1.0",
+            "title": "Version",
+            "type": "string"
+        },
+        "graph": {
+            "$ref": "#/$defs/StageGraph_known_task_types_"
+        }
+    },
+    "title": "My Curriculum",
+    "type": "object"
+}

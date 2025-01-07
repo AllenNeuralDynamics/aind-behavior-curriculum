@@ -13,7 +13,7 @@ from pathlib import Path
 from aind_behavior_curriculum import __version__ as package_version
 
 INSTITUTE_NAME = "Allen Institute for Neural Dynamics"
-SOURCE_ROOT = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/tree/main/src/"  # noqa: E501
+SOURCE_ROOT = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/tree/main/src/"
 
 current_year = date.today().year
 
@@ -32,17 +32,17 @@ extensions = [
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
-    "sphinxcontrib.autodoc_pydantic",
-    # "autoapi.extension",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
     "sphinx.ext.linkcode",
+    "sphinx_mdinclude",
 ]
 
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+autosummary_generate = True
 
 # autoapi_dirs = ['../../src']
 

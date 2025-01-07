@@ -1,0 +1,68 @@
+{
+   "pkg_location": "aind_behavior_curriculum.curriculum.ModelMetaclass",
+   "name": "My Curriculum",
+   "version": "0.0.0",
+   "graph": {
+      "nodes": {
+         "0": {
+            "name": "Track Stage",
+            "task": {
+               "name": "DummyTask",
+               "description": "",
+               "task_parameters": {
+                  "field_1": 0,
+                  "field_2": 0
+               },
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {
+                  "0": "__main__.policy_1_rule",
+                  "1": "__main__.policy_2_rule",
+                  "2": "__main__.policy_3_rule",
+                  "3": "__main__.policy_4_rule",
+                  "4": "__main__.policy_5_rule",
+                  "5": "__main__.policy_6_rule"
+               },
+               "graph": {
+                  "0": [
+                     [
+                        "__main__.m1_rule",
+                        1
+                     ]
+                  ],
+                  "1": [
+                     [
+                        "__main__.m1_rule",
+                        2
+                     ]
+                  ],
+                  "2": [],
+                  "3": [
+                     [
+                        "__main__.m2_rule",
+                        4
+                     ]
+                  ],
+                  "4": [
+                     [
+                        "__main__.m2_rule",
+                        5
+                     ]
+                  ],
+                  "5": []
+               }
+            },
+            "start_policies": [
+               "__main__.policy_1_rule",
+               "__main__.policy_4_rule"
+            ],
+            "metrics_provider": null
+         }
+      },
+      "graph": {
+         "0": []
+      }
+   }
+}

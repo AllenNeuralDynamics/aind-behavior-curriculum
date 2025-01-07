@@ -3,14 +3,18 @@ Example of Trainer creation
 """
 
 from collections import defaultdict
-from typing import Callable, Dict
+from typing import Dict
 
 import example_project_2 as ex2
-
-from aind_behavior_curriculum import Curriculum, Metrics, Trainer, TrainerState
+from aind_behavior_curriculum import (
+    Curriculum,
+    Metrics,
+    TrainerServer,
+    TrainerState,
+)
 
 # Proxy Database
-# NOTE: Trainer's concerte implementation
+# NOTE: Trainer's concrete implementation
 # assumes a higher-level process defines mouse ID's ahead of time
 MICE_CURRICULUMS: dict[int, Curriculum] = {}
 MICE_SUBJECT_HISTORY: dict[int, list[TrainerState]] = defaultdict(list)
@@ -21,7 +25,7 @@ MICE_METRICS: dict[int, Metrics] = {
 }
 
 
-class ExampleTrainer(Trainer):
+class ExampleTrainer(TrainerServer):
     def __init__(self) -> None:
         """
         Custom init w/ super.__init__()
@@ -31,9 +35,7 @@ class ExampleTrainer(Trainer):
 
         self.subject_history: Dict[int, TrainerState] = defaultdict(list)
 
-    def load_data(
-        self, subject_id: int
-    ) -> tuple[Curriculum, TrainerState, Metrics]:
+    def load_data(self, subject_id: int) -> tuple[Curriculum, TrainerState, Metrics]:
         """
         Read from proxy database.
         """

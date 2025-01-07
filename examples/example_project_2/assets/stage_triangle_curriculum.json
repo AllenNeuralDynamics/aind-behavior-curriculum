@@ -1,0 +1,98 @@
+{
+   "pkg_location": "aind_behavior_curriculum.curriculum.ModelMetaclass",
+   "name": "My Curriculum",
+   "version": "0.0.0",
+   "graph": {
+      "nodes": {
+         "0": {
+            "name": "Stage 1",
+            "task": {
+               "name": "DummyTask",
+               "description": "",
+               "task_parameters": {
+                  "field_1": 0,
+                  "field_2": 0
+               },
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {},
+               "graph": {}
+            },
+            "start_policies": [],
+            "metrics_provider": null
+         },
+         "1": {
+            "name": "Stage 2",
+            "task": {
+               "name": "DummyTask",
+               "description": "",
+               "task_parameters": {
+                  "field_1": 0,
+                  "field_2": 0
+               },
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {},
+               "graph": {}
+            },
+            "start_policies": [],
+            "metrics_provider": null
+         },
+         "2": {
+            "name": "Stage 3",
+            "task": {
+               "name": "DummyTask",
+               "description": "",
+               "task_parameters": {
+                  "field_1": 0,
+                  "field_2": 0
+               },
+               "version": null,
+               "stage_name": null
+            },
+            "graph": {
+               "nodes": {},
+               "graph": {}
+            },
+            "start_policies": [],
+            "metrics_provider": null
+         }
+      },
+      "graph": {
+         "0": [
+            [
+               "__main__.m1_rule",
+               1
+            ],
+            [
+               "__main__.m2_rule",
+               2
+            ]
+         ],
+         "1": [
+            [
+               "__main__.m1_rule",
+               2
+            ],
+            [
+               "__main__.m2_rule",
+               0
+            ]
+         ],
+         "2": [
+            [
+               "__main__.m1_rule",
+               0
+            ],
+            [
+               "__main__.m2_rule",
+               1
+            ]
+         ]
+      }
+   }
+}
