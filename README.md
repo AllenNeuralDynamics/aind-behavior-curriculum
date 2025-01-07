@@ -1,7 +1,7 @@
 # aind-behavior-curriculum
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-![CI](https://github.com/AllenNeuralDynamics/AllenNeuralDynamics/aind-behavior-curriculum/actions/workflows/test_and_lint.yml/badge.svg)
+![CI](https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/actions/workflows/test_and_lint.yml/badge.svg)
 [![PyPI - Version](https://img.shields.io/pypi/v/aind-behavior-curriculum)](https://pypi.org/project/aind-behavior-curriculum/)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
