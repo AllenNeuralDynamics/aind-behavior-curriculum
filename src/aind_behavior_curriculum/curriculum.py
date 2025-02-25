@@ -402,7 +402,6 @@ class _NonDeserializableCallable(Generic[_P, _R]):
         """Shim method to return the callable representation."""
         return self._callable_repr
 
-    @property
     def __hash__(self):
         """Shim method to return the hash of the callable."""
         return hash(self._callable_repr)
