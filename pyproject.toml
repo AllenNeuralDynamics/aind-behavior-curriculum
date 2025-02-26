@@ -32,6 +32,11 @@ linters = [
     "coverage",
     "interrogate"
 ]
+
+dev =[
+    "aind_behavior_curriculum[linters]"
+]
+
 docs = [
     "Sphinx",
     "furo",
