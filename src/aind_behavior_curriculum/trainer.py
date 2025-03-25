@@ -410,9 +410,7 @@ class TrainerServer:
 
         for s_policy in start_policies:
             if s_policy not in start_stage.see_policies():
-                raise ValueError(
-                    f"Provided start_policy {s_policy} not in " f"provided start_stage {start_stage.name}."
-                )
+                raise ValueError(f"Provided start_policy {s_policy} not in provided start_stage {start_stage.name}.")
 
         _start_policies = list(start_policies)
 
@@ -454,7 +452,7 @@ class TrainerServer:
             if trainer_state.stage is not None:
                 updated_trainer_state = trainer.evaluate(trainer_state, curr_metrics)
                 if updated_trainer_state.stage is None:
-                    raise ValueError("Trainer.evaluate() returned None stage. " "This should not happen.")
+                    raise ValueError("Trainer.evaluate() returned None stage. This should not happen.")
                 updated_parameters = (
                     updated_trainer_state.stage.get_task_parameters()  # pylint: disable=no-member
                 )
