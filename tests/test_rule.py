@@ -125,3 +125,6 @@ class RuleTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             _ = self.container(this_new_rule=not_a_rule_update)
 
+
+if __name__ == "__main__":
+    unittest.main()
