@@ -110,7 +110,7 @@ def _make_stage_dot_script(s: Stage) -> str:
     for node_id, node in s.graph.nodes.items():
         # Add color to start policies
         if node in s.start_policies:
-            node_str = f'{node_id} [label="{node.name}",' 'fillcolor="#FFEA00"]'
+            node_str = f'{node_id} [label="{node.name}", fillcolor="#FFEA00"]'
         else:
             node_str = f'{node_id} [label="{node.name}"]'
         nodes.append(node_str)
@@ -122,7 +122,7 @@ def _make_stage_dot_script(s: Stage) -> str:
             i = i + 1
 
             # Edges must be StageTransition or PolicyTransition
-            edge_str = f'{start_id} -> {dest_id} [label="({i}) ' f'{edge.name}", minlen=2]'
+            edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.name}", minlen=2]'
             edges.append(edge_str)
 
     stage_dot_script = template.render(
@@ -169,7 +169,7 @@ def _make_curriculum_dot_script(c: Curriculum) -> str:
             i = i + 1
 
             # Edges must be StageTransition or PolicyTransition
-            edge_str = f'{start_id} -> {dest_id} [label="({i}) ' f'{edge.name}", minlen=2]'
+            edge_str = f'{start_id} -> {dest_id} [label="({i}) {edge.name}", minlen=2]'
             edges.append(edge_str)
 
     curriculum_dot_script = template.render(curr_name='"' + c.name + '"', nodes=nodes, edges=edges)

@@ -110,7 +110,7 @@ class RuleTests(unittest.TestCase):
         self.assertTrue(is_non_deserializable_callable(deser.this_new_rule.callable))
         self.assertTrue(is_non_deserializable_callable(deser_json.this_new_rule.callable))
 
-    def rule_from_callable(self):
+    def test_rule_from_callable(self):
         container = self.container(this_new_rule=rule_update)
         dump = container.model_dump()
         json_dump = container.model_dump_json()
@@ -121,6 +121,10 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(container, deser)
         self.assertEqual(container, deser_json)
 
-    def rule_from_not_callable(self):
+    def test_rule_from_not_callable(self):
         with self.assertRaises(TypeError):
             _ = self.container(this_new_rule=not_a_rule_update)
+
+
+if __name__ == "__main__":
+    unittest.main()
