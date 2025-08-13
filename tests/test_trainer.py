@@ -91,10 +91,10 @@ class TrainerTests(unittest.TestCase):
         stageA.set_start_policies(ex.INIT_STAGE)
 
         stageAA = stageA.model_copy(deep=True)
-        stageAA.set_task_parameters(ex.stageA_policyA_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAA.set_task(ex.stageA_policyA_rule(ex.ExampleMetrics(), taskA.model_copy()))
 
         stageAAA = stageA.model_copy(deep=True)
-        stageAAA.set_task_parameters(ex.stageA_policyB_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAAA.set_task(ex.stageA_policyB_rule(ex.ExampleMetrics(), taskA.model_copy()))
 
         curr = ex.MyCurriculum(name="My Curriculum")
         curr.add_stage(stageA)
@@ -155,6 +155,9 @@ class TrainerTests(unittest.TestCase):
         """
         curr = ex.construct_curriculum()
 
+        taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
+        taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
+
         # See stages is ordered arbitrarily
         # StageA and StageB picked out from observation
         stageA = curr.see_stages()[0]
@@ -163,14 +166,14 @@ class TrainerTests(unittest.TestCase):
         stageB.set_start_policies([ex.INIT_STAGE])
 
         stageAA = stageA.model_copy(deep=True)
-        stageAA.set_task_parameters(ex.stageA_policyA_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAA.set_task(ex.stageA_policyA_rule(ex.ExampleMetrics(), taskA.model_copy()))
         stageAAA = stageA.model_copy(deep=True)
-        stageAAA.set_task_parameters(ex.stageA_policyB_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAAA.set_task(ex.stageA_policyB_rule(ex.ExampleMetrics(), taskA.model_copy()))
         stageBB = stageB.model_copy(deep=True)
 
-        stageBB.set_task_parameters(ex.stageB_policyA_rule(ex.ExampleMetrics(), ex.TaskBParameters()))
+        stageBB.set_task(ex.stageB_policyA_rule(ex.ExampleMetrics(), taskB.model_copy()))
         stageBBB = stageB.model_copy(deep=True)
-        stageBBB.set_task_parameters(ex.stageB_policyB_rule(ex.ExampleMetrics(), ex.TaskBParameters()))
+        stageBBB.set_task(ex.stageB_policyB_rule(ex.ExampleMetrics(), taskB.model_copy()))
 
         # Associate mice with curriculum
         tr = ex.ExampleTrainer()
@@ -241,15 +244,16 @@ class TrainerTests(unittest.TestCase):
         # StageA and StageB picked out from observation
         stageA = curr.see_stages()[0]
         stageB = curr.see_stages()[2]
-
+        taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
+        taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
         stageAA = stageA.model_copy(deep=True)
-        stageAA.set_task_parameters(ex.stageA_policyA_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAA.set_task(ex.stageA_policyA_rule(ex.ExampleMetrics(), taskA.model_copy()))
         stageAAA = stageA.model_copy(deep=True)
-        stageAAA.set_task_parameters(ex.stageA_policyB_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAAA.set_task(ex.stageA_policyB_rule(ex.ExampleMetrics(), taskA.model_copy()))
         stageBB = stageB.model_copy(deep=True)
-        stageBB.set_task_parameters(ex.stageB_policyA_rule(ex.ExampleMetrics(), ex.TaskBParameters()))
+        stageBB.set_task(ex.stageB_policyA_rule(ex.ExampleMetrics(), taskB.model_copy()))
         stageBBB = stageB.model_copy(deep=True)
-        stageBBB.set_task_parameters(ex.stageB_policyB_rule(ex.ExampleMetrics(), ex.TaskBParameters()))
+        stageBBB.set_task(ex.stageB_policyB_rule(ex.ExampleMetrics(), taskB.model_copy()))
 
         tr = ex.ExampleTrainer()
         tr.register_subject(0, curr, stageA, ex.INIT_STAGE)
@@ -340,9 +344,9 @@ class TrainerTests(unittest.TestCase):
         stageA.set_start_policies(ex.INIT_STAGE)
 
         stageAA = stageA.model_copy(deep=True)
-        stageAA.set_task_parameters(ex.stageA_policyA_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAA.set_task(ex.stageA_policyA_rule(ex.ExampleMetrics(), taskA.model_copy()))
         stageAAA = stageA.model_copy(deep=True)
-        stageAAA.set_task_parameters(ex.stageA_policyB_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAAA.set_task(ex.stageA_policyB_rule(ex.ExampleMetrics(), taskA.model_copy()))
 
         curr = ex.MyCurriculum(name="My Curriculum")
         curr.add_stage(stageA)
@@ -605,7 +609,7 @@ class TrainerTests(unittest.TestCase):
         stageB = curr.see_stages()[2]
 
         stageAA = stageA.model_copy(deep=True)
-        stageAA.set_task_parameters(ex.stageA_policyA_rule(ex.ExampleMetrics(), ex.TaskAParameters()))
+        stageAA.set_task(ex.stageA_policyA_rule(ex.ExampleMetrics(), ex.TaskA(task_parameters=ex.TaskAParameters())))
 
         tr = ex.ExampleTrainer()
         tr.register_subject(0, curr, stageA, ex.INIT_STAGE)

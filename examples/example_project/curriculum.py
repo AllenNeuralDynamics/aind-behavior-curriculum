@@ -14,6 +14,7 @@ from aind_behavior_curriculum import (
     PolicyTransition,
     Stage,
     StageTransition,
+    Task,
     TaskParameters,
     create_curriculum,
     create_task,
@@ -24,11 +25,11 @@ from aind_behavior_curriculum.curriculum_utils import (
 )
 
 
-def init_stage_rule(metrics: Metrics, task_params: TaskParameters) -> TaskParameters:
+def init_stage_rule(metrics: Metrics, task: Task) -> Task:
     """
     Trivially pass the default
     """
-    return task_params
+    return task
 
 
 INIT_STAGE = Policy(init_stage_rule)
@@ -62,37 +63,37 @@ class ExampleMetrics(Metrics):
 
 
 # --- POLICIES ---
-def stageA_policyA_rule(metrics: ExampleMetrics, task_params: TaskAParameters) -> TaskAParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_a = 8
-    return task_params
+def stageA_policyA_rule(metrics: ExampleMetrics, task: TaskA) -> TaskA:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_a = 8
+    return task
 
 
 stageA_policyA = Policy(stageA_policyA_rule)
 
 
-def stageA_policyB_rule(metrics: ExampleMetrics, task_params: TaskAParameters) -> TaskAParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_a = 16
-    return task_params
+def stageA_policyB_rule(metrics: ExampleMetrics, task: TaskA) -> TaskA:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_a = 16
+    return task
 
 
 stageA_policyB = Policy(stageA_policyB_rule)
 
 
-def stageB_policyA_rule(metrics: ExampleMetrics, task_params: TaskBParameters) -> TaskBParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_b = 8
-    return task_params
+def stageB_policyA_rule(metrics: ExampleMetrics, task: TaskB) -> TaskB:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_b = 8
+    return task
 
 
 stageB_policyA = Policy(stageB_policyA_rule)
 
 
-def stageB_policyB_rule(metrics: ExampleMetrics, task_params: TaskBParameters) -> TaskBParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_b = 16
-    return task_params
+def stageB_policyB_rule(metrics: ExampleMetrics, task: TaskB) -> TaskB:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_b = 16
+    return task
 
 
 stageB_policyB = Policy(stageB_policyB_rule)

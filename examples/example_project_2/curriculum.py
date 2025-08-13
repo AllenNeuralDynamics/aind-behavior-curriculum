@@ -50,55 +50,55 @@ class ExampleMetrics2(Metrics):
 # --- POLICIES ---
 # Policies 1-3 do the same thing
 # Policies 4-6 do the same thing
-def policy_1_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_1 += 5
-    return task_params
+def policy_1_rule(metrics: ExampleMetrics2, task: DummyTask) -> DummyTask:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_1 += 5
+    return task
 
 
 policy_1 = Policy(policy_1_rule)
 
 
-def policy_2_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_1 += 5
-    return task_params
+def policy_2_rule(metrics: ExampleMetrics2, task: DummyTask) -> DummyTask:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_1 += 5
+    return task
 
 
 policy_2 = Policy(policy_2_rule)
 
 
-def policy_3_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_1 += 5
-    return task_params
+def policy_3_rule(metrics: ExampleMetrics2, task: DummyTask) -> DummyTask:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_1 += 5
+    return task
 
 
 policy_3 = Policy(policy_3_rule)
 
 
-def policy_4_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_2 += 5
-    return task_params
+def policy_4_rule(metrics: ExampleMetrics2, task: DummyTask) -> DummyTask:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_2 += 5
+    return task
 
 
 policy_4 = Policy(policy_4_rule)
 
 
-def policy_5_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_2 += 5
-    return task_params
+def policy_5_rule(metrics: ExampleMetrics2, task: DummyTask) -> DummyTask:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_2 += 5
+    return task
 
 
 policy_5 = Policy(policy_5_rule)
 
 
-def policy_6_rule(metrics: ExampleMetrics2, task_params: DummyParameters) -> DummyParameters:
-    task_params = task_params.model_copy(deep=True)
-    task_params.field_2 += 5
-    return task_params
+def policy_6_rule(metrics: ExampleMetrics2, task: DummyTask) -> DummyTask:
+    task = task.model_copy(deep=True)
+    task.task_parameters.field_2 += 5
+    return task
 
 
 policy_6 = Policy(policy_6_rule)
@@ -127,7 +127,7 @@ Tasks = make_task_discriminator(tasks=[DummyTask])
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())  # type: ignore
+    graph: StageGraph[Metrics, Tasks] = Field(default=StageGraph[Metrics, Tasks]())  # type: ignore
 
 
 def construct_track_curriculum() -> MyCurriculum:
