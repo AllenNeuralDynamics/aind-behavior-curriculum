@@ -1180,7 +1180,6 @@ def create_curriculum(
         )
 
 
-
 def make_task_discriminator(tasks: Iterable[Type[TTask]]) -> Type[TTask]:
     """
     Creates a discriminated union type for the given tasks.

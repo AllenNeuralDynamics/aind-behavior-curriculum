@@ -126,6 +126,16 @@ class Trainer(Generic[TCurriculum]):
         """
         return self._curriculum
 
+    @property
+    def trainer_state_model(self) -> Type[TrainerState[TCurriculum]]:
+        """
+        Property that returns a type-aware TrainerState class.
+
+        Returns:
+            Type[TrainerState]: type-aware TrainerState type.
+        """
+        return self._trainer_state_factory
+
     def create_trainer_state(
         self,
         *,
@@ -134,10 +144,10 @@ class Trainer(Generic[TCurriculum]):
         active_policies: Optional[Iterable[Policy]] = None,
     ) -> TrainerState[TCurriculum]:
         """
-        Property that returns a type-aware TrainerState class.
+        Creates a new instance of the type-aware TrainerState class.
 
         Returns:
-            Type[TrainerState]: type-aware TrainerState type.
+            TrainerState: A new instance of the type-aware TrainerState class.
         """
         return self._trainer_state_factory(
             curriculum=self.curriculum,
