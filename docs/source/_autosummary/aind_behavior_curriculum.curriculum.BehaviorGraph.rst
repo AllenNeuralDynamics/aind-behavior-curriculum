@@ -1,9 +1,9 @@
-aind\_behavior\_curriculum.curriculum.BehaviorGraph
+aind\_behavior\_curriculum.curriculum._BehaviorGraph
 ===================================================
 
 .. currentmodule:: aind_behavior_curriculum.curriculum
 
-.. autoclass:: BehaviorGraph
+.. autoclass:: _BehaviorGraph
    :members:
    :show-inheritance:
    :inherited-members:
@@ -16,37 +16,37 @@ aind\_behavior\_curriculum.curriculum.BehaviorGraph
 
    .. autosummary::
    
-      ~BehaviorGraph.__init__
-      ~BehaviorGraph.add_node
-      ~BehaviorGraph.add_transition
-      ~BehaviorGraph.construct
-      ~BehaviorGraph.copy
-      ~BehaviorGraph.dict
-      ~BehaviorGraph.from_orm
-      ~BehaviorGraph.json
-      ~BehaviorGraph.model_construct
-      ~BehaviorGraph.model_copy
-      ~BehaviorGraph.model_dump
-      ~BehaviorGraph.model_dump_json
-      ~BehaviorGraph.model_json_schema
-      ~BehaviorGraph.model_parametrized_name
-      ~BehaviorGraph.model_post_init
-      ~BehaviorGraph.model_rebuild
-      ~BehaviorGraph.model_validate
-      ~BehaviorGraph.model_validate_json
-      ~BehaviorGraph.model_validate_strings
-      ~BehaviorGraph.parse_file
-      ~BehaviorGraph.parse_obj
-      ~BehaviorGraph.parse_raw
-      ~BehaviorGraph.remove_node
-      ~BehaviorGraph.remove_node_transition
-      ~BehaviorGraph.schema
-      ~BehaviorGraph.schema_json
-      ~BehaviorGraph.see_node_transitions
-      ~BehaviorGraph.see_nodes
-      ~BehaviorGraph.set_transition_priority
-      ~BehaviorGraph.update_forward_refs
-      ~BehaviorGraph.validate
+      ~_BehaviorGraph.__init__
+      ~_BehaviorGraph.add_node
+      ~_BehaviorGraph.add_transition
+      ~_BehaviorGraph.construct
+      ~_BehaviorGraph.copy
+      ~_BehaviorGraph.dict
+      ~_BehaviorGraph.from_orm
+      ~_BehaviorGraph.json
+      ~_BehaviorGraph.model_construct
+      ~_BehaviorGraph.model_copy
+      ~_BehaviorGraph.model_dump
+      ~_BehaviorGraph.model_dump_json
+      ~_BehaviorGraph.model_json_schema
+      ~_BehaviorGraph.model_parametrized_name
+      ~_BehaviorGraph.model_post_init
+      ~_BehaviorGraph.model_rebuild
+      ~_BehaviorGraph.model_validate
+      ~_BehaviorGraph.model_validate_json
+      ~_BehaviorGraph.model_validate_strings
+      ~_BehaviorGraph.parse_file
+      ~_BehaviorGraph.parse_obj
+      ~_BehaviorGraph.parse_raw
+      ~_BehaviorGraph.remove_node
+      ~_BehaviorGraph.remove_node_transition
+      ~_BehaviorGraph.schema
+      ~_BehaviorGraph.schema_json
+      ~_BehaviorGraph.see_node_transitions
+      ~_BehaviorGraph.see_nodes
+      ~_BehaviorGraph.set_transition_priority
+      ~_BehaviorGraph.update_forward_refs
+      ~_BehaviorGraph.validate
    
    
 
@@ -56,12 +56,12 @@ aind\_behavior\_curriculum.curriculum.BehaviorGraph
 
    .. autosummary::
    
-      ~BehaviorGraph.model_computed_fields
-      ~BehaviorGraph.model_config
-      ~BehaviorGraph.model_extra
-      ~BehaviorGraph.model_fields
-      ~BehaviorGraph.model_fields_set
-      ~BehaviorGraph.nodes
-      ~BehaviorGraph.graph
+      ~_BehaviorGraph.model_computed_fields
+      ~_BehaviorGraph.model_config
+      ~_BehaviorGraph.model_extra
+      ~_BehaviorGraph.model_fields
+      ~_BehaviorGraph.model_fields_set
+      ~_BehaviorGraph.nodes
+      ~_BehaviorGraph.graph
    
    
