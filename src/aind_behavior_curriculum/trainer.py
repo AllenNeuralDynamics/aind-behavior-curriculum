@@ -4,22 +4,17 @@ Core Trainer primitive.
 
 from abc import abstractmethod
 from collections.abc import Iterable
+from functools import reduce
 from typing import Annotated, Generic, List, Optional, Self, Type, TypeVar
 
 from pydantic import Field, create_model
 
 from aind_behavior_curriculum.base import AindBehaviorModel
-from aind_behavior_curriculum.curriculum import (
-    Curriculum,
-    Metrics,
-    Policy,
-    Stage,
-    make_task_discriminator,
-)
-from aind_behavior_curriculum.task import TaskParameters
+from aind_behavior_curriculum.curriculum import Curriculum, Metrics, Policy, Stage, Task, make_task_discriminator
 
 TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
 TMetrics = TypeVar("TMetrics", bound=Metrics)
+TTask = TypeVar("TTask", bound=Task)
 
 
 class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
@@ -33,6 +28,9 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
         validate_default=True,
         description="The curriculum used by the trainer",
     )
+    # Note: This will deserialize to a base Stage object.
+    # Should users require the subclass, they are incentivized to use
+    # the Trainer.create_trainer_state property instead
     stage: Optional[Stage] = Field(
         ...,
         validate_default=True,
@@ -43,9 +41,6 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
         validate_default=True,
         description="Was the output suggestion generated as part of the curriculum?",
     )
-    # Note: This will deserialize to a base Stage object.
-    # Should users require the subclass, they are incentivized to use
-    # the Trainer.create_trainer_state property instead
     active_policies: Optional[List[Policy]] = Field(
         default=[],
         validate_default=True,
@@ -137,7 +132,7 @@ class Trainer(Generic[TCurriculum]):
         stage: Optional[Stage],
         is_on_curriculum: bool = True,
         active_policies: Optional[Iterable[Policy]] = None,
-    ) -> TrainerState:
+    ) -> TrainerState[TCurriculum]:
         """
         Property that returns a type-aware TrainerState class.
 
@@ -153,23 +148,22 @@ class Trainer(Generic[TCurriculum]):
 
     @staticmethod
     def _construct_trainer_state_type_from_curriculum(
-        curriculum: Curriculum,
-    ) -> Type[TrainerState]:
+        curriculum: TCurriculum,
+    ) -> Type[TrainerState[TCurriculum]]:
         """Constructs a task-type-aware TrainerState"""
         _union_type = make_task_discriminator(curriculum._known_tasks)
 
-        _props = {
-            "stage": Annotated[
-                Optional[Stage[_union_type]],
+        return create_model(
+            f"{curriculum.name}TrainerState",
+            __base__=TrainerState[type(curriculum)],
+            stage=Annotated[
+                Optional[Stage[Metrics, _union_type]],
                 Field(frozen=True, validate_default=True),
             ],
-        }
-
-        trainer = create_model(f"{curriculum.name}TrainerState", __base__=TrainerState[type(curriculum)], **_props)  # type: ignore
-        return trainer
+        )
 
     @staticmethod
-    def _evaluate_stage_transition(curriculum: Curriculum, current_stage: Stage, metrics: TMetrics) -> Optional[Stage]:
+    def _evaluate_stage_transition(curriculum: TCurriculum, current_stage: Stage, metrics: TMetrics) -> Optional[Stage]:
         """
         Evaluates whether a transition to a new stage is needed based on the given metrics.
 
@@ -195,10 +189,10 @@ class Trainer(Generic[TCurriculum]):
     @classmethod
     def _evaluate_policy_transitions(
         cls,
-        current_stage: Stage,
-        active_policies: Iterable[Policy],
+        current_stage: Stage[TMetrics, TTask],
+        active_policies: Iterable[Policy[TMetrics, TTask]],
         metrics: TMetrics,
-    ) -> List[Policy]:
+    ) -> List[Policy[TMetrics, TTask]]:
         """
         Evaluates policy transitions, for the given current stage and currently active policies, based on the provided metrics.
         Args:
@@ -209,7 +203,7 @@ class Trainer(Generic[TCurriculum]):
             List[Policy]: a list of unique policies that are active after the evaluation.
         """
         # Buffer data structures to store result of active policy transitions.
-        dest_policies: list[Policy] = []
+        dest_policies: list[Policy[TMetrics, TTask]] = []
 
         for active_policy in active_policies:
             policy_transitions = current_stage.see_policy_transitions(active_policy)
@@ -227,7 +221,7 @@ class Trainer(Generic[TCurriculum]):
 
         return cls._get_unique_policies(dest_policies)
 
-    def evaluate(self, trainer_state: TrainerState, metrics: TMetrics) -> TrainerState:
+    def evaluate(self, trainer_state: TrainerState[TCurriculum], metrics: Metrics) -> TrainerState[TCurriculum]:
         """
         Evaluates the current state of the trainer and updates the stage and policies based on the provided metrics.
         Args:
@@ -239,7 +233,7 @@ class Trainer(Generic[TCurriculum]):
             ValueError: If the current stage or active policies are not set in the trainer state.
         """
         current_stage = trainer_state.stage
-        active_policies: Optional[Iterable[Policy]] = trainer_state.active_policies
+        active_policies: Optional[Iterable[Policy[Metrics, Task]]] = trainer_state.active_policies
 
         if current_stage is None:
             raise ValueError("No current stage. This likely means subject is off-curriculum.")
@@ -256,10 +250,8 @@ class Trainer(Generic[TCurriculum]):
 
             active_policies = self._evaluate_policy_transitions(current_stage, active_policies, metrics)
             # 3) Bootstrap updated parameters with new policies
-            updated_task_parameters = self.get_net_parameter_update(
-                updated_stage.get_task_parameters(), active_policies, metrics
-            )
-            updated_stage.set_task_parameters(updated_task_parameters)
+            updated_task = self.get_net_parameter_update(updated_stage.get_task(), active_policies, metrics)
+            updated_stage.set_task(updated_task)
 
         # If we've transitioned stages, we keep to default task_parameters,
         # and reset active_policies to the start_policies of the new stage.
@@ -275,24 +267,23 @@ class Trainer(Generic[TCurriculum]):
 
     @staticmethod
     def get_net_parameter_update(
-        stage_parameters: TaskParameters,
-        stage_policies: Iterable[Policy],
-        curr_metrics: Metrics,
-    ) -> TaskParameters:
+        task: TTask,
+        stage_policies: Iterable[Policy[TMetrics, TTask]],
+        curr_metrics: TMetrics,
+    ) -> TTask:
         """
         Aggregates parameter update of input stage_policies
         given current stage_parameters and current metrics.
         """
 
-        updated_params = stage_parameters.model_copy(deep=True)
-        for p in stage_policies:
-            p = Policy.normalize_rule_or_callable(p)
-            updated_params = p.invoke(curr_metrics, updated_params)
-
-        return updated_params
+        return reduce(
+            lambda t, p: Policy.normalize_rule_or_callable(p).invoke(curr_metrics, t),
+            stage_policies,
+            task,
+        )
 
     @staticmethod
-    def _get_unique_policies(policies: List[Policy]) -> List[Policy]:
+    def _get_unique_policies(policies: List[Policy[TMetrics, TTask]]) -> List[Policy[TMetrics, TTask]]:
         """
         set(policies) is not hashable, although Policy
         only contains a function, which is hashable.
@@ -301,7 +292,7 @@ class Trainer(Generic[TCurriculum]):
         """
 
         filtered_funcs = list(set(p for p in policies))
-        output = [Policy(f) for f in filtered_funcs]
+        output = [Policy[TMetrics, TTask](f) for f in filtered_funcs]
 
         return output
 
@@ -355,9 +346,9 @@ class TrainerServer:
         self,
         s_id: int,
         curriculum: Curriculum,
-        stage: Optional[Stage],
-        updated_stage_parameters: Optional[TaskParameters],
-        stage_policies: Optional[Iterable[Policy]],
+        stage: Optional[Stage[TMetrics, TTask]],
+        updated_task: Optional[TTask],
+        stage_policies: Optional[Iterable[Policy[TMetrics, TTask]]],
     ) -> None:
         """
         Updates subject history, which involves many steps.
@@ -367,9 +358,8 @@ class TrainerServer:
         If any of {stage, updated_stage_parameters, stage_policies} are None,
         all of the elements are expected to be None.
         """
-        if not (stage is None or updated_stage_parameters is None or stage_policies is None):
-            stage = stage.model_copy(deep=True)
-            stage.set_task_parameters(updated_stage_parameters)
+        if not (stage is None or updated_task is None or stage_policies is None):
+            stage.set_task(updated_task)
 
         trainer = Trainer(curriculum)
         if stage is None:
@@ -386,9 +376,9 @@ class TrainerServer:
     def register_subject(
         self,
         subject_id: int,
-        curriculum: Curriculum,
-        start_stage: Stage,
-        start_policies: Optional[Policy | List[Policy]] = None,
+        curriculum: Curriculum[TTask],
+        start_stage: Stage[TMetrics, TTask],
+        start_policies: Optional[Policy[TMetrics, TTask] | List[Policy[TMetrics, TTask]]] = None,
     ) -> None:
         """
         Adds subject into the Trainer system.
@@ -414,8 +404,8 @@ class TrainerServer:
 
         _start_policies = list(start_policies)
 
-        initial_params = Trainer.get_net_parameter_update(
-            start_stage.get_task_parameters(),
+        initial_task = Trainer.get_net_parameter_update(
+            start_stage.get_task(),
             _start_policies,
             curr_metrics=Metrics(),  # Metrics is empty on registration.
         )
@@ -423,7 +413,7 @@ class TrainerServer:
             subject_id,
             curriculum,
             start_stage,
-            initial_params,
+            initial_task,
             _start_policies,
         )
 
@@ -453,22 +443,20 @@ class TrainerServer:
                 updated_trainer_state = trainer.evaluate(trainer_state, curr_metrics)
                 if updated_trainer_state.stage is None:
                     raise ValueError("Trainer.evaluate() returned None stage. This should not happen.")
-                updated_parameters = (
-                    updated_trainer_state.stage.get_task_parameters()  # pylint: disable=no-member
-                )
+                updated_task = updated_trainer_state.stage.get_task()
             else:
                 updated_trainer_state = trainer.create_trainer_state(
                     stage=None,
                     is_on_curriculum=False,
                     active_policies=trainer_state.active_policies,
                 )  # Not sure if this is correct, but a user may want to keep track of the policies that were active when the subject was off-curriculum.
-                updated_parameters = None
+                updated_task = None
 
             self._update_subject_trainer_state(
                 s_id,
                 curriculum,
                 updated_trainer_state.stage,
-                updated_parameters,
+                updated_task,
                 updated_trainer_state.active_policies,
             )
 
@@ -508,7 +496,7 @@ class TrainerServer:
 
         # Update Stage parameters according to override policies
         updated_params = Trainer(curriculum).get_net_parameter_update(
-            override_stage.get_task_parameters(),
+            override_stage.get_task(),
             override_policies,
             curr_metrics,
         )
@@ -533,6 +521,6 @@ class TrainerServer:
             s_id,
             curriculum,
             stage=None,
-            updated_stage_parameters=None,
+            updated_task=None,
             stage_policies=None,
         )
