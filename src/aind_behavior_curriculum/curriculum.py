@@ -1151,6 +1151,10 @@ def create_curriculum(
                 str,
                 Field(default=pkg_location, frozen=False, validate_default=True),
             ],
+            graph=Annotated[
+                StageGraph[Metrics, _tasks_tagged],
+                Field(default=StageGraph[Metrics, _tasks_tagged](), validate_default=True),
+            ],
         )
     else:
         return create_model(
@@ -1168,6 +1172,10 @@ def create_curriculum(
                     pattern=SEMVER_REGEX,
                     validate_default=True,
                 ),
+            ],
+            graph=Annotated[
+                StageGraph[Metrics, _tasks_tagged],
+                Field(default=StageGraph[Metrics, _tasks_tagged](), validate_default=True),
             ],
         )
 
