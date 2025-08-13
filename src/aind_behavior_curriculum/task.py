@@ -2,8 +2,6 @@
 Base Behavior Models
 """
 
-from __future__ import annotations
-
 from string import capwords
 from typing import Annotated, Generic, Literal, Optional, Type, TypeVar
 
