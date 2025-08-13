@@ -922,7 +922,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         validate_default=True,
         description="Curriculum version.",
     )
-    graph: StageGraph[Metrics, TTask] = Field(default=StageGraph[Metrics, TTask](), validate_default=True)
+    graph: StageGraph[Metrics, TTask] = Field(default_factory=StageGraph[Metrics, TTask], validate_default=True)
 
     @property
     def _known_tasks(self) -> List[Type[Task]]:
@@ -1153,7 +1153,7 @@ def create_curriculum(
             ],
             graph=Annotated[
                 StageGraph[Metrics, _tasks_tagged],
-                Field(default=StageGraph[Metrics, _tasks_tagged](), validate_default=True),
+                Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
             ],
         )
     else:
@@ -1175,9 +1175,10 @@ def create_curriculum(
             ],
             graph=Annotated[
                 StageGraph[Metrics, _tasks_tagged],
-                Field(default=StageGraph[Metrics, _tasks_tagged](), validate_default=True),
+                Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
             ],
         )
+
 
 
 def make_task_discriminator(tasks: Iterable[Type[TTask]]) -> Type[TTask]:
