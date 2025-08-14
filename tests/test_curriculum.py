@@ -6,25 +6,24 @@ import unittest
 
 import example_project as ex
 import example_project_2 as ex2
-from pydantic import BaseModel, Field, PydanticUserError
+from pydantic import BaseModel, PydanticUserError
 
 from aind_behavior_curriculum import (
     Curriculum,
     Metrics,
     Policy,
     Stage,
-    StageGraph,
-    TaskParameters,
+    Task,
     create_curriculum,
 )
 from aind_behavior_curriculum.curriculum import make_task_discriminator
 
 
-def init_stage_rule(metrics: Metrics, task_params: TaskParameters) -> TaskParameters:
+def init_stage_rule(metrics: Metrics, task: Task) -> Task:
     """
     Trivially pass the default
     """
-    return task_params
+    return task
 
 
 INIT_STAGE = Policy(init_stage_rule)
@@ -415,10 +414,11 @@ class CurriculumTests(unittest.TestCase):
         )
 
     def test_create_curriculum_equivalence(self):
-        class TestCurriculum(Curriculum):
+        _tasks = make_task_discriminator((ex.TaskA, ex.TaskB))
+
+        class TestCurriculum(Curriculum[_tasks]):
             name: str = "TestCurriculum"
             version: str = "1.2.3"
-            graph: StageGraph[make_task_discriminator((ex.TaskA, ex.TaskB))] = Field(default_factory=StageGraph)
             pkg_location: str = "test"
 
         taskA = ex.TaskA(task_parameters=ex.TaskAParameters())

@@ -23,6 +23,7 @@ aind\_behavior\_curriculum.curriculum.Stage
       ~Stage.copy
       ~Stage.dict
       ~Stage.from_orm
+      ~Stage.get_task
       ~Stage.get_task_parameters
       ~Stage.json
       ~Stage.model_construct
@@ -47,6 +48,7 @@ aind\_behavior\_curriculum.curriculum.Stage
       ~Stage.see_policy_transitions
       ~Stage.set_policy_transition_priority
       ~Stage.set_start_policies
+      ~Stage.set_task
       ~Stage.set_task_parameters
       ~Stage.update_forward_refs
       ~Stage.validate

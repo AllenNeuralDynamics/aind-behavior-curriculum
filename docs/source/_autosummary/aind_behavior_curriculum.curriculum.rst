@@ -29,9 +29,6 @@
       :toctree:
       :template: custom-class-template.rst               
    
-      BehaviorGraph
-      BehaviorGraph[Policy, PolicyTransition]
-      BehaviorGraph[Stage, StageTransition]
       Curriculum
       Metrics
       MetricsProvider

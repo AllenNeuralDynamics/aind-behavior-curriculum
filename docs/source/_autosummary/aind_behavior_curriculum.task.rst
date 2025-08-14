@@ -27,7 +27,6 @@
       :template: custom-class-template.rst               
    
       Task
-      TaskParameters
    
    
 

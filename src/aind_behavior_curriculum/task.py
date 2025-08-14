@@ -2,12 +2,10 @@
 Base Behavior Models
 """
 
-from __future__ import annotations
-
 from string import capwords
-from typing import Annotated, Literal, Optional, Type, TypeVar
+from typing import Annotated, Generic, Literal, Optional, Type, TypeVar
 
-from pydantic import Field, create_model
+from pydantic import Field, SerializeAsAny, create_model
 
 from aind_behavior_curriculum.base import (
     AindBehaviorModel,
@@ -17,27 +15,23 @@ from aind_behavior_curriculum.base import (
 SEMVER_REGEX = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
 
 
-TTask = TypeVar("TTask", bound="Task")
+TTaskParameters = TypeVar("TTaskParameters", bound=AindBehaviorModelExtra)
+
+TaskParameters = AindBehaviorModelExtra
 
 
-class TaskParameters(AindBehaviorModelExtra):
+class Task(AindBehaviorModel, Generic[TTaskParameters]):
     """
-    Set of parameters associated with a subject task.
-    Subclass with Task Parameters.
-    """
-
-    pass
-
-
-class Task(AindBehaviorModel):
-    """
-    Base Task Primitive.
+    Base class for all Tasks. A new Task can be created by:
+        - Subclassing: class NewTask(TaskParameters)
+        - Using the factory method: create_task(...)
+        - Passing a type to the generic base: NewTask = Task[MyParameters]
     Holds Task metadata and parameters.
     """
 
     name: str = Field(..., description="Name of the task.", frozen=True)
     description: str = Field(default="", description="Description of the task.")
-    task_parameters: TaskParameters = Field(..., description=TaskParameters.__doc__.strip(), validate_default=True)
+    task_parameters: SerializeAsAny[TTaskParameters]
     version: Optional[str] = Field(
         default=None,
         pattern=SEMVER_REGEX,
@@ -50,13 +44,16 @@ class Task(AindBehaviorModel):
     )
 
 
+TTask = TypeVar("TTask", bound="Task")
+
+
 def create_task(
     *,
     name: str,
-    task_parameters: Type[TaskParameters],
+    task_parameters: Type[TTaskParameters],
     version: Optional[str] = None,
     description: str = "",
-) -> Type[Task]:
+) -> Type[Task[TTaskParameters]]:
     """
     Factory method for creating a Task object.
 
@@ -75,18 +72,14 @@ def create_task(
         """Converts a string from snake_case to PascalCase"""
         return "".join(map(capwords, v.split("_")))
 
-    _props = {
-        "name": Annotated[
+    return create_model(
+        _snake_to_pascal(name),
+        __base__=Task[task_parameters],
+        name=Annotated[
             Literal[name],
             Field(default=name, frozen=True, validate_default=True),
         ],
-        "task_parameters": Annotated[
-            task_parameters,
-            Field(
-                description=(task_parameters.__doc__.strip() if task_parameters.__doc__ else ""),
-            ),
-        ],
-        "version": Annotated[
+        version=Annotated[
             Literal[version] if version else Optional[str],
             Field(
                 default=version,
@@ -95,10 +88,8 @@ def create_task(
                 validate_default=True,
             ),
         ],
-        "description": Annotated[
+        description=Annotated[
             str,
             Field(default=description, frozen=True, validate_default=True),
         ],
-    }
-
-    return create_model(_snake_to_pascal(name), __base__=Task, **_props)  # type: ignore
+    )
