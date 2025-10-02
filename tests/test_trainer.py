@@ -11,6 +11,47 @@ from aind_behavior_curriculum import GRADUATED, Stage, Trainer, TrainerState
 
 
 class TrainerTests(unittest.TestCase):
+    def test_create_enrollment(self):
+        """Tests the syntactic sugar method for creating a initial
+        state for the trainer"""
+        taskA = ex.TaskA(task_parameters=ex.TaskAParameters())
+        taskB = ex.TaskB(task_parameters=ex.TaskBParameters())
+        stageA = Stage(name="StageA", task=taskA)
+        stageB = Stage(name="StageB", task=taskB)
+
+        curr = ex.MyCurriculum(name="My Curriculum")
+        curr.add_stage_transition(stageA, GRADUATED, ex.t2_10)
+        curr.add_stage_transition(stageA, stageB, ex.t2_5)
+        curr.add_stage_transition(stageB, GRADUATED, ex.t2_10)
+
+        # Associate mice with curriculum
+        tr = ex.ExampleTrainer()
+        tr.register_subject(0, curr, stageA)
+        tr.register_subject(1, curr, stageA)
+        tr.register_subject(2, curr, stageA)
+
+        # Move mice through curriculum by updating metrics
+        ex.MICE_METRICS[0] = ex.ExampleMetrics(theta_2=0)
+        ex.MICE_METRICS[1] = ex.ExampleMetrics(theta_2=8)
+        ex.MICE_METRICS[2] = ex.ExampleMetrics(theta_2=12)
+        tr.evaluate_subjects()
+        ex.MICE_METRICS[0] = ex.ExampleMetrics(theta_2=6)
+        ex.MICE_METRICS[1] = ex.ExampleMetrics(theta_2=8)
+        ex.MICE_METRICS[2] = ex.ExampleMetrics(theta_2=12)
+        tr.evaluate_subjects()
+        ex.MICE_METRICS[0] = ex.ExampleMetrics(theta_2=12)
+        ex.MICE_METRICS[1] = ex.ExampleMetrics(theta_2=12)
+        ex.MICE_METRICS[2] = ex.ExampleMetrics(theta_2=12)
+        tr.evaluate_subjects()
+
+        trainer = Trainer(curr)
+        enrollment = trainer.create_enrollment()
+        expected = trainer.create_trainer_state(
+            stage=stageA, is_on_curriculum=True, active_policies=stageA.start_policies
+        )
+        self.assertEqual(enrollment, expected)
+        self.assertEqual(enrollment.model_dump(), expected.model_dump())
+
     def test_pure_stage_evaluation(self):
         """
         Tests if multiple trajectories through stages

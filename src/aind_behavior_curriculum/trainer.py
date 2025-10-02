@@ -10,7 +10,15 @@ from typing import Annotated, Generic, List, Optional, Self, Type, TypeVar
 from pydantic import Field, create_model
 
 from aind_behavior_curriculum.base import AindBehaviorModel
-from aind_behavior_curriculum.curriculum import Curriculum, Metrics, Policy, Stage, Task, make_task_discriminator
+from aind_behavior_curriculum.curriculum import (
+    Curriculum,
+    Metrics,
+    Policy,
+    Stage,
+    StageGraph,
+    Task,
+    make_task_discriminator,
+)
 
 TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
 TMetrics = TypeVar("TMetrics", bound=Metrics)
@@ -125,6 +133,27 @@ class Trainer(Generic[TCurriculum]):
             TCurriculum: The current curriculum instance.
         """
         return self._curriculum
+
+    def create_enrollment(self) -> TrainerState[TCurriculum]:
+        """Creates a new TrainerState for a subject enrolling in the curriculum.
+        The initial stage is determined by the curriculum's graph, by
+        selecting the stage with the lowest index.
+
+        Returns:
+            TrainerState: A new instance of the type-aware TrainerState class,
+            initialized to the first stage of the curriculum.
+        """
+
+        stages: StageGraph[Metrics, Task] = self.curriculum.graph
+        if len(stages.see_nodes()) == 0:
+            raise ValueError("Curriculum has no stages.")
+        min_index = min(stages.nodes.keys())
+        init_stage = stages.nodes[min_index]
+        return self.create_trainer_state(
+            is_on_curriculum=True,
+            active_policies=init_stage.start_policies,
+            stage=init_stage,
+        )
 
     @property
     def trainer_state_model(self) -> Type[TrainerState[TCurriculum]]:
