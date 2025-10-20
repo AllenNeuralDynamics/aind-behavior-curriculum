@@ -929,7 +929,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         """Get all known tasks in the curriculum."""
 
         # We introspect into the StageGraph[T] type to get the known tasks.
-        
+
         _generic = self.model_fields["graph"].annotation
         _inner_args = _generic.__dict__["__pydantic_generic_metadata__"]["args"]
 
@@ -1049,7 +1049,9 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         """
         return self.graph.see_nodes()
 
-    def see_stage_transitions(self, stage: Stage[Metrics, TTask]) -> List[Tuple[StageTransition, Stage[Metrics, TTask]]]:
+    def see_stage_transitions(
+        self, stage: Stage[Metrics, TTask]
+    ) -> List[Tuple[StageTransition, Stage[Metrics, TTask]]]:
         """
         See transitions of stage in curriculum graph.
         """
