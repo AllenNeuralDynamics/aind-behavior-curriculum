@@ -844,14 +844,14 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         self.task = task.model_copy(deep=True)
 
     @deprecated("This method is deprecated in favor of setting the task directly using set_task(...).")
-    def set_task_parameters(self, task_parameters: TTaskParameters) -> None:
+    def set_task_parameters(self, task_parameters: TaskParameters) -> None:
         """
         Set the task parameters for the current task.
         """
         self.task = self.get_task().model_copy(update={"task_parameters": task_parameters})
 
     @deprecated("This method is deprecated in favor of getting the task directly using get_task(...).")
-    def get_task_parameters(self) -> TTaskParameters:
+    def get_task_parameters(self) -> TaskParameters:
         """
         Get the task parameters for the current task.
         """
