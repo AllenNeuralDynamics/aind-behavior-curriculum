@@ -657,7 +657,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
     name: str = Field(..., description="Stage name.")
     task: TTask = Field(..., description="Task in which this stage is based off of.")
     graph: PolicyGraph[TMetrics, TTask] = Field(
-        default_factory=PolicyGraph[TMetrics, TTask],
+        default=PolicyGraph[TMetrics, TTask](),
         validate_default=True,
         description="Policy Graph.",
     )
@@ -844,14 +844,14 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         self.task = task.model_copy(deep=True)
 
     @deprecated("This method is deprecated in favor of setting the task directly using set_task(...).")
-    def set_task_parameters(self, task_parameters: TTaskParameters) -> None:
+    def set_task_parameters(self, task_parameters: TaskParameters) -> None:
         """
         Set the task parameters for the current task.
         """
         self.task = self.get_task().model_copy(update={"task_parameters": task_parameters})
 
     @deprecated("This method is deprecated in favor of getting the task directly using get_task(...).")
-    def get_task_parameters(self) -> TTaskParameters:
+    def get_task_parameters(self) -> TaskParameters:
         """
         Get the task parameters for the current task.
         """
@@ -877,7 +877,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         return self
 
 
-class StageTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
+class StageTransition(_Rule[[Metrics], bool]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
@@ -887,7 +887,7 @@ class StageTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
     pass
 
 
-class StageGraph(_BehaviorGraph[Stage[TMetrics, TTask], StageTransition[TMetrics]], Generic[TMetrics, TTask]):
+class StageGraph(_BehaviorGraph[Stage[Metrics, TTask], StageTransition], Generic[TTask]):
     """
     Graph for Curriculum.
     """
@@ -922,13 +922,14 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         validate_default=True,
         description="Curriculum version.",
     )
-    graph: StageGraph[Metrics, TTask] = Field(default_factory=StageGraph[Metrics, TTask], validate_default=True)
+    graph: StageGraph[TTask] = Field(default_factory=StageGraph[TTask], validate_default=True)
 
     @property
-    def _known_tasks(self) -> List[Type[Task]]:
+    def _known_tasks(self) -> List[Type[TTask]]:
         """Get all known tasks in the curriculum."""
 
         # We introspect into the StageGraph[T] type to get the known tasks.
+
         _generic = self.model_fields["graph"].annotation
         _inner_args = _generic.__dict__["__pydantic_generic_metadata__"]["args"]
 
@@ -937,7 +938,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             _inner_union = Task
         else:
             # TODO This may be an issue if people define a generic on TTask but not Metrics
-            _inner_args = _inner_args[1]
+            _inner_args = _inner_args[0]
             _inner_union = get_args(_inner_args.__value__)[0]
 
         if isinstance(_inner_union, type):
@@ -954,7 +955,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             )
         return _known_tasks
 
-    def task_discriminator_type(self) -> Type[Task]:
+    def task_discriminator_type(self) -> Type[TTask]:
         """Create a Discriminated Union  type for the known tasks."""
         return make_task_discriminator(self._known_tasks)
 
@@ -997,8 +998,8 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
 
     def add_stage_transition(
         self,
-        start_stage: Stage,
-        dest_stage: Stage,
+        start_stage: Stage[Metrics, TTask],
+        dest_stage: Stage[Metrics, TTask],
         rule: StageTransition,
     ) -> None:
         """
@@ -1022,8 +1023,8 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
 
     def remove_stage_transition(
         self,
-        start_stage: Stage,
-        dest_stage: Stage,
+        start_stage: Stage[Metrics, TTask],
+        dest_stage: Stage[Metrics, TTask],
         rule: StageTransition,
         remove_start_stage: bool = False,
         remove_dest_stage: bool = False,
@@ -1042,13 +1043,15 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             remove_dest_stage,
         )
 
-    def see_stages(self) -> List[Stage]:
+    def see_stages(self) -> List[Stage[Metrics, TTask]]:
         """
         See stages of curriculum graph.
         """
         return self.graph.see_nodes()
 
-    def see_stage_transitions(self, stage: Stage) -> List[Tuple[StageTransition, Stage]]:
+    def see_stage_transitions(
+        self, stage: Stage[Metrics, TTask]
+    ) -> List[Tuple[StageTransition, Stage[Metrics, TTask]]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -1056,8 +1059,8 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
 
     def set_stage_transition_priority(
         self,
-        stage: Stage,
-        stage_transitions: List[Tuple[StageTransition, Stage]],
+        stage: Stage[Metrics, TTask],
+        stage_transitions: List[Tuple[StageTransition, Stage[Metrics, TTask]]],
     ) -> None:
         """
         Change the order of stage transitions listed under a stage.
@@ -1152,8 +1155,8 @@ def create_curriculum(
                 Field(default=pkg_location, frozen=False, validate_default=True),
             ],
             graph=Annotated[
-                StageGraph[Metrics, _tasks_tagged],
-                Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
+                StageGraph[_tasks_tagged],
+                Field(default_factory=StageGraph[_tasks_tagged], validate_default=True),
             ],
         )
     else:
@@ -1174,8 +1177,8 @@ def create_curriculum(
                 ),
             ],
             graph=Annotated[
-                StageGraph[Metrics, _tasks_tagged],
-                Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
+                StageGraph[_tasks_tagged],
+                Field(default_factory=StageGraph[_tasks_tagged], validate_default=True),
             ],
         )
 

@@ -127,7 +127,7 @@ Tasks = make_task_discriminator(tasks=[DummyTask])
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
-    graph: StageGraph[Metrics, Tasks] = Field(default=StageGraph[Metrics, Tasks]())  # type: ignore
+    graph: StageGraph[Tasks] = Field(default=StageGraph[Tasks]())  # type: ignore
 
 
 def construct_track_curriculum() -> MyCurriculum:
