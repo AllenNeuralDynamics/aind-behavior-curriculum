@@ -929,7 +929,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         """Get all known tasks in the curriculum."""
 
         # We introspect into the StageGraph[T] type to get the known tasks.
-        _generic = self.model_fields["graph"].annotation
+        _generic = type(self).model_fields["graph"].annotation
         _inner_args = _generic.__dict__["__pydantic_generic_metadata__"]["args"]
 
         _inner_union: Type
