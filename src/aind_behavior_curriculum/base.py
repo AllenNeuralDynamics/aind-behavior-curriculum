@@ -3,7 +3,7 @@ Base behavior pydantic object
 """
 
 import warnings
-from typing import get_args
+from typing import Literal, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict
 from semver import Version
@@ -56,9 +56,15 @@ def coerce_schema_version(cls: type[BaseModel], v: str, version_string: str = "v
     """
 
     try:  # Get the default schema version from the model literal field
-        _default_schema_version = Version.parse(get_args(cls.model_fields[version_string].annotation)[0])
-    except IndexError:  # This handles the case where the base class does not define a literal schema_version value
-        _default_schema_version = Version.parse(cls.model_fields[version_string].default)
+        field = cls.model_fields[version_string]
+        annotation = field.annotation
+        if get_origin(annotation) is Literal:
+            _default_schema_version = Version.parse(get_args(cls.model_fields[version_string].annotation)[0])
+        else:
+            _default_schema_version = Version.parse(cls.model_fields[version_string].default)
+    except Exception as e:  # If anything fails, raise a warning and return the original value for the user to handle
+        warnings.warn(f"Failed to parse default schema version for {cls.__name__}: {e}")
+        return v
 
     semver = Version.parse(v)
     if semver != _default_schema_version:

@@ -1,11 +1,13 @@
+import logging
 import unittest
-import warnings
 from typing import Literal
 
 from pydantic import Field
 
 from aind_behavior_curriculum.curriculum import Curriculum, create_curriculum
 from aind_behavior_curriculum.task import Task
+
+log = logging.getLogger(__name__)
 
 
 class CurriculumVersionCoercionTestWithLiteral(unittest.TestCase):
@@ -26,23 +28,31 @@ class CurriculumVersionCoercionTestWithLiteral(unittest.TestCase):
         CurV2 = self.curr_v2_factory
         v1_instance = CurV1()
         v2_instance = CurV2()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarns(Warning) as cm:
             v1_as_v2 = CurV2.model_validate_json(v1_instance.model_dump_json())
-            warning_msgs = [str(warning.message) for warning in w]
-            self.assertTrue(any("Deserialized versioned field 1.0.0, expected 2.0.0." in msg for msg in warning_msgs))
-            self.assertEqual(v1_as_v2.version, v2_instance.version)
+        warning_msgs = cm.warnings
+        self.assertTrue(
+            any(
+                "Deserialized versioned field 1.0.0, expected 2.0.0." in str(warning.message)
+                for warning in warning_msgs
+            )
+        )
+        self.assertEqual(v1_as_v2.version, v2_instance.version)
 
     def test_version_update_backwards_coercion(self):
         CurV1 = self.curr_v1_factory
         CurV2 = self.curr_v2_factory
         v2_instance = CurV2()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarns(Warning) as cm:
             v2_as_v1 = CurV1.model_validate_json(v2_instance.model_dump_json())
-            warning_msgs = [str(warning.message) for warning in w]
-            self.assertTrue(any("Deserialized versioned field 2.0.0, expected 1.0.0." in msg for msg in warning_msgs))
-            self.assertEqual(v2_as_v1.version, CurV1().version)
+        warning_msgs = cm.warnings
+        self.assertTrue(
+            any(
+                "Deserialized versioned field 2.0.0, expected 1.0.0." in str(warning.message)
+                for warning in warning_msgs
+            )
+        )
+        self.assertEqual(v2_as_v1.version, CurV1().version)
 
 
 class CurriculumVersionCoercionTestWithoutLiteral(unittest.TestCase):
@@ -70,24 +80,28 @@ class CurriculumVersionCoercionTestWithoutLiteral(unittest.TestCase):
         CurV2 = self.curr_v2_factory
         v1_instance = CurV1()
         v2_instance = CurV2()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarns(Warning) as cm:
             v1_as_v2 = CurV2.model_validate_json(v1_instance.model_dump_json())
-            warning_msgs = [str(warning.message) for warning in w]
-            self.assertTrue(any("Deserialized versioned field 1.0.0, expected 2.0.0." in msg for msg in warning_msgs))
-            self.assertEqual(v1_as_v2.version, v2_instance.version)
+        warning_msgs = cm.warnings
+        self.assertTrue(
+            any(
+                "Deserialized versioned field 1.0.0, expected 2.0.0." in str(warning.message)
+                for warning in warning_msgs
+            )
+        )
+        self.assertEqual(v1_as_v2.version, v2_instance.version)
 
     def test_version_update_backwards_coercion(self):
         CurV1 = self.curr_v1_factory
         CurV2 = self.curr_v2_factory
         v2_instance = CurV2()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarns(Warning) as cm:
             v2_as_v1 = CurV1.model_validate_json(v2_instance.model_dump_json())
-            warning_msgs = [str(warning.message) for warning in w]
-            self.assertTrue(any("Deserialized versioned field 2.0.0, expected 1.0.0." in msg for msg in warning_msgs))
-            self.assertEqual(v2_as_v1.version, CurV1().version)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        warning_msgs = cm.warnings
+        self.assertTrue(
+            any(
+                "Deserialized versioned field 2.0.0, expected 1.0.0." in str(warning.message)
+                for warning in warning_msgs
+            )
+        )
+        self.assertEqual(v2_as_v1.version, CurV1().version)
