@@ -24,7 +24,7 @@ from typing import (
     Union,
 )
 
-from pydantic import Field, GetJsonSchemaHandler, ValidationError, create_model
+from pydantic import Field, GetJsonSchemaHandler, ValidationError, create_model, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from typing_extensions import TypeAliasType, cast, deprecated, get_args, get_origin
@@ -34,6 +34,8 @@ from aind_behavior_curriculum.base import (
     AindBehaviorModelExtra,
 )
 from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
+
+from .base import coerce_schema_version
 
 TTask = TypeVar("TTask", bound=Task)
 _P = ParamSpec("_P")
@@ -923,6 +925,13 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         description="Curriculum version.",
     )
     graph: StageGraph[Metrics, TTask] = Field(default_factory=StageGraph[Metrics, TTask], validate_default=True)
+
+    @field_validator("version", mode="before", check_fields=False)
+    @classmethod
+    def coerce_version(cls, v: str, ctx) -> str:
+        """Attempts to coerce the incoming deserialized version string to
+        the version defined by the deserialization model."""
+        return coerce_schema_version(cls, v, ctx.field_name)
 
     @property
     def _known_tasks(self) -> List[Type[Task]]:
