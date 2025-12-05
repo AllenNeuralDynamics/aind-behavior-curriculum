@@ -929,6 +929,8 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
     @field_validator("version", mode="before", check_fields=False)
     @classmethod
     def coerce_version(cls, v: str, ctx) -> str:
+        """Attempts to coerce the incoming deserialized version string to
+        the version defined by the deserialization model."""
         return coerce_schema_version(cls, v, ctx.field_name)
 
     @property
