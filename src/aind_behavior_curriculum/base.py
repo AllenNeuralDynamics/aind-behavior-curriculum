@@ -2,7 +2,11 @@
 Base behavior pydantic object
 """
 
+import warnings
+from typing import get_args
+
 from pydantic import BaseModel, ConfigDict
+from semver import Version
 
 
 class AindBehaviorModel(BaseModel):
@@ -43,3 +47,23 @@ class AindBehaviorModelExtra(BaseModel):
         strict=True,
         str_strip_whitespace=True,
     )
+
+
+def coerce_schema_version(cls: type[BaseModel], v: str, version_string: str = "version") -> str:
+    """Try to coerce a versioned field to the default schema version defined in the model.
+
+    This function is meant to be used as a pydantic validator for versioned fields.
+    """
+
+    try:  # Get the default schema version from the model literal field
+        _default_schema_version = Version.parse(get_args(cls.model_fields[version_string].annotation)[0])
+    except IndexError:  # This handles the case where the base class does not define a literal schema_version value
+        return v
+
+    semver = Version.parse(v)
+    if semver != _default_schema_version:
+        warnings.warn(
+            f"Deserialized versioned field {semver}, expected {_default_schema_version}. \n"
+            f"Will attempt to coerce. This will be considered a best-effort operation and may lead to a loss of information."
+        )
+    return str(_default_schema_version)
