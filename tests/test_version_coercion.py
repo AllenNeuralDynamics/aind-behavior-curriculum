@@ -1,4 +1,3 @@
-import logging
 import unittest
 from typing import Literal
 
@@ -6,8 +5,6 @@ from pydantic import Field
 
 from aind_behavior_curriculum.curriculum import Curriculum, create_curriculum
 from aind_behavior_curriculum.task import Task
-
-log = logging.getLogger(__name__)
 
 
 class CurriculumVersionCoercionTestWithLiteral(unittest.TestCase):
