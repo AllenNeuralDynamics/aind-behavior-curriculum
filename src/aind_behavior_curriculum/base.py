@@ -58,7 +58,7 @@ def coerce_schema_version(cls: type[BaseModel], v: str, version_string: str = "v
     try:  # Get the default schema version from the model literal field
         _default_schema_version = Version.parse(get_args(cls.model_fields[version_string].annotation)[0])
     except IndexError:  # This handles the case where the base class does not define a literal schema_version value
-        return v
+        _default_schema_version = Version.parse(cls.model_fields[version_string].default)
 
     semver = Version.parse(v)
     if semver != _default_schema_version:
