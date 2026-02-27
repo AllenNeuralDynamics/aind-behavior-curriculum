@@ -41,6 +41,7 @@ class Task(AindBehaviorModel, Generic[TTaskParameters]):
     stage_name: Optional[str] = Field(
         default=None,
         description="Optional stage name the `Task` object instance represents.",
+        deprecated="The `stage_name` field is deprecated and will be removed in future versions. Please use the `Stage` model to represent stages instead.",
     )
 
 
