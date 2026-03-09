@@ -33,7 +33,7 @@ class DummyParameters(TaskParameters):
 
 class DummyTask(Task):
     name: Literal["DummyTask"] = "DummyTask"
-    task_parameters: DummyParameters = Field(..., description="Fill w/ Parameter Defaults", validate_default=True)
+    task_parameters: DummyParameters = Field(description="Fill w/ Parameter Defaults", validate_default=True)
 
 
 # --- METRICS ---

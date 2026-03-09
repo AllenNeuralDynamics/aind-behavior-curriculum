@@ -656,8 +656,8 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
     Stage manages a BehaviorGraph instance with a read/write API.
     """
 
-    name: str = Field(..., description="Stage name.")
-    task: TTask = Field(..., description="Task in which this stage is based off of.")
+    name: str = Field(description="Stage name.")
+    task: TTask = Field(description="Task in which this stage is based off of.")
     graph: PolicyGraph[TMetrics, TTask] = Field(
         default_factory=PolicyGraph[TMetrics, TTask],
         validate_default=True,
