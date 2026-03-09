@@ -918,7 +918,6 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         frozen=True,
     )
     version: str = Field(
-        default="0.0.0",
         pattern=SEMVER_REGEX,
         frozen=True,
         validate_default=True,
@@ -1148,13 +1147,13 @@ def create_curriculum(
                 Field(default=name, frozen=True, validate_default=True),
             ],
             version=Annotated[
-                Literal[version] if version else Optional[str],
+                Literal[version],
                 Field(
                     default=version,
                     frozen=True,
                     pattern=SEMVER_REGEX,
                     validate_default=True,
-                ),
+                ),  # Note here that version's validator will be inherited from the Curriculum base model.
             ],
             pkg_location=Annotated[
                 str,
