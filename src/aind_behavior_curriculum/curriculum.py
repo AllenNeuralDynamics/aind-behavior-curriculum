@@ -1138,54 +1138,31 @@ def create_curriculum(
 
     _tasks_tagged = cast(TTask, make_task_discriminator(tasks))
 
+    fields: Dict[str, Any] = {
+        "name": Annotated[
+            Literal[name],
+            Field(default=name, frozen=True, validate_default=True),
+        ],
+        "version": Annotated[
+            Literal[version],
+            Field(
+                default=version,
+                frozen=True,
+                pattern=SEMVER_REGEX,
+                validate_default=True,
+            ),  # Note here that version's validator will be inherited from the Curriculum base model.
+        ],
+        "graph": Annotated[
+            StageGraph[Metrics, _tasks_tagged],
+            Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
+        ],
+    }
     if pkg_location is not None:
-        return create_model(
-            name,
-            __base__=Curriculum[_tasks_tagged],
-            name=Annotated[
-                Literal[name],
-                Field(default=name, frozen=True, validate_default=True),
-            ],
-            version=Annotated[
-                Literal[version],
-                Field(
-                    default=version,
-                    frozen=True,
-                    pattern=SEMVER_REGEX,
-                    validate_default=True,
-                ),  # Note here that version's validator will be inherited from the Curriculum base model.
-            ],
-            pkg_location=Annotated[
-                str,
-                Field(default=pkg_location, frozen=False, validate_default=True),
-            ],
-            graph=Annotated[
-                StageGraph[Metrics, _tasks_tagged],
-                Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
-            ],
-        )
-    else:
-        return create_model(
-            name,
-            __base__=Curriculum[_tasks_tagged],
-            name=Annotated[
-                Literal[name],
-                Field(default=name, frozen=True, validate_default=True),
-            ],
-            version=Annotated[
-                Literal[version] if version else Optional[str],
-                Field(
-                    default=version,
-                    frozen=True,
-                    pattern=SEMVER_REGEX,
-                    validate_default=True,
-                ),
-            ],
-            graph=Annotated[
-                StageGraph[Metrics, _tasks_tagged],
-                Field(default_factory=StageGraph[Metrics, _tasks_tagged], validate_default=True),
-            ],
-        )
+        fields["pkg_location"] = Annotated[
+            str,
+            Field(default=pkg_location, frozen=False, validate_default=True),
+        ]
+    return create_model(name, __base__=Curriculum[_tasks_tagged], **fields)
 
 
 def make_task_discriminator(tasks: Iterable[Type[TTask]]) -> Type[TTask]:
