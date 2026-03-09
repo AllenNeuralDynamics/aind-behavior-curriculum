@@ -29,7 +29,7 @@ class Task(AindBehaviorModel, Generic[TTaskParameters]):
     Holds Task metadata and parameters.
     """
 
-    name: str = Field(..., description="Name of the task.", frozen=True)
+    name: str = Field(description="Name of the task.", frozen=True)
     description: str = Field(default="", description="Description of the task.")
     task_parameters: SerializeAsAny[TTaskParameters]
     version: Optional[str] = Field(

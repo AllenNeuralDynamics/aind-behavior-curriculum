@@ -33,7 +33,7 @@ class DummyParameters(TaskParameters):
 
 class DummyTask(Task):
     name: Literal["DummyTask"] = "DummyTask"
-    task_parameters: DummyParameters = Field(..., description="Fill w/ Parameter Defaults", validate_default=True)
+    task_parameters: DummyParameters = Field(description="Fill w/ Parameter Defaults", validate_default=True)
 
 
 # --- METRICS ---
@@ -127,6 +127,7 @@ Tasks = make_task_discriminator(tasks=[DummyTask])
 
 class MyCurriculum(Curriculum):
     name: Literal["My Curriculum"] = "My Curriculum"
+    version: Literal["0.0.0"] = "0.0.0"
     graph: StageGraph[Metrics, Tasks] = Field(default=StageGraph[Metrics, Tasks]())  # type: ignore
 
 
