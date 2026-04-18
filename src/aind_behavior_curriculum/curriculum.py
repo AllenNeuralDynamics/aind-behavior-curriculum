@@ -930,6 +930,19 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
     def coerce_version(cls, v: str, ctx) -> str:
         """Attempts to coerce the incoming deserialized version string to
         the version defined by the deserialization model."""
+        # The following two guard clauses bypass the coercion since Curriculum
+        # is a special case without required "version" field.
+        if cls is Curriculum:
+            print(cls.__name__)
+            # This is a special case for when users do not subclass Curriculum and just use it directly.
+            # In this case, we do not have a version to coerce to, so we just return the input.
+            return v
+        if (pydantic_metadata := getattr(cls, "__pydantic_generic_metadata__", None)) is not None:
+            # Parameterized pydantic generics (e.g: Curriculum[MyTask]) actually create a proper subclass, so they cant be evaluated with
+            # get_origin. Instead, we need to check the pydantic metadata for the origin of the generic to see if it is Curriculum.
+            if pydantic_metadata.get("origin", None) is Curriculum:
+                return v
+        # Otherwise we coerce.
         return coerce_schema_version(cls, v, ctx.field_name)
 
     @property
