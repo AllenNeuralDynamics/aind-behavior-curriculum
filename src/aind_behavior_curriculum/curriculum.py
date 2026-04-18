@@ -933,7 +933,6 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         # The following two guard clauses bypass the coercion since Curriculum
         # is a special case without required "version" field.
         if cls is Curriculum:
-            print(cls.__name__)
             # This is a special case for when users do not subclass Curriculum and just use it directly.
             # In this case, we do not have a version to coerce to, so we just return the input.
             return v
