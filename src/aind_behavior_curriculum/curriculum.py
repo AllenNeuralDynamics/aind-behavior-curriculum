@@ -938,7 +938,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             # In this case, we do not have a version to coerce to, so we just return the input.
             return v
         if (pydantic_metadata := getattr(cls, "__pydantic_generic_metadata__", None)) is not None:
-            # Parameterized pydantic generics (e.g: Curriculum[MyTask]) actually create a proper subclass, so they cant be evaluated with
+            # Parameterized pydantic generics (e.g: Curriculum[MyTask]) actually create a proper subclass, so they can't be evaluated with
             # get_origin. Instead, we need to check the pydantic metadata for the origin of the generic to see if it is Curriculum.
             if pydantic_metadata.get("origin", None) is Curriculum:
                 return v
