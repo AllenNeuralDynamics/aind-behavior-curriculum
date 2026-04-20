@@ -27,7 +27,7 @@ dependencies = [
     { name = "semver" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "codespell" },
     { name = "coverage" },
@@ -41,29 +41,27 @@ docs = [
     { name = "sphinx-jinja" },
     { name = "sphinx-mdinclude" },
 ]
-linters = [
+
+[package.metadata]
+requires-dist = [
+    { name = "jinja2", specifier = ">=3.1.3" },
+    { name = "pydantic", specifier = ">2.7" },
+    { name = "semver", specifier = ">=3.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
     { name = "codespell" },
     { name = "coverage" },
     { name = "interrogate" },
     { name = "ruff" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "aind-behavior-curriculum", extras = ["linters"], marker = "extra == 'dev'" },
-    { name = "codespell", marker = "extra == 'linters'" },
-    { name = "coverage", marker = "extra == 'linters'" },
-    { name = "furo", marker = "extra == 'docs'" },
-    { name = "interrogate", marker = "extra == 'linters'" },
-    { name = "jinja2", specifier = ">=3.1.3" },
-    { name = "pydantic", specifier = ">2.7" },
-    { name = "ruff", marker = "extra == 'linters'" },
-    { name = "semver", specifier = ">=3.0" },
-    { name = "sphinx", marker = "extra == 'docs'" },
-    { name = "sphinx-jinja", marker = "extra == 'docs'" },
-    { name = "sphinx-mdinclude", marker = "extra == 'docs'" },
+docs = [
+    { name = "furo" },
+    { name = "sphinx" },
+    { name = "sphinx-jinja" },
+    { name = "sphinx-mdinclude" },
 ]
-provides-extras = ["linters", "dev", "docs"]
 
 [[package]]
 name = "alabaster"
