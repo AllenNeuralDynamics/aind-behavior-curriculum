@@ -13,8 +13,7 @@ jobs:
       - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
-      - name: Set up Python 3.11
-        run: uv python install 3.11
+          python-version: 3.11
 
       - name: Install dependencies
         run: uv sync
@@ -73,8 +72,8 @@ jobs:
       - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
-      - name: Set up Python 3.11
-        run: uv python install 3.11
+          python-version: 3.11
+
       - name: Install dependencies
         run: |
           sudo apt install graphviz libgraphviz-dev -y
@@ -103,8 +102,8 @@ jobs:
       - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
-      - name: Set up Python 3.11
-        run: uv python install 3.11
+          python-version: 3.11
+
       - name: Install dependencies
         run: |
           uv pip install --upgrade setuptools wheel twine build
