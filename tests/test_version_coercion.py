@@ -1,10 +1,11 @@
 import unittest
+import warnings
 from typing import Literal
 
 from pydantic import Field
 
 from aind_behavior_curriculum.curriculum import Curriculum, create_curriculum
-from aind_behavior_curriculum.task import Task
+from aind_behavior_curriculum.task import Task, TaskParameters, create_task
 
 
 class CurriculumVersionCoercionTestWithLiteral(unittest.TestCase):
@@ -102,3 +103,42 @@ class CurriculumVersionCoercionTestWithoutLiteral(unittest.TestCase):
             )
         )
         self.assertEqual(v2_as_v1.version, CurV1().version)
+
+
+class CurriculumVersionCoercionEdgeCasesTest(unittest.TestCase):
+    """Tests that bare Curriculum and Curriculum[T] do NOT emit warnings, and that coercion works."""
+
+    def setUp(self) -> None:
+        MyTask = create_task(name="MyTask", task_parameters=TaskParameters)
+        self.MyTask = MyTask
+        MyCurriculum = create_curriculum("MyCurriculum", "0.1.0", (MyTask,))
+        self.json_str = MyCurriculum().model_dump_json()
+
+    def test_bare_curriculum_no_warning(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = Curriculum.model_validate_json(self.json_str)
+        self.assertIsNotNone(result)
+
+    def test_parameterized_curriculum_no_warning(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = Curriculum[self.MyTask].model_validate_json(self.json_str)
+        self.assertIsNotNone(result)
+
+    def test_same_version_no_warning(self):
+        MyCurriculum = create_curriculum("MyCurriculum", "0.1.0", (self.MyTask,))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = MyCurriculum.model_validate_json(self.json_str)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.version, "0.1.0")
+
+    def test_coercion_emits_warning_and_updates_version(self):
+        MyCurriculumV2 = create_curriculum("MyCurriculum", "0.2.0", (self.MyTask,))
+        with self.assertWarns(Warning) as cm:
+            result = MyCurriculumV2.model_validate_json(self.json_str)
+        self.assertTrue(
+            any("Deserialized versioned field 0.1.0, expected 0.2.0." in str(w.message) for w in cm.warnings)
+        )
+        self.assertEqual(result.version, "0.2.0")
