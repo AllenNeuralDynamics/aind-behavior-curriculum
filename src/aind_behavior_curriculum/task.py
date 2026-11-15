@@ -3,7 +3,7 @@ Base Behavior Models
 """
 
 from string import capwords
-from typing import Annotated, Generic, Literal, Optional, Type, TypeVar
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import Field, SerializeAsAny, create_model
 
@@ -32,13 +32,13 @@ class Task(AindBehaviorModel, Generic[TTaskParameters]):
     name: str = Field(description="Name of the task.", frozen=True)
     description: str = Field(default="", description="Description of the task.")
     task_parameters: SerializeAsAny[TTaskParameters]
-    version: Optional[str] = Field(
+    version: str | None = Field(
         default=None,
         pattern=SEMVER_REGEX,
         description="task schema version",
         frozen=True,
     )
-    stage_name: Optional[str] = Field(
+    stage_name: str | None = Field(
         default=None,
         description="Optional stage name the `Task` object instance represents.",
     )
@@ -50,10 +50,10 @@ TTask = TypeVar("TTask", bound="Task")
 def create_task(
     *,
     name: str,
-    task_parameters: Type[TTaskParameters],
-    version: Optional[str] = None,
+    task_parameters: type[TTaskParameters],
+    version: str | None = None,
     description: str = "",
-) -> Type[Task[TTaskParameters]]:
+) -> type[Task[TTaskParameters]]:
     """
     Factory method for creating a Task object.
 
@@ -80,7 +80,7 @@ def create_task(
             Field(default=name, frozen=True, validate_default=True),
         ],
         version=Annotated[
-            Literal[version] if version else Optional[str],
+            Literal[version] if version else str | None,
             Field(
                 default=version,
                 frozen=True,

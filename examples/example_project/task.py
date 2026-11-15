@@ -66,7 +66,7 @@ if __name__ == "__main__":
         f.write(json_string)
 
     # Import/De-serialize Instance:
-    with open("examples/example_project/jsons/task_instance.json", "r") as f:
+    with open("examples/example_project/jsons/task_instance.json") as f:
         json_data = f.read()
     task_instance = ExampleTask.model_validate_json(json_data)
     print(task_instance)

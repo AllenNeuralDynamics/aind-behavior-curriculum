@@ -40,6 +40,9 @@ jobs:
       - name: Run ruff check
         run: uv run ruff check
 
+      - name: Run pyright
+        run: uv run pyright
+
       - name: Run codespell
         run: uv run codespell --check-filenames
 
