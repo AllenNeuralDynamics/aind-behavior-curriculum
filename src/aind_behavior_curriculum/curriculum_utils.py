@@ -5,7 +5,7 @@ Useful Placeholders when making Curriculums
 import os
 import subprocess
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from jinja2 import Template
 from pydantic import Field
@@ -19,19 +19,19 @@ class Graduated(Task):
     Utility Final Task.
     """
 
-    name: Literal["Graduated"] = "Graduated"
+    name: Literal["Graduated"] = "Graduated"  # pyright: ignore[reportIncompatibleVariableOverride]
     task_parameters: TaskParameters = Field(default=TaskParameters(), description="Fill w/ Parameter Defaults")
 
 
 GRADUATED = Stage(name="GRADUATED", task=Graduated())
 
 
-def export_diagram(curriculum: Curriculum, path: Optional[os.PathLike] = None) -> str:
+def export_diagram(curriculum: Curriculum, path: str | os.PathLike[str] | None = None) -> str:
     """Renders a curriculum to SVG
 
     Args:
         curriculum (Curriculum): A curriculum to be rendered
-        path (Optional[os.PathLike], optional): An optional path to save the SVG asset to.
+        path (str | os.PathLike[str] | None, optional): An optional path to save the SVG asset to.
         If not path is provided, only the str representation of the SVG will be returned.
         Defaults to None.
 
@@ -177,7 +177,7 @@ def _make_curriculum_dot_script(c: Curriculum) -> str:
     return curriculum_dot_script
 
 
-def export_json(curriculum: Curriculum, path: os.PathLike) -> None:
+def export_json(curriculum: Curriculum, path: str | os.PathLike[str]) -> None:
     """
     Export curriculum json to export path
     """

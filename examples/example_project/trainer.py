@@ -3,7 +3,6 @@ Example of Trainer creation
 """
 
 from collections import defaultdict
-from typing import Dict
 
 import example_project as ex
 from aind_behavior_curriculum import (
@@ -33,7 +32,7 @@ class ExampleTrainer(TrainerServer):
         """
         super().__init__()
 
-        self.subject_history: Dict[int, TrainerState] = defaultdict(list)
+        self.subject_history: dict[int, TrainerState] = defaultdict(list)
 
     def load_data(self, subject_id: int) -> tuple[Curriculum, TrainerState, Metrics]:
         """

@@ -5,29 +5,27 @@ Core Stage and Curriculum Primitives.
 import importlib
 import inspect
 import warnings
-from types import EllipsisType
+from collections.abc import Callable, Iterable, Sequence
+from types import EllipsisType, UnionType
 from typing import (
     Annotated,
     Any,
-    Callable,
-    Dict,
     Generic,
-    Iterable,
-    List,
     Literal,
-    Optional,
     ParamSpec,
     Self,
-    Tuple,
-    Type,
+    TypeAlias,
     TypeVar,
     Union,
+    cast,
+    get_args,
+    get_origin,
 )
 
-from pydantic import Field, GetJsonSchemaHandler, ValidationError, create_model, field_validator
+from pydantic import Field, GetJsonSchemaHandler, ValidationError, ValidationInfo, create_model, field_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
-from typing_extensions import TypeAliasType, cast, deprecated, get_args, get_origin
+from typing_extensions import TypeAliasType, deprecated
 
 from aind_behavior_curriculum.base import (
     AindBehaviorModel,
@@ -52,6 +50,9 @@ class Metrics(AindBehaviorModelExtra):
 
 
 TMetrics = TypeVar("TMetrics", bound=Metrics)
+# Rules only consume metrics, so they are contravariant in the metrics type:
+# a rule written for `Metrics` can be used wherever a rule for a `Metrics` subclass is expected.
+TMetrics_contra = TypeVar("TMetrics_contra", bound=Metrics, contravariant=True)
 
 
 class _Rule(Generic[_P, _R]):
@@ -107,7 +108,7 @@ class _Rule(Generic[_P, _R]):
             return False
         return self.__hash__() == other.__hash__()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Returns the hash value for the object.
         """
@@ -175,7 +176,7 @@ class _Rule(Generic[_P, _R]):
         return handler(core_schema.str_schema())
 
     @classmethod
-    def normalize_rule_or_callable(cls, rule: Callable | "_Rule") -> Self:
+    def normalize_rule_or_callable(cls, rule: "Callable[..., Any] | _Rule[..., Any]") -> Self:
         """Ensures the outgoing type is normalized from a Callable or _Rule."""
         if isinstance(rule, cls):
             return rule
@@ -187,36 +188,17 @@ class _Rule(Generic[_P, _R]):
             raise TypeError("rule must be a Callable or _Rule type.")
 
     @classmethod
-    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> "_Rule[_P, _R]":
+    def _deserialize_rule(cls, value: str | Callable[_P, _R]) -> Self:
         """
         Custom Deserialization.
         Imports function according to package and function name.
         """
-        callable_handle: Callable[_P, _R]
         if callable(value):
             return cls(value)
-
-        if isinstance(value, str):
-            try:
-                module_name, _, attr_path = value.partition(".")
-                while "." in attr_path:
-                    module_name += "." + attr_path.split(".", 1)[0]
-                    attr_path = attr_path.split(".", 1)[1]
-
-                module = importlib.import_module(module_name)
-                obj = module
-                for attr in attr_path.split("."):
-                    obj = getattr(obj, attr)
-            except (ModuleNotFoundError, AttributeError) as e:
-                assert isinstance(value, str)
-                callable_handle = _NonDeserializableCallable[_P, _R](value, e)
-            else:
-                callable_handle = cast(Callable[_P, _R], obj)
-
-        return cls(callable_handle)
+        return cls(_import_callable_reference(value))
 
     @classmethod
-    def serialize_rule(cls, value: Union[str, "_Rule[_P, _R]"]) -> str:
+    def serialize_rule(cls, value: "str | _Rule[_P, _R]") -> str:
         """
         Custom Serialization.
         Simply exports reference to function as package + function name.
@@ -268,7 +250,7 @@ class _Rule(Generic[_P, _R]):
             expected_callable, expected_return = x
 
         # Compare signatures
-        sig = inspect.signature(r)
+        sig = _get_signature(r)
 
         try:
             # Compare inputs
@@ -283,7 +265,7 @@ class _Rule(Generic[_P, _R]):
             raise e
 
     @staticmethod
-    def _validate_signature_input(expected_callable: Any, sig: inspect.Signature) -> Optional[TypeError]:
+    def _validate_signature_input(expected_callable: Any, sig: inspect.Signature) -> TypeError | None:
         """Validates the input signature of the incoming callable against
         the expected input type."""
 
@@ -302,14 +284,14 @@ class _Rule(Generic[_P, _R]):
                         expected_type = expected_type.__bound__
                         if expected_type is None:
                             return None  # We assume the Type is unbounded
-                    if not issubclass(param.annotation, expected_type):
+                    if not _is_annotation_compatible(param.annotation, expected_type, require_all=False):
                         return TypeError(
                             f"Parameter '{param.name}' must be of type {expected_type}, but {param.annotation} was found."
                         )
         return None
 
     @staticmethod
-    def _validate_signature_output(expected_return: Any, sig: inspect.Signature) -> Optional[TypeError]:
+    def _validate_signature_output(expected_return: Any, sig: inspect.Signature) -> TypeError | None:
         """Validates the output signature of the incoming callable against
         the expected output type."""
 
@@ -325,7 +307,7 @@ class _Rule(Generic[_P, _R]):
                 return None  # We assume the Type is unbounded
 
         if sig.return_annotation is not inspect.Signature.empty:
-            if not issubclass(sig.return_annotation, expected_return):
+            if not _is_annotation_compatible(sig.return_annotation, expected_return, require_all=True):
                 return TypeError(
                     f"Callable return type must be {expected_return}, but {sig.return_annotation} was found."
                 )
@@ -333,7 +315,7 @@ class _Rule(Generic[_P, _R]):
         return None
 
     @staticmethod
-    def _solve_generic_typing(cls_: Any) -> Tuple[Any, Any] | TypeError:
+    def _solve_generic_typing(cls_: Any) -> tuple[Any, Any] | TypeError:
         """Returns an inner generic type's type hint information"""
         origin_bases = getattr(cls_, "__orig_bases__", [])
         if not origin_bases:
@@ -353,6 +335,94 @@ class _Rule(Generic[_P, _R]):
         return TypeError(f"Class {cls_.__name__} must define its generic types explicitly.")
 
 
+def _get_signature(r: Callable[..., Any]) -> inspect.Signature:
+    """Returns the signature of `r`, resolving string annotations when possible.
+
+    String annotations are produced, for instance, by modules that use
+    `from __future__ import annotations`. If they cannot be resolved
+    (e.g. they reference names only available under `TYPE_CHECKING`),
+    the unresolved signature is returned instead.
+    """
+    try:
+        return inspect.signature(r, eval_str=True)
+    except Exception:
+        return inspect.signature(r)
+
+
+def _is_annotation_compatible(annotation: Any, expected: Any, *, require_all: bool) -> bool:
+    """Checks whether a callable's annotation is compatible with an expected type.
+
+    Args:
+        annotation: The annotation found in the callable signature.
+        expected: The type expected by the rule's generic signature.
+        require_all: For union annotations, whether every member (True) or at
+            least one member (False) must be compatible with `expected`.
+
+    Returns:
+        bool: False only if the annotation is provably incompatible. Annotations
+        that cannot be statically reasoned about (e.g. `Any`, unresolved forward
+        references) are considered compatible.
+    """
+    if annotation is None:
+        annotation = type(None)
+    if annotation is Any or isinstance(annotation, str):
+        return True
+    if isinstance(annotation, TypeVar):
+        if annotation.__bound__ is None:
+            return True
+        annotation = annotation.__bound__
+
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        return _is_annotation_compatible(get_args(annotation)[0], expected, require_all=require_all)
+    if origin is Union or origin is UnionType:
+        results = (_is_annotation_compatible(a, expected, require_all=require_all) for a in get_args(annotation))
+        return all(results) if require_all else any(results)
+    if origin is not None:
+        annotation = origin
+
+    if get_origin(expected) is Union or get_origin(expected) is UnionType:
+        return any(_is_annotation_compatible(annotation, e, require_all=require_all) for e in get_args(expected))
+
+    if not isinstance(annotation, type) or not isinstance(expected, type):
+        return True
+    return issubclass(annotation, expected)
+
+
+def _import_callable_reference(reference: str) -> Callable[..., Any]:
+    """Resolves a fully qualified reference (e.g. `package.module.function`,
+    or `package.module.Class.method`) to the object it points to.
+
+    The longest importable module prefix is used, and the remaining
+    path is resolved through attribute access.
+
+    Returns:
+        The resolved object, or a `_NonDeserializableCallable` placeholder
+        if the reference cannot be resolved in the current environment.
+    """
+    parts = reference.split(".")
+    error: Exception = ValueError(f"'{reference}' is not a fully qualified reference to a callable.")
+    for split in range(len(parts) - 1, 0, -1):
+        module_name = ".".join(parts[:split])
+        try:
+            obj: Any = importlib.import_module(module_name)
+        except ModuleNotFoundError as e:
+            error = e
+            # Only keep searching if the missing module is the candidate path itself.
+            # Otherwise, an existing module failed to import one of its own dependencies.
+            if e.name is not None and not module_name.startswith(e.name):
+                break
+            continue
+        try:
+            for attr in parts[split:]:
+                obj = getattr(obj, attr)
+        except AttributeError as e:
+            error = e
+            break
+        return obj
+    return _NonDeserializableCallable(reference, error)
+
+
 def is_non_deserializable_callable(value: Any) -> bool:
     """
     Check if the given value is an instance of _NonDeserializableCallable.
@@ -367,7 +437,7 @@ def is_non_deserializable_callable(value: Any) -> bool:
 
 def try_materialize_non_deserializable_callable_error(
     value: "_NonDeserializableCallable",
-) -> Optional[Exception]:
+) -> Exception | None:
     """
     Attempts to materialize the error from a non-deserializable callable.
 
@@ -426,7 +496,7 @@ class _NonDeserializableCallable(Generic[_P, _R]):
         return hash(self._callable_repr)
 
 
-class Policy(_Rule[[TMetrics, TTask], TTask], Generic[TMetrics, TTask]):
+class Policy(_Rule[[TMetrics_contra, TTask], TTask], Generic[TMetrics_contra, TTask]):
     """
     User-defined function that defines
     how the current Task is updated according to metrics.
@@ -436,7 +506,7 @@ class Policy(_Rule[[TMetrics, TTask], TTask], Generic[TMetrics, TTask]):
     pass
 
 
-class PolicyTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
+class PolicyTransition(_Rule[[TMetrics_contra], bool], Generic[TMetrics_contra]):
     """
     User-defined function that defines
     how current Policies change during a Stage.
@@ -444,6 +514,11 @@ class PolicyTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
     """
 
     pass
+
+
+# Inputs accepted wherever a rule is normalized at runtime (see `_Rule.normalize_rule_or_callable`).
+PolicyLike: TypeAlias = Policy[TMetrics, TTask] | Callable[[TMetrics, TTask], TTask]
+PolicyTransitionLike: TypeAlias = PolicyTransition[TMetrics] | Callable[[TMetrics], bool]
 
 
 NodeTypes = TypeVar("NodeTypes")
@@ -455,8 +530,8 @@ class _BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     Core directed graph data structure used in Stage and Curriculum.
     """
 
-    nodes: Dict[int, NodeTypes] = Field(default={}, validate_default=True)
-    graph: Dict[int, List[Tuple[EdgeType, int]]] = Field(default={}, validate_default=True)
+    nodes: dict[int, NodeTypes] = Field(default={}, validate_default=True)
+    graph: dict[int, list[tuple[EdgeType, int]]] = Field(default={}, validate_default=True)
 
     def _get_node_id(self, node: NodeTypes) -> int:
         """
@@ -583,13 +658,13 @@ class _BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
         # Remove transition
         self.graph[start_id].remove((rule, dest_id))
 
-    def see_nodes(self) -> List[NodeTypes]:
+    def see_nodes(self) -> list[NodeTypes]:
         """
         See nodes of behavior graph.
         """
         return list(self.nodes.values())
 
-    def see_node_transitions(self, node: NodeTypes) -> List[Tuple[EdgeType, NodeTypes]]:
+    def see_node_transitions(self, node: NodeTypes) -> list[tuple[EdgeType, NodeTypes]]:
         """
         See transitions of node in behavior graph.
         """
@@ -604,7 +679,7 @@ class _BehaviorGraph(AindBehaviorModel, Generic[NodeTypes, EdgeType]):
     def set_transition_priority(
         self,
         node: NodeTypes,
-        node_transitions: List[Tuple[EdgeType, NodeTypes]],
+        node_transitions: list[tuple[EdgeType, NodeTypes]],
     ) -> None:
         """
         Change order of node transitions listed under a node.
@@ -663,10 +738,10 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         validate_default=True,
         description="Policy Graph.",
     )
-    start_policies: List[Policy[TMetrics, TTask]] = Field(
+    start_policies: list[Policy[TMetrics, TTask]] = Field(
         default_factory=list, description="List of starting policies."
     )
-    metrics_provider: Optional[MetricsProvider[TMetrics]] = Field(
+    metrics_provider: MetricsProvider[TMetrics] | None = Field(
         default=None,
         description="A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
     )
@@ -687,7 +762,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
             return False
         return self.name == other.name
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context: Any) -> None:
         """Runs after model_construct to ensure that the
         initial policies update the PolicyGraph"""
         super().model_post_init(__context)
@@ -695,7 +770,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def set_start_policies(
         self,
-        start_policies: Policy[TMetrics, TTask] | Iterable[Policy[TMetrics, TTask]],
+        start_policies: PolicyLike[TMetrics, TTask] | Iterable[PolicyLike[TMetrics, TTask]],
         append_non_existing: bool = True,
     ) -> None:
         """
@@ -704,18 +779,19 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         """
         if not isinstance(start_policies, Iterable):
             start_policies = [start_policies]
+        # Normalize once; this also materializes one-shot iterables (e.g. generators).
+        normalized: list[Policy[TMetrics, TTask]] = [Policy.normalize_rule_or_callable(p) for p in start_policies]
 
-        for policy in start_policies:
-            policy = Policy.normalize_rule_or_callable(policy)
+        for policy in normalized:
             if policy not in self.graph.see_nodes():
                 if append_non_existing:
                     self.add_policy(policy)
                 else:
                     raise ValueError(f"Policy {policy} is not in the policy graph.")
 
-        self.start_policies = list(start_policies)
+        self.start_policies = normalized
 
-    def add_policy(self, policy: Policy[TMetrics, TTask]) -> None:
+    def add_policy(self, policy: PolicyLike[TMetrics, TTask]) -> None:
         """
         Adds a floating policy to the Stage adjacency graph.
         """
@@ -725,7 +801,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
         self.graph.add_node(policy)
 
-    def remove_policy(self, policy: Policy[TMetrics, TTask]) -> None:
+    def remove_policy(self, policy: PolicyLike[TMetrics, TTask]) -> None:
         """
         Removes policy and all associated incoming/outgoing
         transition rules from the stage graph.
@@ -744,9 +820,9 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def add_policy_transition(
         self,
-        start_policy: Policy[TMetrics, TTask],
-        dest_policy: Policy[TMetrics, TTask],
-        rule: PolicyTransition[TMetrics],
+        start_policy: PolicyLike[TMetrics, TTask],
+        dest_policy: PolicyLike[TMetrics, TTask],
+        rule: PolicyTransitionLike[TMetrics],
     ) -> None:
         """
         Add policy transition between two policies:
@@ -769,9 +845,9 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def remove_policy_transition(
         self,
-        start_policy: Policy[TMetrics, TTask],
-        dest_policy: Policy[TMetrics, TTask],
-        rule: PolicyTransition[TMetrics],
+        start_policy: PolicyLike[TMetrics, TTask],
+        dest_policy: PolicyLike[TMetrics, TTask],
+        rule: PolicyTransitionLike[TMetrics],
         remove_start_policy: bool = False,
         remove_dest_policy: bool = False,
     ) -> None:
@@ -789,15 +865,15 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
             remove_dest_policy,
         )
 
-    def see_policies(self) -> List[Policy[TMetrics, TTask]]:
+    def see_policies(self) -> list[Policy[TMetrics, TTask]]:
         """
         See policies of policy graph.
         """
         return self.graph.see_nodes()
 
     def see_policy_transitions(
-        self, policy: Policy[TMetrics, TTask]
-    ) -> List[Tuple[PolicyTransition[TMetrics], Policy[TMetrics, TTask]]]:
+        self, policy: PolicyLike[TMetrics, TTask]
+    ) -> list[tuple[PolicyTransition[TMetrics], Policy[TMetrics, TTask]]]:
         """
         See transitions of stage in policy graph.
         """
@@ -806,8 +882,8 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def set_policy_transition_priority(
         self,
-        policy: Policy[TMetrics, TTask],
-        policy_transitions: List[Tuple[PolicyTransition[TMetrics], Policy[TMetrics, TTask]]],
+        policy: PolicyLike[TMetrics, TTask],
+        policy_transitions: Sequence[tuple[PolicyTransitionLike[TMetrics], PolicyLike[TMetrics, TTask]]],
     ) -> None:
         """
         Change the order of policy transitions listed under a policy.
@@ -846,14 +922,14 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         self.task = task.model_copy(deep=True)
 
     @deprecated("This method is deprecated in favor of setting the task directly using set_task(...).")
-    def set_task_parameters(self, task_parameters: TTaskParameters) -> None:
+    def set_task_parameters(self, task_parameters: TaskParameters) -> None:
         """
         Set the task parameters for the current task.
         """
         self.task = self.get_task().model_copy(update={"task_parameters": task_parameters})
 
     @deprecated("This method is deprecated in favor of getting the task directly using get_task(...).")
-    def get_task_parameters(self) -> TTaskParameters:
+    def get_task_parameters(self) -> TaskParameters:
         """
         Get the task parameters for the current task.
         """
@@ -879,7 +955,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         return self
 
 
-class StageTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
+class StageTransition(_Rule[[TMetrics_contra], bool], Generic[TMetrics_contra]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
@@ -887,6 +963,9 @@ class StageTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
     """
 
     pass
+
+
+StageTransitionLike: TypeAlias = StageTransition[TMetrics] | Callable[[TMetrics], bool]
 
 
 class StageGraph(_BehaviorGraph[Stage[TMetrics, TTask], StageTransition[TMetrics]], Generic[TMetrics, TTask]):
@@ -927,7 +1006,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
 
     @field_validator("version", mode="before", check_fields=False)
     @classmethod
-    def coerce_version(cls, v: str, ctx) -> str:
+    def coerce_version(cls, v: str, ctx: ValidationInfo) -> str:
         """Attempts to coerce the incoming deserialized version string to
         the version defined by the deserialization model."""
         # The following two guard clauses bypass the coercion since Curriculum
@@ -942,28 +1021,21 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             if pydantic_metadata.get("origin", None) is Curriculum:
                 return v
         # Otherwise we coerce.
-        return coerce_schema_version(cls, v, ctx.field_name)
+        return coerce_schema_version(cls, v, ctx.field_name or "version")
 
     @property
-    def _known_tasks(self) -> List[Type[Task]]:
+    def _known_tasks(self) -> list[type[Task]]:
         """Get all known tasks in the curriculum."""
 
         # We introspect into the StageGraph[T] type to get the known tasks.
         _generic = type(self).model_fields["graph"].annotation
         _inner_args = _generic.__dict__["__pydantic_generic_metadata__"]["args"]
 
-        _inner_union: Type
         if len(_inner_args) == 0:
-            _inner_union = Task
+            _known_tasks: list[type[Task]] = [Task]
         else:
             # TODO This may be an issue if people define a generic on TTask but not Metrics
-            _inner_args = _inner_args[1]
-            _inner_union = get_args(_inner_args.__value__)[0]
-
-        if isinstance(_inner_union, type):
-            _known_tasks = [_inner_union]
-        else:
-            _known_tasks = [x for x in get_args(_inner_union)]
+            _known_tasks = _flatten_task_types(_inner_args[1])
 
         # Since we are here, we also check if the known tasks match the nodes in the graph
         # The tasks known to the graph type should be a super set of the known tasks in the nodes
@@ -974,11 +1046,11 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             )
         return _known_tasks
 
-    def task_discriminator_type(self) -> Type[Task]:
+    def task_discriminator_type(self) -> type[Task]:
         """Create a Discriminated Union  type for the known tasks."""
         return make_task_discriminator(self._known_tasks)
 
-    def _is_task_type_known(self, task_type: Task | Type[Task]) -> bool:
+    def _is_task_type_known(self, task_type: Task | type[Task]) -> bool:
         """Check if a task type is known in the curriculum."""
         if isinstance(task_type, Task):
             task_type = type(task_type)
@@ -1019,7 +1091,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         self,
         start_stage: Stage,
         dest_stage: Stage,
-        rule: StageTransition,
+        rule: StageTransitionLike[Any],
     ) -> None:
         """
         Add stage transition between two stages:
@@ -1044,7 +1116,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         self,
         start_stage: Stage,
         dest_stage: Stage,
-        rule: StageTransition,
+        rule: StageTransitionLike[Any],
         remove_start_stage: bool = False,
         remove_dest_stage: bool = False,
     ) -> None:
@@ -1062,13 +1134,13 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             remove_dest_stage,
         )
 
-    def see_stages(self) -> List[Stage]:
+    def see_stages(self) -> list[Stage]:
         """
         See stages of curriculum graph.
         """
         return self.graph.see_nodes()
 
-    def see_stage_transitions(self, stage: Stage) -> List[Tuple[StageTransition, Stage]]:
+    def see_stage_transitions(self, stage: Stage) -> list[tuple[StageTransition, Stage]]:
         """
         See transitions of stage in curriculum graph.
         """
@@ -1077,7 +1149,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
     def set_stage_transition_priority(
         self,
         stage: Stage,
-        stage_transitions: List[Tuple[StageTransition, Stage]],
+        stage_transitions: Sequence[tuple[StageTransitionLike[Any], Stage]],
     ) -> None:
         """
         Change the order of stage transitions listed under a stage.
@@ -1116,10 +1188,8 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
             self.model_validate_json(instance_json)
         except ValidationError as e:
             e.add_note(
-                (
-                    "Pydantic cannot serialize Curriculum, please use "
-                    "mypy to verify your types (check stage transition signature, etc.)."
-                )
+                "Pydantic cannot serialize Curriculum, please use "
+                "mypy to verify your types (check stage transition signature, etc.)."
             )
             raise e
 
@@ -1129,9 +1199,9 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
 def create_curriculum(
     name: str,
     version: str,
-    tasks: Iterable[Type[TTask]],
-    pkg_location: Optional[str] = None,
-) -> Type[Curriculum[TTask]]:
+    tasks: Iterable[type[TTask]],
+    pkg_location: str | None = None,
+) -> type[Curriculum[TTask]]:
     """
     Creates a new curriculum model with the specified name, version, and tasks.
     Args:
@@ -1145,12 +1215,14 @@ def create_curriculum(
         ValueError: If no tasks are provided.
     """
 
+    # Materialize once so one-shot iterables (e.g. generators) are not exhausted by the check below.
+    tasks = list(tasks)
     if not any(tasks):
         raise ValueError("At least one task must be provided.")
 
     _tasks_tagged = cast(TTask, make_task_discriminator(tasks))
 
-    fields: Dict[str, Any] = {
+    fields: dict[str, Any] = {
         "name": Annotated[
             Literal[name],
             Field(default=name, frozen=True, validate_default=True),
@@ -1177,7 +1249,7 @@ def create_curriculum(
     return create_model(name, __base__=Curriculum[_tasks_tagged], **fields)
 
 
-def make_task_discriminator(tasks: Iterable[Type[TTask]]) -> Type[TTask]:
+def make_task_discriminator(tasks: Iterable[type[TTask]]) -> type[TTask]:
     """
     Creates a discriminated union type for the given tasks.
     This function takes a variable number of Task types and generates a
@@ -1188,14 +1260,31 @@ def make_task_discriminator(tasks: Iterable[Type[TTask]]) -> Type[TTask]:
     Returns:
         Type: A TypeAliasType with the discriminated union type of the provided tasks.
     """
-
-    return cast(
-        Type[TTask],
-        TypeAliasType(
-            "known_task_types",
-            Annotated[
-                Union[tuple(set(tasks))],
-                Field(discriminator="name"),
-            ],
-        ),
+    # Deduplicate while preserving the input order, so the generated
+    # union (and therefore the JSON schema) is deterministic across runs.
+    unique_tasks = tuple(dict.fromkeys(tasks))
+    known_task_types = TypeAliasType(  # pyright: ignore[reportGeneralTypeIssues] - built dynamically
+        "known_task_types",
+        Annotated[
+            Union[unique_tasks],  # noqa: UP007  # pyright: ignore[reportInvalidTypeArguments, reportInvalidTypeForm]
+            Field(discriminator="name"),
+        ],
     )
+    return cast(type[TTask], known_task_types)
+
+
+def _flatten_task_types(tp: Any) -> list[type[Task]]:
+    """Flattens a (possibly aliased, annotated, or union) task type
+    into the list of concrete Task types it represents."""
+    if isinstance(tp, TypeVar):
+        return [tp.__bound__ if tp.__bound__ is not None else Task]
+    if hasattr(tp, "__value__"):  # TypeAliasType (typing or typing_extensions)
+        return _flatten_task_types(tp.__value__)
+    origin = get_origin(tp)
+    if origin is Annotated:
+        return _flatten_task_types(get_args(tp)[0])
+    if origin is Union or origin is UnionType:
+        return [t for arg in get_args(tp) for t in _flatten_task_types(arg)]
+    if isinstance(tp, type):
+        return [tp]
+    raise TypeError(f"Unable to resolve known Task types from {tp!r}.")

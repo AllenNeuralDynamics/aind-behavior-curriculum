@@ -31,7 +31,7 @@ Issues = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/issues
 Changelog = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum/releases"
 
 [dependency-groups]
-dev = ["ruff", "codespell", "coverage", "interrogate", "pytest", "pytest-cov"]
+dev = ["ruff", "codespell", "coverage", "interrogate", "pytest", "pytest-cov", "pyright"]
 docs = ["zensical", "mkdocstrings[python]"]
 
 [tool.uv.build-backend]
@@ -43,7 +43,7 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-extend-select = ["Q", "RUF100", "C90", "I"]
+extend-select = ["Q", "RUF100", "C90", "I", "UP"]
 extend-ignore = []
 mccabe = { max-complexity = 14 }
 pydocstyle = { convention = "google" }
@@ -69,6 +69,13 @@ fail_under = 88
 [tool.interrogate]
 exclude = ["setup.py", "docs", "build", "tests/", "examples/"]
 fail-under = 100
+
+[tool.pyright]
+include = ["src", "tests/type_checks"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportMissingParameterType = "error"
+reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.uv]
 default-groups = ['dev']
