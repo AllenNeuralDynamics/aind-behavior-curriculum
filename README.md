@@ -5,23 +5,76 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/aind-behavior-curriculum)](https://pypi.org/project/aind-behavior-curriculum/)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-![Interrogate](https://img.shields.io/badge/interrogate-100.0%25-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?logo=codecov)
-![Python](https://img.shields.io/badge/python->=3.11-blue?logo=python)
+[![Python](https://img.shields.io/pypi/pyversions/aind-behavior-curriculum)](https://pypi.org/project/aind-behavior-curriculum/)
 
-A core problem in mice training is accurately keeping track of each mouse's training stage and accurately setting the corresponding rig parameters. As the number of behavior studies, research assistants, and mice increase, manual tracking and parameter input is prone to human error. This library provides a flexible framework for defining mice curriculum enabling mouse training to be automated.
+Automate mouse training by describing a curriculum once, as code, and letting the library decide where each mouse goes next.
 
 > [!WARNING]
 > This library is still in development. Expect breaking changes in future releases.
 
+![High-level curriculum](https://raw.githubusercontent.com/AllenNeuralDynamics/aind-behavior-curriculum/main/assets/high_level_curr_diagram.png)
+
+## Overview
+
+Tracking each mouse's training stage and setting the matching rig parameters by hand does not scale with the number of studies, experimenters and animals, and is prone to human error. `aind-behavior-curriculum` provides a small, typed framework to define that logic declaratively:
+
+- **Tasks** hold validated rig/task parameters ([pydantic](https://docs.pydantic.dev/) models, so they serialize to JSON and ship with a schema).
+- **Stages** wrap a task instance and are the nodes of a curriculum graph.
+- **Stage transitions** are prioritized, rule-based edges between stages, triggered by **metrics** computed from a session.
+- **Policies** (optional) update parameters *within* a stage, in parallel, without creating a new stage.
+- A **Trainer** evaluates a mouse's current state against its latest metrics and proposes the next stage and parameters. A **TrainerServer** does the same for many subjects.
+- **Export** a curriculum to JSON or a diagram to review it, and to share it across rigs.
+
 ## Installation
+
 ```bash
 pip install aind-behavior-curriculum
 ```
 
+Requires Python 3.11+. Diagram export additionally needs [Graphviz](https://graphviz.org/).
+
+## Quick start
+
+```python
+from pydantic import Field
+
+from aind_behavior_curriculum import (
+    GRADUATED,
+    Metrics,
+    Stage,
+    StageTransition,
+    TaskParameters,
+    create_curriculum,
+    create_task,
+)
+
+
+class LickParameters(TaskParameters):
+    reward_size: float = Field(default=2.0)
+
+
+class MyMetrics(Metrics):
+    n_trials: int = 0
+
+
+LickTask = create_task(name="Lick Task", task_parameters=LickParameters)
+MyCurriculum = create_curriculum(name="My Curriculum", version="0.1.0", tasks=(LickTask,))
+
+
+def enough_trials(metrics: MyMetrics) -> bool:
+    return metrics.n_trials > 200
+
+
+stage = Stage(name="Stage 1", task=LickTask(task_parameters=LickParameters()))
+curriculum = MyCurriculum(name="My Curriculum")
+curriculum.add_stage_transition(stage, GRADUATED, StageTransition(enough_trials))
+```
+
+See the [getting started guide](https://allenneuraldynamics.github.io/aind-behavior-curriculum/intro/) for stages, policies and the trainer, and the [`examples/`](examples/) folder for complete curricula with generated diagrams.
+
 ## Documentation
 
-The full documentation is available at [https://allenneuraldynamics.github.io/aind-behavior-curriculum/](https://allenneuraldynamics.github.io/aind-behavior-curriculum/)
+Full documentation and API reference: [allenneuraldynamics.github.io/aind-behavior-curriculum](https://allenneuraldynamics.github.io/aind-behavior-curriculum/)
 
 ## Contributing
 
@@ -57,27 +110,27 @@ This project uses:
 `ruff` for linting. To lint the project, run the following commands:
 
 ```bash
-ruff format .
-ruff check .
+uv run ruff format .
+uv run ruff check .
 ```
 
 `interrogate` for documentation analysis:
 
 ```bash
-interrogate --verbose .
+uv run interrogate --verbose .
 ```
 
 and `codespell` for spell checking:
 
 ```bash
-codespell .
+uv run codespell .
 ```
 
 #### Testing
 
-The project uses `unittest` for testing and `coverage` for coverage analysis.
+The project uses `pytest` for testing and `coverage` for coverage analysis.
 
 ```bash
-coverage run -m unittest
-coverage report
+uv run coverage run -m pytest
+uv run coverage report
 ```
