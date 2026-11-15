@@ -69,7 +69,12 @@ jobs:
           enable-cache: true
 
       - name: Install Graphviz
-        run: sudo apt-get update && sudo apt-get install -y graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          # Newer Ubuntu releases ship gvpack in a separate package.
+          command -v gvpack || sudo apt-get install -y $(apt-cache search --names-only gvpack | cut -d' ' -f1)
+          command -v gvpack
 
       - name: Generate documentation assets
         run: uv run --group docs --with . python docs/generate.py
@@ -181,7 +186,12 @@ jobs:
           enable-cache: true
 
       - name: Install Graphviz
-        run: sudo apt-get update && sudo apt-get install -y graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          # Newer Ubuntu releases ship gvpack in a separate package.
+          command -v gvpack || sudo apt-get install -y $(apt-cache search --names-only gvpack | cut -d' ' -f1)
+          command -v gvpack
 
       - name: Generate documentation assets
         run: uv run --group docs --with . python docs/generate.py
