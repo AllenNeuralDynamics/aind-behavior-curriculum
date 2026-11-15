@@ -4,6 +4,7 @@ Core Stage and Curriculum Primitives.
 
 import importlib
 import inspect
+import typing
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from types import EllipsisType, UnionType
@@ -34,6 +35,13 @@ from aind_behavior_curriculum.base import (
 from aind_behavior_curriculum.task import SEMVER_REGEX, Task, TaskParameters
 
 from .base import coerce_schema_version
+
+# Backwards compatibility: these typing names were previously importable from this module.
+Dict = typing.Dict  # noqa: UP006
+List = typing.List  # noqa: UP006
+Optional = typing.Optional
+Tuple = typing.Tuple  # noqa: UP006
+Type = typing.Type  # noqa: UP006
 
 TTask = TypeVar("TTask", bound=Task)
 _P = ParamSpec("_P")

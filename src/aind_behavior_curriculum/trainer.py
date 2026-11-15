@@ -2,10 +2,11 @@
 Core Trainer primitive.
 """
 
+import typing
 from abc import abstractmethod
 from collections.abc import Iterable
 from functools import reduce
-from typing import Annotated, Any, Generic, Self, TypeVar
+from typing import Annotated, Generic, Self, TypeVar
 
 from pydantic import Field, create_model
 
@@ -20,6 +21,11 @@ from aind_behavior_curriculum.curriculum import (
     Task,
     make_task_discriminator,
 )
+
+# Backwards compatibility: these typing names were previously importable from this module.
+List = typing.List  # noqa: UP006
+Optional = typing.Optional
+Type = typing.Type  # noqa: UP006
 
 TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
 TMetrics = TypeVar("TMetrics", bound=Metrics)
@@ -308,8 +314,8 @@ class Trainer(Generic[TCurriculum]):
     @staticmethod
     def get_net_parameter_update(
         task: TTask,
-        stage_policies: Iterable[PolicyLike[Any, TTask]],
-        curr_metrics: Metrics,
+        stage_policies: Iterable[PolicyLike[TMetrics, TTask]],
+        curr_metrics: TMetrics,
     ) -> TTask:
         """
         Aggregates parameter update of input stage_policies
@@ -448,7 +454,9 @@ class TrainerServer:
         initial_task = Trainer.get_net_parameter_update(
             start_stage.get_task(),
             _start_policies,
-            curr_metrics=Metrics(),  # Metrics is empty on registration.
+            # Metrics is empty on registration. Note that start policies typed for a Metrics
+            # subclass receive a base Metrics instance here, hence the type suppression.
+            curr_metrics=Metrics(),  # pyright: ignore[reportArgumentType]
         )
         self._update_subject_trainer_state(
             subject_id,

@@ -4,6 +4,7 @@ Useful Placeholders when making Curriculums
 
 import os
 import subprocess
+import typing
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +13,9 @@ from pydantic import Field
 
 from aind_behavior_curriculum.curriculum import Curriculum, Stage
 from aind_behavior_curriculum.task import Task, TaskParameters
+
+# Backwards compatibility: these typing names were previously importable from this module.
+Optional = typing.Optional
 
 
 class Graduated(Task):

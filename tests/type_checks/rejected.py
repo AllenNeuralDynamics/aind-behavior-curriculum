@@ -6,7 +6,7 @@ Because `reportUnnecessaryTypeIgnoreComment` is an error, CI fails if the
 library ever stops flagging one of these lines.
 """
 
-from aind_behavior_curriculum import Metrics, Policy, PolicyTransition, Stage, StageTransition, Task
+from aind_behavior_curriculum import Metrics, Policy, PolicyTransition, Stage, StageTransition, Task, Trainer
 
 from ._models import MyMetrics, MyParams, MyTask, OtherTask
 
@@ -46,3 +46,13 @@ def _never_called(typed_stage: Stage[MyMetrics, MyTask], base_stage: Stage[Metri
         PolicyTransition(subclass_metrics_transition),  # pyright: ignore[reportArgumentType]
     )
     _: StageTransition[Metrics] = StageTransition(subclass_metrics_transition)  # pyright: ignore[reportAssignmentType]
+    # Policies written for `MyMetrics` cannot be evaluated with base `Metrics`
+    Trainer.get_net_parameter_update(
+        MyTask(task_parameters=MyParams()),
+        [Policy(returns_my_task)],
+        Metrics(),  # pyright: ignore[reportArgumentType]
+    )
+
+
+def returns_my_task(metrics: MyMetrics, task: MyTask) -> MyTask:
+    return task
