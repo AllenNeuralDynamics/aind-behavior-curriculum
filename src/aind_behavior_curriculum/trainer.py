@@ -5,13 +5,14 @@ Core Trainer primitive.
 from abc import abstractmethod
 from collections.abc import Iterable
 from functools import reduce
-from typing import Annotated, Generic, Self, TypeVar
+from typing import Annotated, Any, Generic, Self, TypeVar
 
-from pydantic import Field, create_model
+from pydantic import Field, SerializeAsAny, SerializerFunctionWrapHandler, create_model, model_serializer
 
 from aind_behavior_curriculum.base import AindBehaviorModel
 from aind_behavior_curriculum.curriculum import (
     Curriculum,
+    Globals,
     Metrics,
     Policy,
     PolicyLike,
@@ -55,6 +56,21 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
         validate_default=True,
         description="The active policies for the current stage",
     )
+    globals: SerializeAsAny[Globals] | None = Field(
+        default=None,
+        validate_default=True,
+        description="Subject-level variables that persist across all stages. "
+        "Set on enrollment and never modified by the Trainer.",
+    )
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_globals(self, handler: SerializerFunctionWrapHandler) -> Any:
+        """Omits `globals` when unset, so that trainer states without globals
+        serialize exactly as before and remain readable by older versions."""
+        data = handler(self)
+        if self.globals is None and isinstance(data, dict):
+            data.pop("globals", None)
+        return data
 
     @classmethod
     def default(cls) -> Self:
@@ -69,6 +85,7 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
             stage=None,
             is_on_curriculum=False,
             active_policies=None,
+            globals=None,
         )
 
     def __eq__(self, other: object) -> bool:
@@ -80,6 +97,13 @@ class TrainerState(AindBehaviorModel, Generic[TCurriculum]):
 
         # Compare 'stage' and 'is_on_curriculum' attributes
         if self.stage != other.stage or self.is_on_curriculum != other.is_on_curriculum:
+            return False
+
+        # Globals are compared by value: a TrainerState deserialized without the
+        # concrete Globals type holds the same data in a base Globals instance.
+        self_globals = self.globals.model_dump() if self.globals is not None else None
+        other_globals = other.globals.model_dump() if other.globals is not None else None
+        if self_globals != other_globals:
             return False
 
         # Compare active_policies using set equality
@@ -135,10 +159,17 @@ class Trainer(Generic[TCurriculum]):
         """
         return self._curriculum
 
-    def create_enrollment(self) -> TrainerState[TCurriculum]:
+    def create_enrollment(self, globals: Globals | None = None) -> TrainerState[TCurriculum]:
         """Creates a new TrainerState for a subject enrolling in the curriculum.
         The initial stage is determined by the curriculum's graph, by
         selecting the stage with the lowest index.
+
+        Args:
+            globals (Globals | None): Subject-level variables that persist across stages.
+                Checked against the on_entry rule of every stage (see Curriculum.validate_globals).
+
+        Raises:
+            ValueError: If the curriculum has no stages, or the globals are not valid for it.
 
         Returns:
             TrainerState: A new instance of the type-aware TrainerState class,
@@ -148,13 +179,39 @@ class Trainer(Generic[TCurriculum]):
         stages: StageGraph[Metrics, Task] = self.curriculum.graph
         if len(stages.see_nodes()) == 0:
             raise ValueError("Curriculum has no stages.")
+        self.curriculum.validate_globals(globals)
         min_index = min(stages.nodes.keys())
-        init_stage = stages.nodes[min_index]
+        init_stage = self.enter_stage(stages.nodes[min_index], globals)
         return self.create_trainer_state(
             is_on_curriculum=True,
             active_policies=init_stage.start_policies,
             stage=init_stage,
+            globals=globals,
         )
+
+    def enter_stage(self, stage: Stage, globals: Globals | None) -> Stage:
+        """Returns a copy of `stage` whose task has been updated by the
+        stage's on_entry rule. If the stage has no rule, the copy keeps
+        the stage's task unchanged.
+
+        Args:
+            stage (Stage): The stage being entered.
+            globals (Globals | None): The subject's globals.
+
+        Returns:
+            Stage: A copy of the stage, safe to mutate without affecting the curriculum.
+
+        Raises:
+            ValueError: If the stage defines an on_entry rule but no globals are provided.
+        """
+        entered = stage.model_copy(deep=True)
+        rule = stage.on_entry
+        if rule is None:
+            return entered
+        if globals is None:
+            raise ValueError(f"Stage {stage.name} defines a stage entry rule, but the subject has no globals.")
+        entered.set_task(rule.apply(globals, entered.get_task()))
+        return entered
 
     @property
     def trainer_state_model(self) -> type[TrainerState[TCurriculum]]:
@@ -172,6 +229,7 @@ class Trainer(Generic[TCurriculum]):
         stage: Stage | None,
         is_on_curriculum: bool = True,
         active_policies: Iterable[Policy] | None = None,
+        globals: Globals | None = None,
     ) -> TrainerState[TCurriculum]:
         """
         Creates a new instance of the type-aware TrainerState class.
@@ -184,6 +242,7 @@ class Trainer(Generic[TCurriculum]):
             stage=stage,
             is_on_curriculum=is_on_curriculum,
             active_policies=list(active_policies) if active_policies else None,
+            globals=globals,
         )
 
     @staticmethod
@@ -293,9 +352,11 @@ class Trainer(Generic[TCurriculum]):
             updated_task = self.get_net_parameter_update(updated_stage.get_task(), active_policies, metrics)
             updated_stage.set_task(updated_task)
 
-        # If we've transitioned stages, we keep to default task_parameters,
+        # If we've transitioned stages, we reset to the default task_parameters
+        # (updated by the stage entry rule, if any),
         # and reset active_policies to the start_policies of the new stage.
         else:
+            updated_stage = self.enter_stage(updated_stage, trainer_state.globals)
             active_policies = updated_stage.start_policies
 
         return self._trainer_state_factory(
@@ -303,6 +364,7 @@ class Trainer(Generic[TCurriculum]):
             stage=updated_stage,
             is_on_curriculum=True,
             active_policies=active_policies,
+            globals=trainer_state.globals,
         )
 
     @staticmethod
@@ -390,6 +452,7 @@ class TrainerServer:
         stage: Stage[TMetrics, TTask] | None,
         updated_task: TTask | None,
         stage_policies: Iterable[Policy[TMetrics, TTask]] | None,
+        globals: Globals | None = None,
     ) -> None:
         """
         Updates subject history, which involves many steps.
@@ -404,12 +467,15 @@ class TrainerServer:
 
         trainer = Trainer(curriculum)
         if stage is None:
-            trainer_state = trainer.create_trainer_state(stage=None, is_on_curriculum=False, active_policies=None)
+            trainer_state = trainer.create_trainer_state(
+                stage=None, is_on_curriculum=False, active_policies=None, globals=globals
+            )
         else:
             trainer_state = trainer.create_trainer_state(
                 stage=stage,
                 is_on_curriculum=True,
                 active_policies=(list(stage_policies) if stage_policies else None),
+                globals=globals,
             )
 
         self.write_data(s_id, curriculum, trainer_state)
@@ -420,14 +486,19 @@ class TrainerServer:
         curriculum: Curriculum[TTask],
         start_stage: Stage[TMetrics, TTask],
         start_policies: Policy[TMetrics, TTask] | list[Policy[TMetrics, TTask]] | None = None,
+        globals: Globals | None = None,
     ) -> None:
         """
         Adds subject into the Trainer system.
         If start_policies is None,
         registration defaults to the Stage.start_policies.
+        `globals` are subject-level variables that persist across stages
+        and are applied through the stages' on_entry rules. They are checked
+        against every stage on registration (see Curriculum.validate_globals).
         """
 
         curriculum = curriculum.validate_curriculum()
+        curriculum.validate_globals(globals)
 
         if start_stage not in curriculum.see_stages():
             raise ValueError("Provided start_stage is not in provided curriculum.")
@@ -445,6 +516,7 @@ class TrainerServer:
 
         _start_policies = list(start_policies)
 
+        start_stage = Trainer(curriculum).enter_stage(start_stage, globals)
         initial_task = Trainer.get_net_parameter_update(
             start_stage.get_task(),
             _start_policies,
@@ -458,6 +530,7 @@ class TrainerServer:
             start_stage,
             initial_task,
             _start_policies,
+            globals,
         )
 
         # Add to trainer's local list!
@@ -492,6 +565,7 @@ class TrainerServer:
                     stage=None,
                     is_on_curriculum=False,
                     active_policies=trainer_state.active_policies,
+                    globals=trainer_state.globals,
                 )  # Not sure if this is correct, but a user may want to keep track of the policies that were active when the subject was off-curriculum.
                 updated_task = None
 
@@ -501,6 +575,7 @@ class TrainerServer:
                 updated_trainer_state.stage,
                 updated_task,
                 updated_trainer_state.active_policies,
+                trainer_state.globals,
             )
 
     def override_subject_status(
@@ -519,7 +594,7 @@ class TrainerServer:
         if s_id not in self.subject_ids:
             raise ValueError(f"subject id {s_id} not in self.subject_ids.")
 
-        curriculum, _, curr_metrics = self.load_data(s_id)
+        curriculum, trainer_state, curr_metrics = self.load_data(s_id)
 
         if override_stage not in curriculum.see_stages():
             raise ValueError(
@@ -537,8 +612,10 @@ class TrainerServer:
                     given override stage {override_stage.name}."
                 )
 
-        # Update Stage parameters according to override policies
-        updated_params = Trainer(curriculum).get_net_parameter_update(
+        # Apply the stage entry rule, then update Stage parameters according to override policies
+        trainer = Trainer(curriculum)
+        override_stage = trainer.enter_stage(override_stage, trainer_state.globals)
+        updated_params = trainer.get_net_parameter_update(
             override_stage.get_task(),
             override_policies,
             curr_metrics,
@@ -549,6 +626,7 @@ class TrainerServer:
             override_stage,
             updated_params,
             list(override_policies),
+            trainer_state.globals,
         )
 
     def eject_subject(self, s_id: int) -> None:
@@ -558,7 +636,7 @@ class TrainerServer:
         with Trainer.override_subject_status(...)
         """
 
-        curriculum, _, _ = self.load_data(s_id)
+        curriculum, trainer_state, _ = self.load_data(s_id)
 
         self._update_subject_trainer_state(
             s_id,
@@ -566,4 +644,5 @@ class TrainerServer:
             stage=None,
             updated_task=None,
             stage_policies=None,
+            globals=trainer_state.globals,
         )

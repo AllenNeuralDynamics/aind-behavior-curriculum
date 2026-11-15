@@ -10,11 +10,13 @@ __version__ = _version("aind-behavior-curriculum")
 
 from .curriculum import (
     Curriculum,
+    Globals,
     Metrics,
     MetricsProvider,
     Policy,
     PolicyTransition,
     Stage,
+    StageEntryRule,
     StageGraph,
     StageTransition,
     create_curriculum,
@@ -26,11 +28,13 @@ from .trainer import Trainer, TrainerServer, TrainerState
 
 __all__ = [
     "Curriculum",
+    "Globals",
     "Metrics",
     "MetricsProvider",
     "Policy",
     "PolicyTransition",
     "Stage",
+    "StageEntryRule",
     "StageGraph",
     "StageTransition",
     "create_curriculum",

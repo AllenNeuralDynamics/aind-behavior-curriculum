@@ -22,7 +22,16 @@ from typing import (
     get_origin,
 )
 
-from pydantic import Field, GetJsonSchemaHandler, ValidationError, ValidationInfo, create_model, field_validator
+from pydantic import (
+    Field,
+    GetJsonSchemaHandler,
+    SerializerFunctionWrapHandler,
+    ValidationError,
+    ValidationInfo,
+    create_model,
+    field_validator,
+    model_serializer,
+)
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from typing_extensions import TypeAliasType, deprecated
@@ -53,6 +62,28 @@ TMetrics = TypeVar("TMetrics", bound=Metrics)
 # Rules only consume metrics, so they are contravariant in the metrics type:
 # a rule written for `Metrics` can be used wherever a rule for a `Metrics` subclass is expected.
 TMetrics_contra = TypeVar("TMetrics_contra", bound=Metrics, contravariant=True)
+
+
+class Globals(AindBehaviorModelExtra):
+    """
+    Base class for subject-level variables that persist across all stages
+    of a curriculum (e.g. a counterbalanced stimulus-response contingency).
+    Subclass with the desired fields.
+
+    Globals are set once, when a subject enrolls, and are stored in the
+    TrainerState. The Trainer never modifies them; they can only be changed
+    by editing the TrainerState directly.
+
+    The curriculum does not declare a Globals type. Instead, each StageEntryRule
+    declares the type it expects through the annotation of its first parameter,
+    and the subject's globals are validated into that type right before the rule
+    is invoked. Extra fields are allowed so that globals deserialized without
+    their concrete type keep all of their data.
+    """
+
+
+# Stage entry rules only consume globals, so they are contravariant in the globals type.
+TGlobals_contra = TypeVar("TGlobals_contra", bound=Globals, contravariant=True)
 
 
 class _Rule(Generic[_P, _R]):
@@ -521,6 +552,56 @@ PolicyLike: TypeAlias = Policy[TMetrics, TTask] | Callable[[TMetrics, TTask], TT
 PolicyTransitionLike: TypeAlias = PolicyTransition[TMetrics] | Callable[[TMetrics], bool]
 
 
+class StageEntryRule(_Rule[[TGlobals_contra, TTask], TTask], Generic[TGlobals_contra, TTask]):
+    """
+    User-defined function that defines how a Stage's default Task
+    is updated from the subject's Globals whenever the subject enters a Stage
+    (enrollment, stage transition, or manual override).
+    It is never evaluated while a subject remains in a Stage.
+    It subclasses _Rule.
+
+    The Globals type expected by the rule is taken from the annotation of the
+    callable's first parameter (see `globals_type`). Use `apply` rather than
+    `invoke` so that the globals are validated into that type first.
+    """
+
+    @property
+    def globals_type(self) -> type[Globals]:
+        """
+        The Globals type declared by the first parameter of the callable,
+        or Globals if the parameter is not annotated with a Globals subclass.
+        """
+        try:
+            params = list(_get_signature(self.callable).parameters.values())
+        except (TypeError, ValueError):
+            return Globals
+        if params:
+            annotation = params[0].annotation
+            if isinstance(annotation, type) and issubclass(annotation, Globals):
+                return annotation
+        return Globals
+
+    def coerce_globals(self, globals: Globals) -> Globals:
+        """
+        Validates `globals` into the type expected by this rule.
+        Instances of the expected type (or of a subclass) are returned unchanged.
+        Otherwise the data is round-tripped through JSON into the expected type.
+
+        Raises:
+            pydantic.ValidationError: If the data does not satisfy the expected type.
+        """
+        target = self.globals_type
+        if isinstance(globals, target):
+            return globals
+        return target.model_validate_json(globals.model_dump_json())
+
+    def apply(self, globals: Globals, task: TTask) -> TTask:
+        """Validates `globals` into the expected type and invokes the rule."""
+        # coerce_globals validates into `globals_type`, the rule's declared parameter type,
+        # which a static checker cannot relate to TGlobals_contra.
+        return self.invoke(cast(TGlobals_contra, self.coerce_globals(globals)), task)
+
+
 NodeTypes = TypeVar("NodeTypes")
 EdgeType = TypeVar("EdgeType")
 
@@ -745,6 +826,20 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         default=None,
         description="A MetricsProvider instance that keeps a reference to a handle to create a metrics object for this stage.",
     )
+    on_entry: StageEntryRule[Globals, TTask] | None = Field(
+        default=None,
+        description="Rule applied to the stage's default task, using the subject's globals, when a subject enters "
+        "this stage.",
+    )
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_on_entry(self, handler: SerializerFunctionWrapHandler) -> Any:
+        """Omits `on_entry` when unset, so that stages without an entry rule
+        serialize exactly as before and remain readable by older versions."""
+        data = handler(self)
+        if self.on_entry is None and isinstance(data, dict):
+            data.pop("on_entry", None)
+        return data
 
     def __eq__(self, other: Any) -> bool:
         """
@@ -1168,9 +1263,48 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
 
         self.graph.set_transition_priority(stage, stage_transitions)
 
-    def validate_curriculum(self) -> Self:
+    def validate_globals(self, globals: Globals | None) -> None:
+        """
+        Checks that `globals` can be used by every stage of the curriculum.
+        Each stage's on_entry rule is dry-run on a copy of the stage's default task:
+        the globals must validate into the type the rule expects, the rule must not
+        raise, and it must return a task of the stage's task type.
+        The curriculum itself is not modified.
+
+        Args:
+            globals (Globals | None): The globals to check.
+
+        Raises:
+            ValueError: Listing every stage for which the check failed.
+        """
+        errors: list[str] = []
+        for stage in self.see_stages():
+            rule = stage.on_entry
+            if rule is None:
+                continue
+            if globals is None:
+                errors.append(f"Stage '{stage.name}' defines an on_entry rule, but no globals were provided.")
+                continue
+            try:
+                result = rule.apply(globals, stage.get_task())
+            except Exception as e:
+                errors.append(f"Stage '{stage.name}': on_entry rule '{rule.name}' failed: {e!r}")
+                continue
+            if not isinstance(result, type(stage.task)):
+                errors.append(
+                    f"Stage '{stage.name}': on_entry rule '{rule.name}' returned {type(result).__name__}, "
+                    f"expected {type(stage.task).__name__}."
+                )
+        if errors:
+            raise ValueError("Globals are not valid for this curriculum:\n" + "\n".join(errors))
+
+    def validate_curriculum(self, sample_globals: Globals | None = None) -> Self:
         """
         Validate curriculum for export/serialization.
+
+        Args:
+            sample_globals (Globals | None): If provided, every stage's on_entry rule
+                is dry-run against it (see `validate_globals`).
         """
 
         if not all([self._is_task_type_known(stage.task) for stage in self.see_stages()]):
@@ -1192,6 +1326,9 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
                 "mypy to verify your types (check stage transition signature, etc.)."
             )
             raise e
+
+        if sample_globals is not None:
+            self.validate_globals(sample_globals)
 
         return self
 
