@@ -1,0 +1,83 @@
+/* Graphviz diagrams are rendered on a transparent background: keep them readable in dark mode. */
+.md-typeset img[src$=".svg"],
+.md-typeset img[src$="diagram.png"] {
+  background: #fff;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.4rem;
+  padding: 0.75rem;
+  display: block;
+  margin-inline: auto;
+}
+.md-typeset figure { margin: 1.5rem 0; }
+.md-typeset figcaption { font-size: 0.75rem; opacity: 0.8; text-align: center; }
+.md-typeset .badges img { display: inline; border: 0; padding: 0; background: none; margin-right: 0.15rem; }
+
+/* ---- Colour and separation ---- */
+:root {
+  --acd-ink: #0b0b0f;
+  --acd-accent: #2f6df6;
+  --acd-panel: #f3f5f9;
+  --acd-line: #d9dde6;
+}
+[data-md-color-scheme="slate"] {
+  --acd-panel: #1b1d24;
+  --acd-line: #2c303b;
+}
+
+/* Black header, white logo (the supplied logo is black). */
+.md-header {
+  background: var(--acd-ink);
+  color: #fff;
+  border-bottom: 3px solid var(--acd-accent);
+}
+.md-header *, .md-header a { color: #fff; }
+.md-header img, .md-header svg.logo { filter: invert(1); }
+.md-header__button.md-logo img { height: 1.4rem; width: auto; }
+
+/* Page canvas vs. content panel */
+body, .md-main { background: var(--acd-panel); }
+.md-content__inner {
+  background: var(--md-default-bg-color, #fff);
+  border: 1px solid var(--acd-line);
+  border-radius: 0.6rem;
+  padding: 1.5rem 2rem;
+  margin-top: 1rem;
+}
+
+/* Headings */
+.md-typeset h1 { border-bottom: 3px solid var(--acd-ink); padding-bottom: 0.4rem; }
+[data-md-color-scheme="slate"] .md-typeset h1 { border-bottom-color: var(--acd-accent); }
+.md-typeset h2 {
+  margin-top: 2.5rem;
+  padding: 0.35rem 0.75rem;
+  border-left: 5px solid var(--acd-accent);
+  background: var(--acd-panel);
+  border-radius: 0 0.3rem 0.3rem 0;
+}
+
+/* Code, tabs, cards */
+.md-typeset pre > code, .md-typeset .highlight { border-radius: 0.4rem; }
+.md-typeset .tabbed-set { border: 1px solid var(--acd-line); border-radius: 0.4rem; padding: 0.25rem 0.75rem; }
+.md-typeset .grid.cards > ul > li, .md-typeset .grid > .card {
+  background: var(--acd-panel);
+  border: 1px solid var(--acd-line);
+  border-top: 4px solid var(--acd-ink);
+  border-radius: 0.4rem;
+}
+.md-typeset .md-button { background: var(--acd-ink); color: #fff; border-color: var(--acd-ink); }
+.md-typeset .md-button:hover { background: var(--acd-accent); border-color: var(--acd-accent); color: #fff; }
+.md-typeset table:not([class]) th { background: var(--acd-ink); color: #fff; }
+.md-footer { background: var(--acd-ink); color: #fff; }
+
+/* Card grid: lay out in columns, tint the icons */
+.md-typeset .grid.cards > ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+}
+.md-typeset .grid.cards > ul > li { margin: 0; padding: 1rem; }
+.md-typeset .grid.cards .twemoji { color: var(--acd-accent); }
+.md-typeset .grid.cards .twemoji svg { width: 1.6rem; height: 1.6rem; fill: currentColor; }

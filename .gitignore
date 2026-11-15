@@ -140,3 +140,6 @@ dmypy.json
 
 # zensical
 site/
+
+# Generated documentation assets
+docs/generated/
