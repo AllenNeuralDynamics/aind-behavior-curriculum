@@ -1,0 +1,178 @@
+name: aind-behavior-curriculum CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Check that uv.lock is up to date
+        run: uv lock --check
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run ruff format
+        run: uv run ruff format --check
+
+      - name: Run ruff check
+        run: uv run ruff check
+
+      - name: Run codespell
+        run: uv run codespell --check-filenames
+
+      - name: Run interrogate
+        run: uv run interrogate
+
+      - name: Run tests and coverage
+        run: |
+          uv run coverage run -m pytest
+          uv run coverage report
+
+      - name: Build
+        run: uv build
+
+  docs-check:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Build docs
+        run: uv run --only-group docs --with . zensical build --clean
+
+  prepare-release:
+    name: Set version from release tag
+    runs-on: ubuntu-latest
+    needs: [tests, docs-check]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Extract version from tag
+        id: get_version
+        shell: bash
+        run: echo "version=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+
+      - name: Validate version format
+        run: uv version ${{ steps.get_version.outputs.version }} --dry-run
+
+      - name: Set version
+        run: uv version ${{ steps.get_version.outputs.version }}
+
+      - name: Build
+        run: uv build
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+      - name: Commit version bump and move the release tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Set version ${{ steps.get_version.outputs.version }} [skip ci]"
+          git push origin main
+          git tag -fa "$TAG_NAME" -m "$TAG_NAME"
+          git push origin "$TAG_NAME" --force
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+
+  publish-to-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Publish to PyPI
+        run: uv publish --token ${{ secrets.AIND_PYPI_TOKEN }}
+
+      - name: Upload distributions to GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+
+  deploy-docs:
+    name: Deploy documentation to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Build docs
+        run: uv run --only-group docs --with . zensical build --clean
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

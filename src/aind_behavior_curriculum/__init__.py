@@ -4,7 +4,9 @@ Init package
 Modules in this file are public facing.
 """
 
-__version__ = "0.0.42"
+from importlib.metadata import version as _version
+
+__version__ = _version("aind-behavior-curriculum")
 
 from .curriculum import (
     Curriculum,
