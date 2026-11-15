@@ -2,7 +2,6 @@
 Core Trainer primitive.
 """
 
-import typing
 from abc import abstractmethod
 from collections.abc import Iterable
 from functools import reduce
@@ -21,11 +20,6 @@ from aind_behavior_curriculum.curriculum import (
     Task,
     make_task_discriminator,
 )
-
-# Backwards compatibility: these typing names were previously importable from this module.
-List = typing.List  # noqa: UP006
-Optional = typing.Optional
-Type = typing.Type  # noqa: UP006
 
 TCurriculum = TypeVar("TCurriculum", bound=Curriculum)
 TMetrics = TypeVar("TMetrics", bound=Metrics)

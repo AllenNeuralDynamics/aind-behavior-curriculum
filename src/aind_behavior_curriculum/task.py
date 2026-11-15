@@ -2,7 +2,6 @@
 Base Behavior Models
 """
 
-import typing
 from string import capwords
 from typing import Annotated, Generic, Literal, TypeVar
 
@@ -12,10 +11,6 @@ from aind_behavior_curriculum.base import (
     AindBehaviorModel,
     AindBehaviorModelExtra,
 )
-
-# Backwards compatibility: these typing names were previously importable from this module.
-Optional = typing.Optional
-Type = typing.Type  # noqa: UP006
 
 SEMVER_REGEX = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
 
