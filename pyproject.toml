@@ -71,7 +71,7 @@ exclude = ["setup.py", "docs", "build", "tests/", "examples/"]
 fail-under = 100
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests/type_checks"]
 pythonVersion = "3.11"
 typeCheckingMode = "standard"
 reportMissingParameterType = "error"

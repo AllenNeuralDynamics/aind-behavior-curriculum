@@ -5,7 +5,7 @@ Core Stage and Curriculum Primitives.
 import importlib
 import inspect
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from types import EllipsisType, UnionType
 from typing import (
     Annotated,
@@ -14,6 +14,7 @@ from typing import (
     Literal,
     ParamSpec,
     Self,
+    TypeAlias,
     TypeVar,
     Union,
     cast,
@@ -49,6 +50,9 @@ class Metrics(AindBehaviorModelExtra):
 
 
 TMetrics = TypeVar("TMetrics", bound=Metrics)
+# Rules only consume metrics, so they are contravariant in the metrics type:
+# a rule written for `Metrics` can be used wherever a rule for a `Metrics` subclass is expected.
+TMetrics_contra = TypeVar("TMetrics_contra", bound=Metrics, contravariant=True)
 
 
 class _Rule(Generic[_P, _R]):
@@ -492,7 +496,7 @@ class _NonDeserializableCallable(Generic[_P, _R]):
         return hash(self._callable_repr)
 
 
-class Policy(_Rule[[TMetrics, TTask], TTask], Generic[TMetrics, TTask]):
+class Policy(_Rule[[TMetrics_contra, TTask], TTask], Generic[TMetrics_contra, TTask]):
     """
     User-defined function that defines
     how the current Task is updated according to metrics.
@@ -502,7 +506,7 @@ class Policy(_Rule[[TMetrics, TTask], TTask], Generic[TMetrics, TTask]):
     pass
 
 
-class PolicyTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
+class PolicyTransition(_Rule[[TMetrics_contra], bool], Generic[TMetrics_contra]):
     """
     User-defined function that defines
     how current Policies change during a Stage.
@@ -510,6 +514,11 @@ class PolicyTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
     """
 
     pass
+
+
+# Inputs accepted wherever a rule is normalized at runtime (see `_Rule.normalize_rule_or_callable`).
+PolicyLike: TypeAlias = Policy[TMetrics, TTask] | Callable[[TMetrics, TTask], TTask]
+PolicyTransitionLike: TypeAlias = PolicyTransition[TMetrics] | Callable[[TMetrics], bool]
 
 
 NodeTypes = TypeVar("NodeTypes")
@@ -761,7 +770,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def set_start_policies(
         self,
-        start_policies: Policy[TMetrics, TTask] | Iterable[Policy[TMetrics, TTask]],
+        start_policies: PolicyLike[TMetrics, TTask] | Iterable[PolicyLike[TMetrics, TTask]],
         append_non_existing: bool = True,
     ) -> None:
         """
@@ -770,20 +779,19 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         """
         if not isinstance(start_policies, Iterable):
             start_policies = [start_policies]
-        # Materialize once so one-shot iterables (e.g. generators) are not exhausted by the loop below.
-        start_policies = list(start_policies)
+        # Normalize once; this also materializes one-shot iterables (e.g. generators).
+        normalized: list[Policy[TMetrics, TTask]] = [Policy.normalize_rule_or_callable(p) for p in start_policies]
 
-        for policy in start_policies:
-            policy = Policy.normalize_rule_or_callable(policy)
+        for policy in normalized:
             if policy not in self.graph.see_nodes():
                 if append_non_existing:
                     self.add_policy(policy)
                 else:
                     raise ValueError(f"Policy {policy} is not in the policy graph.")
 
-        self.start_policies = list(start_policies)
+        self.start_policies = normalized
 
-    def add_policy(self, policy: Policy[TMetrics, TTask]) -> None:
+    def add_policy(self, policy: PolicyLike[TMetrics, TTask]) -> None:
         """
         Adds a floating policy to the Stage adjacency graph.
         """
@@ -793,7 +801,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
         self.graph.add_node(policy)
 
-    def remove_policy(self, policy: Policy[TMetrics, TTask]) -> None:
+    def remove_policy(self, policy: PolicyLike[TMetrics, TTask]) -> None:
         """
         Removes policy and all associated incoming/outgoing
         transition rules from the stage graph.
@@ -812,9 +820,9 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def add_policy_transition(
         self,
-        start_policy: Policy[TMetrics, TTask],
-        dest_policy: Policy[TMetrics, TTask],
-        rule: PolicyTransition[TMetrics],
+        start_policy: PolicyLike[TMetrics, TTask],
+        dest_policy: PolicyLike[TMetrics, TTask],
+        rule: PolicyTransitionLike[TMetrics],
     ) -> None:
         """
         Add policy transition between two policies:
@@ -837,9 +845,9 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def remove_policy_transition(
         self,
-        start_policy: Policy[TMetrics, TTask],
-        dest_policy: Policy[TMetrics, TTask],
-        rule: PolicyTransition[TMetrics],
+        start_policy: PolicyLike[TMetrics, TTask],
+        dest_policy: PolicyLike[TMetrics, TTask],
+        rule: PolicyTransitionLike[TMetrics],
         remove_start_policy: bool = False,
         remove_dest_policy: bool = False,
     ) -> None:
@@ -864,7 +872,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         return self.graph.see_nodes()
 
     def see_policy_transitions(
-        self, policy: Policy[TMetrics, TTask]
+        self, policy: PolicyLike[TMetrics, TTask]
     ) -> list[tuple[PolicyTransition[TMetrics], Policy[TMetrics, TTask]]]:
         """
         See transitions of stage in policy graph.
@@ -874,8 +882,8 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
 
     def set_policy_transition_priority(
         self,
-        policy: Policy[TMetrics, TTask],
-        policy_transitions: list[tuple[PolicyTransition[TMetrics], Policy[TMetrics, TTask]]],
+        policy: PolicyLike[TMetrics, TTask],
+        policy_transitions: Sequence[tuple[PolicyTransitionLike[TMetrics], PolicyLike[TMetrics, TTask]]],
     ) -> None:
         """
         Change the order of policy transitions listed under a policy.
@@ -947,7 +955,7 @@ class Stage(AindBehaviorModel, Generic[TMetrics, TTask]):
         return self
 
 
-class StageTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
+class StageTransition(_Rule[[TMetrics_contra], bool], Generic[TMetrics_contra]):
     """
     User-defined function that defines
     criteria for transitioning stages based on metrics.
@@ -955,6 +963,9 @@ class StageTransition(_Rule[[TMetrics], bool], Generic[TMetrics]):
     """
 
     pass
+
+
+StageTransitionLike: TypeAlias = StageTransition[TMetrics] | Callable[[TMetrics], bool]
 
 
 class StageGraph(_BehaviorGraph[Stage[TMetrics, TTask], StageTransition[TMetrics]], Generic[TMetrics, TTask]):
@@ -1080,7 +1091,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         self,
         start_stage: Stage,
         dest_stage: Stage,
-        rule: StageTransition,
+        rule: StageTransitionLike[Any],
     ) -> None:
         """
         Add stage transition between two stages:
@@ -1105,7 +1116,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
         self,
         start_stage: Stage,
         dest_stage: Stage,
-        rule: StageTransition,
+        rule: StageTransitionLike[Any],
         remove_start_stage: bool = False,
         remove_dest_stage: bool = False,
     ) -> None:
@@ -1138,7 +1149,7 @@ class Curriculum(AindBehaviorModel, Generic[TTask]):
     def set_stage_transition_priority(
         self,
         stage: Stage,
-        stage_transitions: list[tuple[StageTransition, Stage]],
+        stage_transitions: Sequence[tuple[StageTransitionLike[Any], Stage]],
     ) -> None:
         """
         Change the order of stage transitions listed under a stage.

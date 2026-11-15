@@ -14,6 +14,7 @@ from aind_behavior_curriculum.curriculum import (
     Curriculum,
     Metrics,
     Policy,
+    PolicyLike,
     Stage,
     StageGraph,
     Task,
@@ -307,7 +308,7 @@ class Trainer(Generic[TCurriculum]):
     @staticmethod
     def get_net_parameter_update(
         task: TTask,
-        stage_policies: Iterable[Policy[Any, TTask]],
+        stage_policies: Iterable[PolicyLike[Any, TTask]],
         curr_metrics: Metrics,
     ) -> TTask:
         """
