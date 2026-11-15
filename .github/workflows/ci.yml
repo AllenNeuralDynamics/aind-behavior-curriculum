@@ -60,7 +60,7 @@ jobs:
 
   docs-check:
     name: Build documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # gvpack is missing from Graphviz on newer images
     steps:
       - uses: actions/checkout@v7
 
@@ -69,12 +69,7 @@ jobs:
           enable-cache: true
 
       - name: Install Graphviz
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz
-          # Newer Ubuntu releases ship gvpack in a separate package.
-          command -v gvpack || sudo apt-get install -y $(apt-cache search --names-only gvpack | cut -d' ' -f1)
-          command -v gvpack
+        run: sudo apt-get update && sudo apt-get install -y graphviz
 
       - name: Generate documentation assets
         run: uv run --group docs --with . python docs/generate.py
@@ -160,7 +155,7 @@ jobs:
 
   deploy-docs:
     name: Deploy documentation to GitHub Pages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # gvpack is missing from Graphviz on newer images
     needs: [tests, docs-check, prepare-release]
     # Runs on stable releases (after prepare-release) and on manual dispatch
     # (prepare-release is skipped there, so the release steps never run).
@@ -186,12 +181,7 @@ jobs:
           enable-cache: true
 
       - name: Install Graphviz
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz
-          # Newer Ubuntu releases ship gvpack in a separate package.
-          command -v gvpack || sudo apt-get install -y $(apt-cache search --names-only gvpack | cut -d' ' -f1)
-          command -v gvpack
+        run: sudo apt-get update && sudo apt-get install -y graphviz
 
       - name: Generate documentation assets
         run: uv run --group docs --with . python docs/generate.py
